@@ -1,54 +1,39 @@
-# Dailydabble Hub
+# Dailydabble Monorepo
 
-Hub app for daily games (Agegaple, Yelple, etc.) with anonymous per-device completion tracking.
+This repository now contains all Dailydabble apps in one workspace so UI and shared patterns can stay consistent.
 
-## Getting Started
+## Structure
 
-1. Copy env values:
+- `apps/hub` - splash page and game status hub
+- `apps/agegaple` - Agegaple game app
+- `apps/yelple` - Yelple game app
+- `supabase` - shared Supabase config and migrations
 
-```bash
-cp .env.example .env.local
-```
+## Workspace Commands
 
-2. Fill `.env.local`:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
-
-3. Run dev server:
+Install once from repo root:
 
 ```bash
 npm install
-npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Run apps:
 
-## Current API
+```bash
+npm run dev:hub
+npm run dev:agegaple
+npm run dev:yelple
+```
 
-- `POST /api/player`
-  - Ensures anonymous `player_id` cookie exists and upserts `core.players`
+Quality/build:
 
-- `GET /api/completions/today`
-  - Returns today completion status by game for the current anonymous player
+```bash
+npm run lint
+npm run build
+```
 
-- `POST /api/completions`
-  - Body:
-    ```json
-    {
-      "gameSlug": "agegaple",
-      "puzzleDate": "2026-03-16",
-      "metadata": {}
-    }
-    ```
-  - Upserts `core.completions` for the current anonymous player
+## App Docs
 
-## Supabase
-
-- Uses schemas from migration in `supabase/migrations/...init_hub_core_game_schemas.sql`
-- Core tables:
-  - `core.players`
-  - `core.completions`
+- Hub details: `apps/hub/README.md`
+- Agegaple details: `apps/agegaple/README.md`
+- Yelple details: `apps/yelple/README.md`

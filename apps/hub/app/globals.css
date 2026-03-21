@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f6f9;
+  --foreground: #2c2f31;
+  --surface: #f5f6f9;
+  --surface-container-low: #eff1f4;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #e0e3e6;
+  --primary: #2f672d;
+  --primary-dim: #225b22;
+  --primary-container: #b6f6ab;
+  --on-primary: #d1ffc7;
+  --secondary: #6b5b00;
+  --secondary-container: #fbe276;
+  --on-secondary-container: #605100;
+  --outline-variant: #abadb0;
+  --on-surface-variant: #595c5e;
+  --glass: rgb(218 221 225 / 70%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+  --font-headline: var(--font-plus-jakarta-sans);
+}
+
+body {
+  background: radial-gradient(circle at 8% -4%, #ffffff 0%, transparent 42%), var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+.font-headline {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+}
+
+.glass-nav {
+  background-color: var(--glass);
+  backdrop-filter: blur(12px);
+}
+
+.hub-nav .dd-nav-inner {
+  width: min(1320px, 96vw);
+  margin: 0 auto;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}

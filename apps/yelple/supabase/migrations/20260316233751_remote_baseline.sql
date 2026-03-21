@@ -1,0 +1,2 @@
+-- Baseline migration placeholder synced from remote project history.
+-- This file exists to align local migration history with remote.

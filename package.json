@@ -1,27 +1,20 @@
 {
-  "name": "dailydabble",
-  "version": "0.1.0",
+  "name": "dailydabble-monorepo",
   "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.99.2",
-    "next": "16.1.7",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "dev:hub": "npm run dev -w @dailydabble/hub -- --port 3100",
+    "dev:agegaple": "npm run dev -w @dailydabble/agegaple -- --port 3101",
+    "dev:yelple": "npm run dev -w @dailydabble/yelple -- --port 3102",
+    "dev:all": "concurrently -n hub,agegaple,yelple -c green,blue,magenta \"npm run dev:hub\" \"npm run dev:agegaple\" \"npm run dev:yelple\"",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.7",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^9.2.1"
   }
 }
