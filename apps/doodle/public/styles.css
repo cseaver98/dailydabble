@@ -1,0 +1,295 @@
+:root {
+  --background: #f5f6f9;
+  --surface: #ffffff;
+  --surface-low: #eff1f4;
+  --surface-high: #e0e3e6;
+  --surface-highest: #dadde1;
+  --text: #2c2f31;
+  --muted: #595c5e;
+  --outline-soft: rgba(171, 173, 176, 0.28);
+
+  --brand: #1768a6;
+  --brand-strong: #0e4e7f;
+  --brand-soft: #d7ecff;
+  --accent: #2fa0ee;
+
+  --nav-height: 78px;
+  --container-width: 840px;
+  --nav-content-width: 1320px;
+
+  --surface-container-low: var(--surface-low);
+  --surface-container-high: var(--surface-high);
+  --surface-container-lowest: var(--surface);
+  --foreground: var(--text);
+  --outline: var(--muted);
+  --primary-dim: var(--brand-strong);
+  --dd-menu-accent: var(--brand-strong);
+  --dd-menu-hover-bg: #e8f5ff;
+  --dd-menu-focus-ring: rgba(47, 160, 238, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(47, 160, 238, 0.12), transparent 30%),
+    radial-gradient(circle at 92% 10%, rgba(23, 104, 166, 0.09), transparent 24%),
+    var(--background);
+}
+
+.container {
+  width: min(var(--container-width), 94vw);
+  margin: 0 auto;
+  padding: 0.85rem 0 2.2rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 1.15rem;
+  border: 0;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
+}
+
+.doodle-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.game-meta-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 56%, white);
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.6rem;
+}
+
+.doodle-stage-wrap {
+  border: 1px solid var(--outline-soft);
+  border-radius: 1rem;
+  background: #fbfdff;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 0.5rem;
+}
+
+.doodle-canvas {
+  width: min(100%, 360px);
+  height: auto;
+}
+
+.doodle-path {
+  fill: none;
+  stroke: var(--brand-strong);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 760ms ease forwards;
+}
+
+@keyframes drawPath {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.doodle-clue {
+  margin: 0;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--brand-soft) 52%, white);
+  padding: 0.62rem 0.78rem;
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
+.guess-form {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1fr auto;
+}
+
+.guess-input {
+  border-radius: 999px;
+  border: 1px solid var(--outline-soft);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.guess-input:focus-visible {
+  outline: 3px solid rgba(47, 160, 238, 0.3);
+  outline-offset: 1px;
+}
+
+.guess-submit-btn,
+.admin-btn-like {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 10px 20px rgba(23, 104, 166, 0.28);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guess-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.message[data-kind="won"] { color: #0a7a37; }
+.message[data-kind="lost"] { color: #b02500; }
+
+.guess-history-wrap {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
+}
+
+.guess-history-title {
+  margin: 0 0 0.45rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.guess-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.guess-history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--surface-low);
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.post-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.admin-btn-like {
+  background: #fff;
+  color: var(--brand-strong);
+  border: 1px solid #bedef4;
+  box-shadow: none;
+}
+
+.admin-btn-like.primary {
+  border: 0;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(23, 104, 166, 0.28);
+}
+
+.page-title {
+  margin: 0 0 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.4rem;
+}
+
+.page-subtle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.error-text {
+  color: #b02500;
+}
+
+.archive-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.archive-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.archive-link {
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  border-radius: 999px;
+  padding: 0.75rem 0.9rem;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.archive-link:hover {
+  background: color-mix(in srgb, var(--surface-low) 76%, white);
+}
+
+.dd-nav .dd-brand-word {
+  color: #0e4e7f;
+}
+
+@media (max-width: 680px) {
+  :root { --nav-height: 72px; }
+
+  .container {
+    width: 95vw;
+    padding-top: 0.75rem;
+  }
+
+  .game-meta-row,
+  .post-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .guess-form {
+    grid-template-columns: 1fr;
+  }
+}

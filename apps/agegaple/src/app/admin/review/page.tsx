@@ -459,9 +459,12 @@ export default function ReviewPage() {
                 <input
                   value={newImageUrl}
                   onChange={(event) => setNewImageUrl(event.target.value)}
-                  placeholder="https://example.com/image.jpg"
+                  placeholder="https://example.com/image.png"
                   className="rounded border border-zinc-600 bg-zinc-950 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-emerald-500 sm:col-span-2"
                 />
+                <p className="sm:col-span-2 text-xs text-zinc-400">
+                  Not SVG-only. Accepted image URL formats: PNG, JPG, JPEG, WEBP, GIF, and SVG.
+                </p>
                 <input
                   value={newImageTitle}
                   onChange={(event) => setNewImageTitle(event.target.value)}

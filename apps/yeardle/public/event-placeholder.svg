@@ -1,0 +1,8 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="700" fill="#F3EEFF"/>
+  <circle cx="1040" cy="120" r="170" fill="#E3D7FF"/>
+  <rect x="100" y="120" width="1000" height="460" rx="36" fill="#FFFFFF" stroke="#D9CBFF" stroke-width="8"/>
+  <path d="M220 470L400 330L550 430L730 250L980 470" stroke="#7A5AF8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="420" cy="250" r="44" fill="#A88BFF"/>
+  <text x="600" y="560" text-anchor="middle" fill="#5A40CB" font-family="Manrope,Arial,sans-serif" font-size="44" font-weight="800">Historical image unavailable</text>
+</svg>

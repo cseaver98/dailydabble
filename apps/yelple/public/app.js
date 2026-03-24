@@ -23,6 +23,10 @@ const resultsBusinessNameEl = document.getElementById("resultsBusinessName");
 const resultsBusinessMetaEl = document.getElementById("resultsBusinessMeta");
 const resultsGuessHistoryEl = document.getElementById("resultsGuessHistory");
 const resultsYelpLinkEl = document.getElementById("resultsYelpLink");
+const resultsShareBtn = document.getElementById("resultsShareBtn");
+const resultsShareStatusEl = document.getElementById("resultsShareStatus");
+const nextGameTimerEl = document.getElementById("nextGameTimer");
+const resultsNextGameTimerEl = document.getElementById("resultsNextGameTimer");
 
 let activeChallenge = null;
 let revealedHints = 1;
@@ -36,6 +40,7 @@ let totalGuessCount = 0;
 let lastResultPayload = null;
 let guessHistory = [];
 let isReplayMode = false;
+let nextGameTimerIntervalId = null;
 
 const STORAGE_KEY = "yelple-streak-v1";
 const PROGRESS_STORAGE_KEY = "yelple-progress-v1";
@@ -209,6 +214,70 @@ function setReplayMode(isReplay) {
   isReplayMode = Boolean(isReplay);
   if (todayGameBtn) {
     todayGameBtn.hidden = !isReplay;
+  }
+  syncNextGameTimerVisibility();
+}
+
+function formatCountdown(msRemaining) {
+  const safeMs = Math.max(0, msRemaining);
+  const totalSeconds = Math.floor(safeMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
+function getTimeUntilNextLocalMidnightMs() {
+  const now = new Date();
+  const nextMidnight = new Date(now);
+  nextMidnight.setHours(24, 0, 0, 0);
+  return nextMidnight.getTime() - now.getTime();
+}
+
+function updateNextGameTimerText() {
+  const shouldShow = gameLocked && !isReplayMode;
+  if (!shouldShow) {
+    return;
+  }
+
+  const text = `Next game in ${formatCountdown(getTimeUntilNextLocalMidnightMs())}`;
+  if (nextGameTimerEl) {
+    nextGameTimerEl.textContent = text;
+  }
+  if (resultsNextGameTimerEl) {
+    resultsNextGameTimerEl.textContent = text;
+  }
+}
+
+function stopNextGameTimer() {
+  if (nextGameTimerIntervalId) {
+    window.clearInterval(nextGameTimerIntervalId);
+    nextGameTimerIntervalId = null;
+  }
+}
+
+function startNextGameTimer() {
+  stopNextGameTimer();
+  updateNextGameTimerText();
+  nextGameTimerIntervalId = window.setInterval(updateNextGameTimerText, 1000);
+}
+
+function syncNextGameTimerVisibility() {
+  const shouldShow = gameLocked && !isReplayMode;
+  if (nextGameTimerEl) {
+    nextGameTimerEl.hidden = !shouldShow;
+  }
+  if (resultsNextGameTimerEl) {
+    resultsNextGameTimerEl.hidden = !shouldShow;
+  }
+
+  if (shouldShow) {
+    startNextGameTimer();
+  } else {
+    stopNextGameTimer();
   }
 }
 
@@ -434,6 +503,66 @@ function closeResultsDialog() {
   }
 }
 
+function setResultsShareStatus(text) {
+  if (!resultsShareStatusEl) return;
+  resultsShareStatusEl.textContent = text || "";
+}
+
+function buildResultsSharePayload({ won, answer, actualRating }) {
+  const shareBlocks = guessHistory.map((entry) => {
+    const actual = Number.isFinite(entry.actual) ? entry.actual : Number(actualRating);
+    const delta = Math.abs(Number((entry.guess - actual).toFixed(1)));
+    if (delta <= 0.1) return "🟩";
+    if (delta <= 0.3) return "🟨";
+    if (delta <= 0.6) return "🟧";
+    return "🟥";
+  }).join("");
+  const gameDate = activeChallenge?.challengeDate || "Today";
+  const shareUrl = isReplayMode && activeChallenge?.challengeDate
+    ? `${window.location.origin}/?replay=${encodeURIComponent(activeChallenge.challengeDate)}`
+    : `${window.location.origin}/`;
+  const text = [
+    `${answer.name || "Today's business"}`,
+    `${totalGuessCount}/${MAX_WRONG_GUESSES} guesses`,
+    shareBlocks || "⬜",
+    shareUrl,
+  ].join("\n");
+  return {
+    title: "Yelple",
+    text
+  };
+}
+
+async function handleResultsShare() {
+  if (!lastResultPayload) return;
+  const payload = buildResultsSharePayload(lastResultPayload);
+  setResultsShareStatus("");
+
+  if (typeof navigator.share === "function") {
+    try {
+      await navigator.share(payload);
+      setResultsShareStatus("Shared");
+      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(payload.text);
+      setResultsShareStatus("Share link copied");
+      return;
+    } catch {
+      // fall through
+    }
+  }
+
+  setResultsShareStatus("Share not available on this device");
+}
+
 function openResultsDialog({ won, answer, actualRating }) {
   if (!resultsDialogEl || !resultsTitleEl || !resultsMapEl || !resultsBusinessNameEl || !resultsBusinessMetaEl || !answer) {
     return;
@@ -448,6 +577,10 @@ function openResultsDialog({ won, answer, actualRating }) {
       ? `Solved in ${totalGuessCount} guess${totalGuessCount === 1 ? "" : "es"}.`
       : `Used ${totalGuessCount} guesses.`;
   }
+  if (resultsShareBtn) {
+    resultsShareBtn.disabled = false;
+  }
+  setResultsShareStatus("");
 
   if (resultsGuessHistoryEl) {
     resultsGuessHistoryEl.innerHTML = "";
@@ -498,6 +631,7 @@ function openResultsDialog({ won, answer, actualRating }) {
     }
   }
 
+  updateNextGameTimerText();
   resultsDialogEl.showModal();
 }
 
@@ -513,6 +647,12 @@ function setupResultsDialog() {
       resultsDialogEl.close();
     }
   });
+
+  if (resultsShareBtn) {
+    resultsShareBtn.addEventListener("click", () => {
+      void handleResultsShare();
+    });
+  }
 }
 
 function buildHintCard(hint, index, revealedCount) {
@@ -908,6 +1048,7 @@ function renderGuessButtons() {
   picker.append(guessLeftGroup, submitBtn);
   guessButtonsEl.appendChild(picker);
   renderStars();
+  syncNextGameTimerVisibility();
 }
 
 async function loadToday() {
@@ -953,6 +1094,7 @@ async function loadToday() {
   } else {
     setMessage("", "");
   }
+  syncNextGameTimerVisibility();
   saveProgress(data.challengeDate);
 }
 
@@ -980,6 +1122,7 @@ async function replayDate(challengeDate) {
   renderHints();
   renderGuessButtons();
   setMessage("Replay loaded.", "ok");
+  syncNextGameTimerVisibility();
 }
 
 async function bootstrap() {

@@ -1,0 +1,155 @@
+:root {
+  --bg: #f5f6f9;
+  --surface: #ffffff;
+  --surface-low: #eff1f4;
+  --text: #2c2f31;
+  --muted: #595c5e;
+  --outline: #d8dce2;
+  --brand: #2f672d;
+  --brand-soft: #d1ffc7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(47, 103, 45, 0.12), transparent 24%),
+    radial-gradient(circle at 92% 6%, rgba(216, 112, 147, 0.1), transparent 20%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Manrope", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.admin-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+
+.admin-sidebar {
+  border-right: 1px solid var(--outline);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 1.1rem 0.8rem;
+}
+
+.admin-brand {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.admin-subtle {
+  margin: 0.2rem 0 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.admin-nav {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-nav-link {
+  display: block;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 0.62rem 0.75rem;
+  background: var(--surface-low);
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+
+.admin-nav-link.active {
+  background: var(--brand);
+  color: var(--brand-soft);
+}
+
+.admin-content {
+  padding: 1.15rem;
+}
+
+.admin-card {
+  border: 1px solid var(--outline);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 16px 30px rgba(44, 47, 49, 0.06);
+  padding: 1rem;
+}
+
+.admin-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.admin-copy {
+  color: var(--muted);
+  margin: 0.55rem 0 0;
+  line-height: 1.45;
+}
+
+.admin-actions {
+  margin-top: 0.95rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--outline);
+  background: var(--surface-low);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0.56rem 0.9rem;
+}
+
+.admin-btn.primary {
+  border: 0;
+  background: var(--brand);
+  color: var(--brand-soft);
+}
+
+.admin-iframe {
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  margin-top: 0.85rem;
+  background: white;
+}
+
+@media (max-width: 960px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--outline);
+  }
+
+  .admin-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

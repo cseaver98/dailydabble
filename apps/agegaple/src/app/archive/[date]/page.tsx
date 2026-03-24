@@ -419,7 +419,6 @@ export default function ArchiveGamePage() {
   }).join("");
   const shareText = puzzle
     ? [
-        `Agegaple Archive ${puzzle.puzzleDate}`,
         `${puzzle.personAName} + ${puzzle.personBName}`,
         `${attempts.length}/${maxGuesses} tries`,
         shareBlocks,
@@ -427,9 +426,7 @@ export default function ArchiveGamePage() {
     : "";
   const handleShareResult = async () => {
     if (!shareText) return;
-    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
-    if (isMobileDevice && typeof navigator.share === "function") {
+    if (typeof navigator.share === "function") {
       try {
         await navigator.share({
           title: "Agegaple",
@@ -550,18 +547,18 @@ export default function ArchiveGamePage() {
         {!loading && puzzle && (
           <section className={`${panelClass} flex h-full min-h-0 flex-col gap-2 sm:gap-3`}>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-              <div className="rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 text-center shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
+              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
                 <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Attempts</p>
                 <p className="text-[0.88rem] font-black text-[color:var(--foreground)]">
                   {attempts.length}
                   <span className={`text-[0.72rem] font-semibold ${mutedTextClass}`}> / {maxGuesses}</span>
                 </p>
               </div>
-              <div className="rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 text-center shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
+              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
                 <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Remaining</p>
                 <p className="text-[0.88rem] font-black text-[color:var(--primary-dim)]">{attemptsRemaining}</p>
               </div>
-              <div className="rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 text-center shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
+              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
                 <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Photos</p>
                 <p className="text-[0.88rem] font-black text-[color:var(--primary-dim)]">
                   {revealedPhotoCount}
@@ -611,51 +608,62 @@ export default function ArchiveGamePage() {
                 </>
               )}
             </div>
-            {galleryImages.length > 1 && (
-              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-                {galleryImages.map((image, index) => {
-                  const isLocked = index >= revealedPhotoCount;
-                  return (
-                  <button
-                    key={`${image.imageUrl}-${index}`}
-                    type="button"
-                    className={`relative aspect-square overflow-hidden rounded-full border bg-[color:var(--surface-container-low)] ${
-                      !isLocked && index === selectedImageIndex
-                        ? "border-[color:var(--primary)] ring-2 ring-[color:var(--primary-container)]"
-                        : isDarkMode
-                          ? "border-zinc-700 bg-zinc-800"
-                          : "border-[color:var(--surface-container)]"
-                    }`}
-                    onClick={() => {
-                      if (isLocked) return;
-                      setSelectedImageIndex(index);
-                    }}
-                    aria-label={isLocked ? `Photo ${index + 1} locked` : `View photo ${index + 1}`}
-                    disabled={isLocked}
-                  >
-                    {isLocked ? (
-                      <div className={`flex h-full w-full items-center justify-center ${
-                        isDarkMode ? "bg-zinc-800 text-zinc-300" : "bg-[color:var(--surface-container)] text-[color:var(--outline)]"
-                      }`}>
-                        <span aria-hidden="true" className="text-xl">🔒</span>
-                      </div>
-                    ) : (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={image.imageUrl} alt={image.imageAlt} className="h-full w-full object-cover object-top" />
-                      </>
-                    )}
-                  </button>
-                  );
-                })}
+            {galleryImages.length > 1 ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+                <div className="rounded-2xl border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] px-2 py-2 sm:px-3">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    {galleryImages.map((image, index) => {
+                      const isLocked = index >= revealedPhotoCount;
+                      return (
+                        <button
+                          key={`${image.imageUrl}-${index}`}
+                          type="button"
+                          className={`relative h-10 w-10 overflow-hidden rounded-full border bg-[color:var(--surface-container-low)] sm:h-11 sm:w-11 ${
+                            !isLocked && index === selectedImageIndex
+                              ? "border-[color:var(--primary)] ring-2 ring-[color:var(--primary-container)]"
+                              : isDarkMode
+                                ? "border-zinc-700 bg-zinc-800"
+                                : "border-[color:var(--surface-container)]"
+                          }`}
+                          onClick={() => {
+                            if (isLocked) return;
+                            setSelectedImageIndex(index);
+                          }}
+                          aria-label={isLocked ? `Photo ${index + 1} locked` : `View photo ${index + 1}`}
+                          disabled={isLocked}
+                        >
+                          {isLocked ? (
+                            <div className={`flex h-full w-full items-center justify-center ${
+                              isDarkMode ? "bg-zinc-800 text-zinc-300" : "bg-[color:var(--surface-container)] text-[color:var(--outline)]"
+                            }`}>
+                              <span aria-hidden="true" className="text-sm">🔒</span>
+                            </div>
+                          ) : (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={image.imageUrl} alt={image.imageAlt} className="h-full w-full object-cover object-top" />
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <EditorialDrawer
+                  context={puzzle.editorialContext}
+                  personAName={puzzle.personAName}
+                  personBName={puzzle.personBName}
+                  isDarkMode={false}
+                />
               </div>
+            ) : (
+              <EditorialDrawer
+                context={puzzle.editorialContext}
+                personAName={puzzle.personAName}
+                personBName={puzzle.personBName}
+                isDarkMode={false}
+              />
             )}
-            <EditorialDrawer
-              context={puzzle.editorialContext}
-              personAName={puzzle.personAName}
-              personBName={puzzle.personBName}
-              isDarkMode={false}
-            />
             {!result && lastAttempt && lastAttempt.direction !== "exact" && (
               <div
                 className={`rounded-md border px-3 py-2 text-sm ${
@@ -871,7 +879,7 @@ export default function ArchiveGamePage() {
                 type="button"
                 onClick={() => setIsResultOpen(false)}
                 aria-label="Close result dialog"
-                className={`rounded-md border px-2 py-1 text-sm font-bold leading-none ${
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg font-bold leading-none transition ${
                   isDarkMode
                     ? "border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
                     : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
@@ -926,7 +934,7 @@ export default function ArchiveGamePage() {
               <button
                 type="button"
                 onClick={handleShareResult}
-                className={`inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                className={`inline-flex h-11 items-center justify-center rounded-full border px-5 font-bold transition ${
                   isDarkMode
                     ? "border-zinc-500 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
                     : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
@@ -944,10 +952,10 @@ export default function ArchiveGamePage() {
               </button>
               <Link
                 href="/archive"
-                className={`inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                className={`inline-flex h-11 items-center justify-center rounded-full px-5 font-extrabold text-white transition ${
                   isDarkMode
-                    ? "border-zinc-500 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
+                    ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                    : "bg-[color:var(--primary)] hover:bg-[color:var(--primary-dim)]"
                 }`}
               >
                 Play More Archive Games

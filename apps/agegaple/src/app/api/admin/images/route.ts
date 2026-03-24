@@ -25,6 +25,23 @@ const isHttpUrl = (value: string): boolean => {
   }
 };
 
+const allowedImageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"]);
+
+const hasAllowedImageExtension = (value: string): boolean => {
+  try {
+    const pathname = new URL(value).pathname.toLowerCase();
+    const dotIndex = pathname.lastIndexOf(".");
+    if (dotIndex === -1) {
+      // Some providers may serve image routes without a file extension.
+      return true;
+    }
+    const ext = pathname.slice(dotIndex);
+    return allowedImageExtensions.has(ext);
+  } catch {
+    return false;
+  }
+};
+
 export async function POST(request: Request) {
   const payload = (await request.json()) as PostPayload;
 
@@ -32,8 +49,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  if (!hasAllowedImageExtension(payload.imageUrl)) {
+    return NextResponse.json(
+      { error: "Unsupported image type. Use PNG, JPG, JPEG, WEBP, SVG, or GIF URL." },
+      { status: 400 },
+    );
+  }
+
   if (payload.thumbUrl && !isHttpUrl(payload.thumbUrl)) {
     return NextResponse.json({ error: "Invalid thumbUrl" }, { status: 400 });
+  }
+
+  if (payload.thumbUrl && !hasAllowedImageExtension(payload.thumbUrl)) {
+    return NextResponse.json(
+      { error: "Unsupported thumbUrl type. Use PNG, JPG, JPEG, WEBP, SVG, or GIF URL." },
+      { status: 400 },
+    );
   }
 
   try {

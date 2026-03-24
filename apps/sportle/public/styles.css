@@ -1,0 +1,254 @@
+:root {
+  --background: #f4f7fb;
+  --surface: #ffffff;
+  --surface-low: #eaf0f8;
+  --surface-high: #dce6f3;
+  --text: #243040;
+  --muted: #4d5b70;
+  --outline-soft: rgba(137, 154, 177, 0.32);
+
+  --brand: #2f76d2;
+  --brand-strong: #1f4f99;
+  --brand-soft: #dceafe;
+
+  --surface-container-low: var(--surface-low);
+  --surface-container-high: var(--surface-high);
+  --surface-container-lowest: var(--surface);
+  --foreground: var(--text);
+  --outline: var(--muted);
+  --primary: var(--brand);
+  --primary-dim: var(--brand-strong);
+  --dd-menu-accent: var(--brand-strong);
+  --dd-menu-hover-bg: #e7f0ff;
+  --dd-menu-focus-ring: rgba(47, 118, 210, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(47, 118, 210, 0.16), transparent 30%),
+    radial-gradient(circle at 92% 10%, rgba(31, 79, 153, 0.14), transparent 24%),
+    var(--background);
+}
+
+.container {
+  width: min(840px, 94vw);
+  margin: 0 auto;
+  padding: 0.85rem 0 2.2rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 1.15rem;
+  border: 0;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(36, 48, 64, 0.07);
+}
+
+.sportle-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.game-meta-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 58%, white);
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.6rem;
+}
+
+.guess-form {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1fr auto;
+}
+
+.guess-input {
+  border-radius: 999px;
+  border: 1px solid var(--outline-soft);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.guess-input:focus-visible {
+  outline: 3px solid rgba(47, 118, 210, 0.28);
+  outline-offset: 1px;
+}
+
+.guess-submit-btn,
+.admin-btn-like {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 10px 20px rgba(31, 79, 153, 0.25);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guess-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.message[data-kind="won"] { color: #0a7a37; }
+.message[data-kind="lost"] { color: #b02500; }
+
+.guess-history-wrap,
+.hints-wrap {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
+}
+
+.guess-history-title {
+  margin: 0 0 0.45rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.guess-history-list,
+.hints-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.guess-history-item,
+.hint-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--surface-low);
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.hint-item {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hint-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-strong);
+  font-weight: 800;
+}
+
+.clue-team-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.team-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.post-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.archive-card,
+.legal-card {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.page-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: clamp(1.2rem, 0.95rem + 0.9vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.page-subtle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.error-text {
+  color: #8b2d2d;
+}
+
+.archive-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.archive-link {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--text);
+  border-radius: 0.8rem;
+  background: var(--surface-low);
+  padding: 0.66rem 0.75rem;
+  font-weight: 700;
+}
+
+.archive-link:hover {
+  background: var(--surface-high);
+}
+
+@media (max-width: 640px) {
+  .game-meta-row,
+  .post-actions,
+  .guess-form {
+    grid-template-columns: 1fr;
+  }
+}

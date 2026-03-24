@@ -1,0 +1,2 @@
+-- Placeholder migration to align local migration history with remote.
+-- The remote project already contains this migration id.
