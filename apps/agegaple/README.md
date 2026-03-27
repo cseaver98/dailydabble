@@ -97,11 +97,12 @@ Primary entities:
 - Admin routes (`/admin/*`, `/api/admin/*`) are protected by password login and an `httpOnly` signed session cookie.
 - Seed script: `scripts/seed-mvp.mjs`.
 - Queue flow:
-  - `npm run seed` dynamically pulls couples from Wikidata relationship data (`spouse` / `partner`) and creates `pending_review` candidates.
+  - `npm run seed` dynamically pulls couples from Wikidata relationship data (`spouse`, `couple`, `former_spouse`, `former_couple`) and creates `pending_review` candidates.
   - Couples already used in `puzzle_candidates` are skipped, so each run prefers fresh couples.
   - Seeding still does not auto-approve photos; each new candidate is created with a non-usable placeholder image so admins can manually curate image URLs.
   - Optional seed controls: `--batch-size=1|5|10|15|20` and `--pool-size=<50..3000>` (or env `SEED_POOL_SIZE`).
   - Notability filters (defaults): `SEED_MIN_PRIMARY_SITELINKS=60` and `SEED_MIN_COMBINED_SITELINKS=120` to reduce obscure people.
+  - Optional Wikidata fetch tuning (useful if seeding times out): `SEED_WIKIDATA_TIMEOUT_MS` (default `45000`), `SEED_WIKIDATA_ATTEMPTS` (default `4`), `SEED_WIKIDATA_BACKOFF_BASE_MS` (default `600`), `SEED_WIKIDATA_BACKOFF_MAX_MS` (default `3000`).
   - Admin can also run manual batch seed from `/admin/review` (`1`, `5`, `10`, `15`, `20`).
   - In admin review, open a candidate photo to inspect gallery images, remove bad photos, or add manual image URLs before approval.
   - Approval is gated by usable images: candidates cannot be approved without at least one usable image.

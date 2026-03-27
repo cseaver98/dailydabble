@@ -18,10 +18,16 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 
 const WIKIDATA_SPARQL_ENDPOINT = "https://query.wikidata.org/sparql";
 const validBatchSizes = new Set([1, 5, 10, 15, 20]);
-const relationshipFromPredicate = new Map([
-  ["http://www.wikidata.org/prop/direct/P26", "spouse"],
-  ["http://www.wikidata.org/prop/direct/P451", "partner"],
-]);
+const relationshipTypeFromWikidata = ({ predicateUri, hasEndDate }) => {
+  const predicateCode = String(predicateUri ?? "").split("/").pop();
+  if (predicateCode === "P26") {
+    return hasEndDate ? "former_spouse" : "spouse";
+  }
+  if (predicateCode === "P451") {
+    return hasEndDate ? "former_couple" : "couple";
+  }
+  return null;
+};
 
 const getDateInTimeZone = (timeZone) => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -133,19 +139,55 @@ const shuffle = (arr) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchJsonWithRetry = async (url, init, attempts = 3) => {
+const isRetriableStatus = (status) =>
+  status === 408 || status === 429 || status === 502 || status === 503 || status === 504 || status >= 520;
+
+const computeBackoffDelay = (attempt, baseDelayMs, maxDelayMs) => {
+  const expDelay = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
+  const jitter = Math.floor(Math.random() * 250);
+  return expDelay + jitter;
+};
+
+const withTimeoutSignal = (requestTimeoutMs) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+};
+
+const fetchJsonWithRetry = async (
+  url,
+  init,
+  {
+    attempts = 2,
+    baseDelayMs = 300,
+    maxDelayMs = 900,
+    requestTimeoutMs = 7000,
+  } = {},
+) => {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await fetch(url, init);
+      const timeoutGuard = withTimeoutSignal(requestTimeoutMs);
+      let response;
+      try {
+        response = await fetch(url, { ...init, signal: timeoutGuard.signal });
+      } finally {
+        timeoutGuard.clear();
+      }
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        const statusError = new Error(`HTTP ${response.status}`);
+        if (!isRetriableStatus(response.status) || attempt === attempts) {
+          throw statusError;
+        }
+        lastError = statusError;
+        await wait(computeBackoffDelay(attempt, baseDelayMs, maxDelayMs));
+        continue;
       }
       return await response.json();
     } catch (error) {
       lastError = error;
       if (attempt < attempts) {
-        await wait(300 * attempt);
+        await wait(computeBackoffDelay(attempt, baseDelayMs, maxDelayMs));
       }
     }
   }
@@ -331,12 +373,12 @@ const parsePoolSize = () => {
     }
   }
 
-  const fromEnv = Number(process.env.SEED_POOL_SIZE ?? "500");
+  const fromEnv = Number(process.env.SEED_POOL_SIZE ?? "280");
   if (Number.isFinite(fromEnv) && fromEnv >= 50 && fromEnv <= 3000) {
     return Math.floor(fromEnv);
   }
 
-  return 500;
+  return 280;
 };
 
 const parseIntInRange = (value, min, max, fallback) => {
@@ -371,27 +413,53 @@ const parseNotabilityThresholds = () => {
   };
 };
 
+const parseWikidataFetchSettings = () => {
+  const attempts = parseIntInRange(process.env.SEED_WIKIDATA_ATTEMPTS ?? "4", 1, 8, 4);
+  const requestTimeoutMs = parseIntInRange(
+    process.env.SEED_WIKIDATA_TIMEOUT_MS ?? "45000",
+    4000,
+    120000,
+    45000,
+  );
+  const baseDelayMs = parseIntInRange(process.env.SEED_WIKIDATA_BACKOFF_BASE_MS ?? "600", 100, 5000, 600);
+  const maxDelayMs = parseIntInRange(process.env.SEED_WIKIDATA_BACKOFF_MAX_MS ?? "3000", 200, 15000, 3000);
+
+  return {
+    attempts,
+    requestTimeoutMs,
+    baseDelayMs,
+    maxDelayMs: Math.max(maxDelayMs, baseDelayMs),
+  };
+};
+
 const buildDynamicCoupleSparql = (limit) => `
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX ps: <http://www.wikidata.org/prop/statement/>
+PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
 PREFIX schema: <http://schema.org/>
 
 SELECT
   ?person
-  ?personLabel
   ?personBirth
   ?personArticle
   ?personSitelinks
   ?partner
-  ?partnerLabel
   ?partnerBirth
   ?partnerArticle
   ?partnerSitelinks
   ?relationshipPredicate
+  ?relationshipEndDate
 WHERE {
-  VALUES ?relationshipPredicate { wdt:P26 wdt:P451 }
-  ?person ?relationshipPredicate ?partner .
+  VALUES (?relationshipProp ?relationshipPredicate) {
+    (p:P26 ps:P26)
+    (p:P451 ps:P451)
+  }
+  ?person ?relationshipProp ?relationshipStatement .
+  ?relationshipStatement ?relationshipPredicate ?partner .
   FILTER(?person != ?partner)
+  OPTIONAL { ?relationshipStatement pq:P582 ?relationshipEndDate . }
 
   ?person wdt:P31 wd:Q5 ;
           wdt:P569 ?personBirth ;
@@ -407,14 +475,19 @@ WHERE {
 
   FILTER(YEAR(?personBirth) >= 1900)
   FILTER(YEAR(?partnerBirth) >= 1900)
-
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
 LIMIT ${limit}
 `;
 
 const getQualityScore = ({ relationshipType, ageGap }) => {
-  let score = relationshipType === "spouse" ? 82 : 76;
+  let score = 76;
+  if (relationshipType === "spouse") {
+    score = 82;
+  } else if (relationshipType === "former_spouse") {
+    score = 79;
+  } else if (relationshipType === "former_couple") {
+    score = 74;
+  }
   if (ageGap <= 15) {
     score += 4;
   } else if (ageGap >= 30) {
@@ -424,18 +497,44 @@ const getQualityScore = ({ relationshipType, ageGap }) => {
 };
 
 const fetchDynamicCouplePool = async (limit) => {
-  const query = buildDynamicCoupleSparql(limit);
-  const url = `${WIKIDATA_SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`;
-  const payload = await fetchJsonWithRetry(
-    url,
-    {
-      headers: {
-        Accept: "application/sparql-results+json",
-        "User-Agent": "AgegapleSeeder/1.0 (https://github.com/)",
-      },
-    },
-    3,
-  );
+  const fetchSettings = parseWikidataFetchSettings();
+  const limitCandidates = Array.from(
+    new Set([
+      Math.max(50, Math.floor(limit)),
+      Math.max(80, Math.floor(limit * 0.65)),
+      120,
+      80,
+    ]),
+  ).filter((value) => Number.isFinite(value) && value > 0);
+
+  let payload = null;
+  let lastError = null;
+
+  for (const candidateLimit of limitCandidates) {
+    try {
+      const query = buildDynamicCoupleSparql(candidateLimit);
+      const url = `${WIKIDATA_SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`;
+      payload = await fetchJsonWithRetry(
+        url,
+        {
+          headers: {
+            Accept: "application/sparql-results+json",
+            "User-Agent": "AgegapleSeeder/1.0 (https://github.com/)",
+          },
+        },
+        fetchSettings,
+      );
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!payload) {
+    throw new Error(
+      `Failed to load dynamic pool from Wikidata: ${lastError instanceof Error ? lastError.message : "unknown error"}`,
+    );
+  }
 
   const bindings = payload?.results?.bindings ?? [];
   const unique = new Map();
@@ -448,16 +547,19 @@ const fetchDynamicCouplePool = async (limit) => {
     const personTitle = wikipediaTitleFromArticleUri(row.personArticle?.value);
     const partnerTitle = wikipediaTitleFromArticleUri(row.partnerArticle?.value);
     const personName = resolveDisplayName({
-      label: row.personLabel?.value,
+      label: null,
       wikiTitle: personTitle,
       qid: personQid,
     });
     const partnerName = resolveDisplayName({
-      label: row.partnerLabel?.value,
+      label: null,
       wikiTitle: partnerTitle,
       qid: partnerQid,
     });
-    const relationshipType = relationshipFromPredicate.get(row.relationshipPredicate?.value ?? "");
+    const relationshipType = relationshipTypeFromWikidata({
+      predicateUri: row.relationshipPredicate?.value ?? "",
+      hasEndDate: Boolean(row.relationshipEndDate?.value),
+    });
     const personSitelinks = Number(row.personSitelinks?.value ?? 0);
     const partnerSitelinks = Number(row.partnerSitelinks?.value ?? 0);
 

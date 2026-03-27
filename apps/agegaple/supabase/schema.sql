@@ -18,7 +18,7 @@ create table if not exists couples (
   id uuid primary key default gen_random_uuid(),
   person_a_id uuid not null references people(id),
   person_b_id uuid not null references people(id),
-  relationship_type text not null check (relationship_type in ('spouse', 'partner')),
+  relationship_type text not null check (relationship_type in ('spouse', 'couple', 'former_spouse', 'former_couple')),
   source text not null default 'wikidata',
   is_active boolean,
   start_date date,

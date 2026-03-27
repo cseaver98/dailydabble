@@ -42,10 +42,6 @@ export default function LegalPageShell({ title, updatedLabel, children }: LegalP
               { label: "Today", href: "/" },
               { label: "Archive games", href: "/archive" },
             ]}
-            legalLinks={[
-              { label: "Terms", href: "/terms" },
-              { label: "Privacy", href: "/privacy" },
-            ]}
           />
         }
         headerClassName={isDarkMode ? "bg-zinc-950/90 border-zinc-700" : "bg-white/90 border-zinc-300"}

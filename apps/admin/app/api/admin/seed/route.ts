@@ -27,12 +27,15 @@ const findAgegapleCwd = (): string => {
 
 const runSeedScript = async (batchSize: number): Promise<{ stdout: string; stderr: string }> => {
   const cwd = findAgegapleCwd();
+  const poolSize = Math.max(120, Math.min(360, batchSize * 48));
   const { stdout, stderr } = await execAsync(
-    `node --env-file=.env.local scripts/seed-mvp.mjs --batch-size=${batchSize}`,
+    `node --env-file=.env.local scripts/seed-mvp.mjs --batch-size=${batchSize} --pool-size=${poolSize}`,
     {
       cwd,
       env: process.env,
       maxBuffer: 1024 * 1024,
+      timeout: 90_000,
+      killSignal: "SIGTERM",
     },
   );
 

@@ -153,10 +153,86 @@ body {
   object-position: center;
 }
 
+.result-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.result-modal-panel {
+  width: min(640px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface);
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.2);
+}
+
+.result-modal-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--outline-soft);
+  background: #fff;
+  color: var(--text);
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.result-modal-title {
+  margin: 0 0 0.4rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.1rem;
+}
+
+.result-modal-answer {
+  margin: 0 0 0.55rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--brand-strong);
+}
+
+.result-modal-copy {
+  margin: 0 0 0.55rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+
 .guess-form {
   display: grid;
   gap: 0.55rem;
   grid-template-columns: 1fr auto;
+}
+
+.suggestions-wrap {
+  margin-top: -0.15rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.suggestion-item {
+  text-align: left;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  color: var(--text);
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  font-family: "Manrope", sans-serif;
+  font-size: 0.92rem;
+}
+
+.suggestion-item:hover {
+  background: var(--brand-soft);
 }
 
 .guess-input {

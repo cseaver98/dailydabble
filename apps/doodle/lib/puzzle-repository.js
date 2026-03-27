@@ -88,49 +88,75 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, puzzleRow);
 };
 
-const getLatestPuzzleOnOrBefore = async (date) => {
+const autoScheduleApprovedPuzzleForDate = async (date) => {
   const supabase = getDoodleSupabaseAdmin();
 
-  const { data: scheduleRow, error: scheduleError } = await supabase
-    .from("daily_schedule")
-    .select("puzzle_date,puzzle_id")
-    .lte("puzzle_date", date)
-    .order("puzzle_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (scheduleError) {
-    throw new Error(`Failed to load fallback schedule: ${scheduleError.message}`);
-  }
-
-  if (!scheduleRow) {
-    return null;
-  }
-
-  const { data: puzzleRow, error: puzzleError } = await supabase
+  const { data: approvedRows, error: approvedError } = await supabase
     .from("puzzles")
-    .select("id,slug,answer,aliases,view_box,stage_count,stages")
-    .eq("id", scheduleRow.puzzle_id)
-    .maybeSingle();
+    .select("id,slug,answer,aliases,view_box,stage_count,stages,created_at")
+    .eq("status", "approved")
+    .order("created_at", { ascending: true })
+    .limit(250);
 
-  if (puzzleError) {
-    throw new Error(`Failed to load fallback puzzle: ${puzzleError.message}`);
+  if (approvedError) {
+    throw new Error(`Failed to load approved doodle puzzles: ${approvedError.message}`);
   }
 
-  if (!puzzleRow) {
-    return null;
+  const candidates = Array.isArray(approvedRows) ? approvedRows : [];
+  for (const candidate of candidates) {
+    const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
+      .from("daily_schedule")
+      .select("puzzle_date")
+      .eq("puzzle_id", candidate.id)
+      .maybeSingle();
+
+    if (scheduleLookupError) {
+      throw new Error(`Failed to check doodle schedule usage: ${scheduleLookupError.message}`);
+    }
+
+    if (alreadyScheduled) {
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("daily_schedule").insert({
+      puzzle_date: date,
+      puzzle_id: candidate.id,
+    });
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        const existing = await getPuzzleByScheduleDate(date);
+        if (existing) {
+          return existing;
+        }
+        continue;
+      }
+      throw new Error(`Failed to auto-schedule doodle puzzle: ${insertError.message}`);
+    }
+
+    await supabase
+      .from("puzzles")
+      .update({ status: "used" })
+      .eq("id", candidate.id)
+      .eq("status", "approved");
+
+    return mapPuzzle(
+      { puzzle_date: date, puzzle_id: candidate.id },
+      candidate,
+    );
   }
 
-  return mapPuzzle(scheduleRow, puzzleRow);
+  return null;
 };
 
 export const getTodayDoodlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  const exact = await getPuzzleByScheduleDate(today);
-  if (exact) {
-    return exact;
+  const scheduled = await getPuzzleByScheduleDate(today);
+  if (scheduled) {
+    return scheduled;
   }
-  return getLatestPuzzleOnOrBefore(today);
+
+  return autoScheduleApprovedPuzzleForDate(today);
 };
 
 export const getDoodlePuzzleByDate = async (date) => {

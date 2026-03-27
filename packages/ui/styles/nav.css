@@ -53,19 +53,21 @@
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--outline, #75777a);
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #75777a;
 }
 
 .dd-nav-label {
   display: none;
   border-radius: 999px;
-  background: var(--surface-container-low, #eff1f4);
+  background: #eff1f4;
   padding: 0.25rem 0.75rem;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--outline, #75777a);
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #75777a;
 }
 
 .dd-nav-right {
@@ -145,7 +147,11 @@
 .nav-menu-item,
 .dd-nav .nav-menu-item {
   margin: 0;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
   padding: 0.72rem 0.82rem;
   border-radius: 12px;
   background: var(--surface-container-low, #eff1f4);
@@ -160,6 +166,24 @@
 .nav-menu-item:hover,
 .dd-nav .nav-menu-item:hover {
   background: var(--dd-menu-hover-bg, #ffe9e9);
+}
+
+.nav-menu-item-brand,
+.dd-nav .nav-menu-item-brand {
+  color: #2f672d;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.nav-menu-item-brand:hover,
+.dd-nav .nav-menu-item-brand:hover {
+  background: #e8f6e4;
+}
+
+.nav-menu-item-icon,
+.dd-nav .nav-menu-item-icon {
+  flex: 0 0 auto;
+  opacity: 0.9;
 }
 
 .nav-menu-footer,

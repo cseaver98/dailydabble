@@ -28,7 +28,10 @@ export default function MoviedleGameClient({
   const [gameState, setGameState] = useState("playing");
   const [message, setMessage] = useState("");
   const [revealedAnswer, setRevealedAnswer] = useState("");
+  const [revealedDetails, setRevealedDetails] = useState(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [isResultOpen, setIsResultOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -41,6 +44,13 @@ export default function MoviedleGameClient({
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
+          if (response.status === 404) {
+            if (active) {
+              setPuzzle(null);
+              setError("");
+            }
+            return;
+          }
           throw new Error(payload.error || "Failed to load Moviedle puzzle");
         }
 
@@ -54,7 +64,9 @@ export default function MoviedleGameClient({
         setGameState("playing");
         setMessage("");
         setRevealedAnswer("");
+        setRevealedDetails(null);
         setIsImageOpen(false);
+        setIsResultOpen(false);
       } catch (loadError) {
         if (!active) {
           return;
@@ -105,6 +117,9 @@ export default function MoviedleGameClient({
       setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
       setRevealedAnswer(typeof parsed.revealedAnswer === "string" ? parsed.revealedAnswer : "");
+      setRevealedDetails(
+        parsed?.revealedDetails && typeof parsed.revealedDetails === "object" ? parsed.revealedDetails : null,
+      );
     } catch {
       window.localStorage.removeItem(progressKey);
     }
@@ -130,6 +145,9 @@ export default function MoviedleGameClient({
       setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
       setRevealedAnswer(typeof parsed.revealedAnswer === "string" ? parsed.revealedAnswer : "");
+      setRevealedDetails(
+        parsed?.revealedDetails && typeof parsed.revealedDetails === "object" ? parsed.revealedDetails : null,
+      );
     } catch {
       window.localStorage.removeItem(completionKey);
     }
@@ -140,9 +158,52 @@ export default function MoviedleGameClient({
       return;
     }
 
-    const payload = { guess, attempts, gameState, message, revealedAnswer };
+    const payload = { guess, attempts, gameState, message, revealedAnswer, revealedDetails };
     window.localStorage.setItem(progressKey, JSON.stringify(payload));
-  }, [attempts, gameState, guess, message, progressKey, puzzle, revealedAnswer]);
+  }, [attempts, gameState, guess, message, progressKey, puzzle, revealedAnswer, revealedDetails]);
+
+  useEffect(() => {
+    let active = true;
+    if (gameState !== "playing") {
+      setSuggestions([]);
+      return () => {};
+    }
+
+    const trimmed = guess.trim();
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      return () => {};
+    }
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/puzzle/suggest?q=${encodeURIComponent(trimmed)}&limit=8`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to load suggestions");
+        }
+        if (!active) {
+          return;
+        }
+        setSuggestions(Array.isArray(payload.suggestions) ? payload.suggestions : []);
+      } catch {
+        if (active) {
+          setSuggestions([]);
+        }
+      }
+    }, 120);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [gameState, guess]);
+
+  useEffect(() => {
+    if (gameState === "won" || gameState === "lost") {
+      setIsResultOpen(true);
+    }
+  }, [gameState]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
   const stills = Array.isArray(puzzle?.stillImages) ? puzzle.stillImages : [];
@@ -190,12 +251,14 @@ export default function MoviedleGameClient({
 
       setAttempts(nextAttempts);
       setGuess("");
+      setSuggestions([]);
 
       if (payload.isCorrect) {
         const title = payload.answerTitle || "the movie";
         const finalMessage = `Correct! It was ${title}.`;
         setGameState("won");
         setRevealedAnswer(title);
+        setRevealedDetails(payload.answerDetails || null);
         setMessage(finalMessage);
 
         if (completionKey && lockDailyCompletion) {
@@ -207,6 +270,7 @@ export default function MoviedleGameClient({
               gameState: "won",
               message: finalMessage,
               revealedAnswer: title,
+              revealedDetails: payload.answerDetails || null,
             }),
           );
         }
@@ -218,6 +282,7 @@ export default function MoviedleGameClient({
         const finalMessage = `Out of guesses. The movie was ${title}.`;
         setGameState("lost");
         setRevealedAnswer(title);
+        setRevealedDetails(payload.answerDetails || null);
         setMessage(finalMessage);
 
         if (completionKey && lockDailyCompletion) {
@@ -229,6 +294,7 @@ export default function MoviedleGameClient({
               gameState: "lost",
               message: finalMessage,
               revealedAnswer: title,
+              revealedDetails: payload.answerDetails || null,
             }),
           );
         }
@@ -248,6 +314,8 @@ export default function MoviedleGameClient({
       setGameState("playing");
       setMessage("");
       setRevealedAnswer("");
+      setRevealedDetails(null);
+      setIsResultOpen(false);
       return;
     }
 
@@ -324,6 +392,23 @@ export default function MoviedleGameClient({
               Guess
             </button>
           </form>
+          {gameState === "playing" && suggestions.length > 0 ? (
+            <div className="suggestions-wrap" role="listbox" aria-label="Movie title suggestions">
+              {suggestions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="suggestion-item"
+                  onClick={() => {
+                    setGuess(item.title);
+                    setSuggestions([]);
+                  }}
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <p className="message" data-kind={gameState}>
             {message || "Guess the movie. Wrong guesses reveal additional stills."}
@@ -373,6 +458,29 @@ export default function MoviedleGameClient({
             </button>
             <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="image-modal-image" />
           </div>
+        </div>
+      ) : null}
+
+      {isResultOpen && gameState !== "playing" ? (
+        <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
+          <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <button className="result-modal-close" type="button" onClick={() => setIsResultOpen(false)}>
+              Close
+            </button>
+            <h2 className="result-modal-title">Results</h2>
+            <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
+            {Number.isFinite(revealedDetails?.releaseYear) ? (
+              <p className="result-modal-copy"><strong>Year:</strong> {revealedDetails.releaseYear}</p>
+            ) : null}
+            {Array.isArray(revealedDetails?.leadActors) && revealedDetails.leadActors.length > 0 ? (
+              <p className="result-modal-copy">
+                <strong>Lead actors:</strong> {revealedDetails.leadActors.join(", ")}
+              </p>
+            ) : null}
+            {revealedDetails?.summary ? (
+              <p className="result-modal-copy">{revealedDetails.summary}</p>
+            ) : null}
+          </section>
         </div>
       ) : null}
     </>

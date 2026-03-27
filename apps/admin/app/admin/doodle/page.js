@@ -27,6 +27,7 @@ export default function DoodleAdminTab() {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [runningPipeline, setRunningPipeline] = useState(false);
+  const [rerunningSlug, setRerunningSlug] = useState("");
   const [pipelineError, setPipelineError] = useState("");
   const [pipelineOutput, setPipelineOutput] = useState("");
   const [pipelineSummary, setPipelineSummary] = useState(null);
@@ -34,11 +35,10 @@ export default function DoodleAdminTab() {
   const [previewItem, setPreviewItem] = useState(null);
   const [previewError, setPreviewError] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [reorderingStages, setReorderingStages] = useState(false);
+  const [reorderMessage, setReorderMessage] = useState("");
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [deletingSlug, setDeletingSlug] = useState("");
-  const [publishingSlug, setPublishingSlug] = useState("");
-  const [publishMessage, setPublishMessage] = useState("");
-  const [publishError, setPublishError] = useState("");
 
   const hydrateOverview = (payload) => {
     if (Array.isArray(payload.items)) {
@@ -167,52 +167,34 @@ export default function DoodleAdminTab() {
     }
   };
 
-  const runPipeline = async () => {
+  const runPipeline = async (slug = "") => {
+    const normalizedSlug = String(slug || "").trim();
+    if (normalizedSlug) {
+      setRerunningSlug(normalizedSlug);
+    }
     setRunningPipeline(true);
     setPipelineError("");
     setPipelineOutput("");
     try {
       const response = await fetch("/api/admin/doodle/pipeline", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(normalizedSlug ? { slug: normalizedSlug } : {}),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(payload.details || payload.error || "Pipeline failed");
       }
 
-      setPipelineOutput(payload.output || "Pipeline finished.");
+      const baseOutput = payload.output || "Pipeline finished.";
+      setPipelineOutput(normalizedSlug ? `Reran stages for ${normalizedSlug}.\n${baseOutput}` : baseOutput);
       setPipelineSummary(payload.summary || null);
       await loadRawFiles();
     } catch (error) {
       setPipelineError(error instanceof Error ? error.message : "Could not run pipeline");
     } finally {
       setRunningPipeline(false);
-    }
-  };
-
-  const publishItem = async (slug) => {
-    setPublishingSlug(slug);
-    setPublishError("");
-    setPublishMessage("");
-
-    try {
-      const response = await fetch("/api/admin/doodle/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setPublishError(payload.error || "Could not publish doodle");
-        return;
-      }
-
-      setPublishMessage(payload.message || `Published ${slug}.`);
-      await loadRawFiles();
-    } catch {
-      setPublishError("Could not publish doodle");
-    } finally {
-      setPublishingSlug("");
+      setRerunningSlug("");
     }
   };
 
@@ -221,6 +203,7 @@ export default function DoodleAdminTab() {
     setPreviewItem(null);
     setPreviewError("");
     setPreviewLoading(true);
+    setReorderMessage("");
     setActiveStageIndex(0);
     try {
       const response = await fetch(`/api/admin/doodle?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
@@ -241,7 +224,53 @@ export default function DoodleAdminTab() {
     setPreviewItem(null);
     setPreviewError("");
     setPreviewLoading(false);
+    setReorderMessage("");
+    setReorderingStages(false);
     setActiveStageIndex(0);
+  };
+
+  const moveStage = async (direction) => {
+    if (!previewSlug || !Array.isArray(processedStages) || processedStages.length < 2) {
+      return;
+    }
+
+    const fromIndex = boundedStageIndex;
+    const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= processedStages.length) {
+      return;
+    }
+
+    setReorderingStages(true);
+    setReorderMessage("");
+    setPreviewError("");
+
+    try {
+      const response = await fetch("/api/admin/doodle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorderStages",
+          slug: previewSlug,
+          fromIndex,
+          toIndex,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not reorder stages");
+      }
+
+      if (payload?.item) {
+        setPreviewItem(payload.item);
+      }
+      setActiveStageIndex(toIndex);
+      setReorderMessage(`Moved stage ${fromIndex + 1} to position ${toIndex + 1}.`);
+      await loadRawFiles();
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Could not reorder stages");
+    } finally {
+      setReorderingStages(false);
+    }
   };
 
   const groupedItems = useMemo(
@@ -257,12 +286,66 @@ export default function DoodleAdminTab() {
     const stages = previewItem?.processed?.stages;
     return Array.isArray(stages) ? stages : [];
   }, [previewItem]);
+  const processedStageParts = useMemo(() => {
+    const stages = previewItem?.processed?.stageParts;
+    return Array.isArray(stages) ? stages : [];
+  }, [previewItem]);
 
-  const stageCount = processedStages.length;
+  const stageCount = (processedStageParts.length > 0 ? processedStageParts : processedStages).length;
   const boundedStageIndex = Math.min(Math.max(activeStageIndex, 0), Math.max(stageCount - 1, 0));
-  const cumulativeStagePaths = useMemo(
-    () => processedStages.slice(0, boundedStageIndex + 1).flat(),
-    [processedStages, boundedStageIndex],
+  const activeStagePaths = useMemo(
+    () => {
+      const source = processedStageParts.length > 0 ? processedStageParts : processedStages;
+      return Array.isArray(source[boundedStageIndex]) ? source[boundedStageIndex] : [];
+    },
+    [processedStageParts, processedStages, boundedStageIndex],
+  );
+  const normalizedStagePaths = useMemo(
+    () =>
+      activeStagePaths
+        .map((segment) => {
+          if (typeof segment === "string") {
+            return {
+              d: segment,
+              to: 1,
+              style: {
+                fill: "none",
+                stroke: "#1f4f80",
+                strokeWidth: "7",
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+                opacity: "1",
+                fillOpacity: "1",
+                strokeOpacity: "1",
+              },
+            };
+          }
+          if (!segment || typeof segment !== "object" || typeof segment.d !== "string") {
+            return null;
+          }
+          const to = Number(segment.to ?? 1);
+          const sourceStyle = segment.style && typeof segment.style === "object" ? segment.style : {};
+          return {
+            d: segment.d,
+            to: Number.isFinite(to) ? Math.max(0.001, Math.min(1, to)) : 1,
+            fillOnly: typeof segment.fillOnly === "boolean" ? segment.fillOnly : undefined,
+            complete: typeof segment.complete === "boolean" ? segment.complete : undefined,
+            fullD: typeof segment.fullD === "string" ? segment.fullD : undefined,
+            style: {
+              fill: typeof sourceStyle.fill === "string" ? sourceStyle.fill : "none",
+              stroke: typeof sourceStyle.stroke === "string" ? sourceStyle.stroke : "#1f4f80",
+              strokeWidth: typeof sourceStyle["stroke-width"] === "string" ? sourceStyle["stroke-width"] : "7",
+              strokeLinecap: typeof sourceStyle["stroke-linecap"] === "string" ? sourceStyle["stroke-linecap"] : "round",
+              strokeLinejoin: typeof sourceStyle["stroke-linejoin"] === "string" ? sourceStyle["stroke-linejoin"] : "round",
+              opacity: typeof sourceStyle.opacity === "string" ? sourceStyle.opacity : "1",
+              fillOpacity: typeof sourceStyle["fill-opacity"] === "string" ? sourceStyle["fill-opacity"] : "1",
+              strokeOpacity: typeof sourceStyle["stroke-opacity"] === "string" ? sourceStyle["stroke-opacity"] : "1",
+              fillRule: typeof sourceStyle["fill-rule"] === "string" ? sourceStyle["fill-rule"] : "evenodd",
+            },
+          };
+        })
+        .filter(Boolean),
+    [activeStagePaths],
   );
   const rawSvgDataUrl = useMemo(() => {
     if (!previewItem?.rawSvg) {
@@ -299,8 +382,6 @@ export default function DoodleAdminTab() {
         {pipelineOutput ? (
           <p className="admin-copy" style={{ color: "#2f672d", marginTop: ".55rem", whiteSpace: "pre-wrap" }}>{pipelineOutput}</p>
         ) : null}
-        {publishError ? <p className="admin-copy" style={{ color: "#8b2d2d", marginTop: ".55rem" }}>{publishError}</p> : null}
-        {publishMessage ? <p className="admin-copy" style={{ color: "#2f672d", marginTop: ".55rem" }}>{publishMessage}</p> : null}
 
         {pipelineSummary ? (
           <div style={{ marginTop: ".75rem", border: "1px solid #d8dce2", borderRadius: 12, padding: ".7rem .8rem", background: "#f8fafc" }}>
@@ -367,18 +448,16 @@ export default function DoodleAdminTab() {
                             <button className="admin-btn" type="button" onClick={() => void openPreview(item.slug)}>
                               Preview
                             </button>
-                            <button
-                              className="admin-btn primary"
-                              type="button"
-                              onClick={() => void publishItem(item.slug)}
-                              disabled={
-                                publishingSlug === item.slug ||
-                                !item.hasProcessed ||
-                                item.status !== "approved"
-                              }
-                            >
-                              {publishingSlug === item.slug ? "Publishing..." : "Publish Next Day"}
-                            </button>
+                            {item.status === "pending" && item.hasProcessed ? (
+                              <button
+                                className="admin-btn"
+                                type="button"
+                                onClick={() => void runPipeline(item.slug)}
+                                disabled={runningPipeline || (Boolean(rerunningSlug) && rerunningSlug !== item.slug)}
+                              >
+                                {rerunningSlug === item.slug ? "Rerunning..." : "Rerun Stages"}
+                              </button>
+                            ) : null}
                             <button
                               className="admin-btn"
                               type="button"
@@ -455,6 +534,7 @@ export default function DoodleAdminTab() {
 
             {previewLoading ? <p className="admin-copy">Loading preview...</p> : null}
             {previewError ? <p className="admin-copy" style={{ color: "#8b2d2d" }}>{previewError}</p> : null}
+            {reorderMessage ? <p className="admin-copy" style={{ color: "#2f672d" }}>{reorderMessage}</p> : null}
 
             {!previewLoading && !previewError && previewItem ? (
               <div style={{ marginTop: ".75rem", display: "grid", gap: ".75rem" }}>
@@ -480,26 +560,93 @@ export default function DoodleAdminTab() {
                   ) : (
                     <>
                       <p style={{ margin: "0 0 .45rem", color: "#5b6168", fontSize: ".84rem" }}>
-                        Stage {boundedStageIndex + 1} of {stageCount} (cumulative preview)
+                        Stage {boundedStageIndex + 1} of {stageCount} (new parts for this stage)
                       </p>
+                      <div style={{ marginBottom: ".45rem", display: "flex", flexWrap: "wrap", gap: ".42rem" }}>
+                        <button
+                          className="admin-btn"
+                          type="button"
+                          onClick={() => void moveStage("left")}
+                          disabled={reorderingStages || boundedStageIndex === 0}
+                        >
+                          {reorderingStages ? "Saving..." : "Move Stage Left"}
+                        </button>
+                        <button
+                          className="admin-btn"
+                          type="button"
+                          onClick={() => void moveStage("right")}
+                          disabled={reorderingStages || boundedStageIndex === stageCount - 1}
+                        >
+                          {reorderingStages ? "Saving..." : "Move Stage Right"}
+                        </button>
+                      </div>
                       <div style={{ border: "1px solid #d8dce2", borderRadius: 12, padding: ".55rem", background: "#fff" }}>
                         <svg viewBox={previewViewBox} style={{ width: "100%", maxHeight: 360, display: "block" }} aria-label="Stage preview">
-                          {cumulativeStagePaths.map((path, index) => (
-                            <path
-                              key={`${boundedStageIndex}-${index}`}
-                              d={path}
-                              fill="none"
-                              stroke="#1f4f80"
-                              strokeWidth="7"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          ))}
+                          {normalizedStagePaths.map((segment, index) => {
+                            const isFillOnly = typeof segment.fillOnly === "boolean"
+                              ? segment.fillOnly
+                              : String(segment.style.stroke || "").toLowerCase() === "none" &&
+                                String(segment.style.fill || "").toLowerCase() !== "none";
+                            const drawFill = isFillOnly ? segment.style.fill : "none";
+                            const drawStroke = isFillOnly ? "none" : segment.style.stroke;
+                            const drawStrokeWidth = isFillOnly ? "1.75" : segment.style.strokeWidth;
+                            const drawStrokeLinecap = isFillOnly ? "round" : segment.style.strokeLinecap;
+                            const drawStrokeLinejoin = isFillOnly ? "round" : segment.style.strokeLinejoin;
+                            const drawFillRule = segment.style.fillRule || "evenodd";
+                            const fullD = segment.fullD || segment.d;
+                            const maskId = `admin-mask-${boundedStageIndex}-${index}`;
+                            if (isFillOnly) {
+                              return (
+                                <g key={`${boundedStageIndex}-${index}`}>
+                                  <defs>
+                                    <mask id={maskId} maskUnits="userSpaceOnUse">
+                                      <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
+                                      <path
+                                        d={segment.d}
+                                        fill="white"
+                                        stroke="white"
+                                        strokeWidth="18"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        fillRule={drawFillRule}
+                                      />
+                                    </mask>
+                                  </defs>
+                                  <path
+                                    d={fullD}
+                                    fill={drawFill}
+                                    fillRule={drawFillRule}
+                                    stroke="none"
+                                    opacity={segment.style.opacity}
+                                    fillOpacity={segment.style.fillOpacity}
+                                    mask={`url(#${maskId})`}
+                                  />
+                                </g>
+                              );
+                            }
+                            return (
+                              <path
+                                key={`${boundedStageIndex}-${index}`}
+                                d={segment.d}
+                                pathLength={1}
+                                fill={drawFill}
+                                fillRule={drawFillRule}
+                                stroke={drawStroke}
+                                strokeWidth={drawStrokeWidth}
+                                strokeLinecap={drawStrokeLinecap}
+                                strokeLinejoin={drawStrokeLinejoin}
+                                opacity={segment.style.opacity}
+                                fillOpacity={segment.style.fillOpacity}
+                                strokeOpacity={isFillOnly ? "0.92" : segment.style.strokeOpacity}
+                                strokeDasharray={`${segment.to} 1`}
+                              />
+                            );
+                          })}
                         </svg>
                       </div>
 
                       <div style={{ marginTop: ".6rem", display: "flex", flexWrap: "wrap", gap: ".42rem" }}>
-                        {processedStages.map((stagePaths, index) => (
+                        {(processedStageParts.length > 0 ? processedStageParts : processedStages).map((stagePaths, index) => (
                           <button
                             key={`stage-${index + 1}`}
                             className="admin-btn"

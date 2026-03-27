@@ -45,6 +45,13 @@ export default function YeardleGameClient({
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
+          if (response.status === 404) {
+            if (active) {
+              setPuzzle(null);
+              setError("");
+            }
+            return;
+          }
           throw new Error(payload.error || "Failed to load Yeardle puzzle");
         }
 

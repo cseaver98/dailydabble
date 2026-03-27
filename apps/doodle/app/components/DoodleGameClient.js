@@ -4,6 +4,38 @@ import { useEffect, useMemo, useState } from "react";
 import MainNav from "./MainNav";
 
 const normalizeGuess = (value) => value.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "");
+const normalizeStageSegment = (segment) => {
+  if (typeof segment === "string") {
+    return { d: segment, to: 1 };
+  }
+
+  if (!segment || typeof segment !== "object" || typeof segment.d !== "string") {
+    return null;
+  }
+
+  const to = Number(segment.to ?? 1);
+  const safeTo = Number.isFinite(to) ? Math.max(0.001, Math.min(1, to)) : 1;
+  const sourceStyle = segment.style && typeof segment.style === "object" ? segment.style : {};
+  const normalizedStyle = {
+    fill: typeof sourceStyle.fill === "string" ? sourceStyle.fill : "none",
+    stroke: typeof sourceStyle.stroke === "string" ? sourceStyle.stroke : "var(--brand-strong)",
+    strokeWidth: typeof sourceStyle["stroke-width"] === "string" ? sourceStyle["stroke-width"] : "8",
+    strokeLinecap: typeof sourceStyle["stroke-linecap"] === "string" ? sourceStyle["stroke-linecap"] : "round",
+    strokeLinejoin: typeof sourceStyle["stroke-linejoin"] === "string" ? sourceStyle["stroke-linejoin"] : "round",
+    opacity: typeof sourceStyle.opacity === "string" ? sourceStyle.opacity : "1",
+    fillOpacity: typeof sourceStyle["fill-opacity"] === "string" ? sourceStyle["fill-opacity"] : "1",
+    strokeOpacity: typeof sourceStyle["stroke-opacity"] === "string" ? sourceStyle["stroke-opacity"] : "1",
+    fillRule: typeof sourceStyle["fill-rule"] === "string" ? sourceStyle["fill-rule"] : "evenodd",
+  };
+  return {
+    d: segment.d,
+    to: safeTo,
+    style: normalizedStyle,
+    fillOnly: typeof segment.fillOnly === "boolean" ? segment.fillOnly : undefined,
+    complete: typeof segment.complete === "boolean" ? segment.complete : undefined,
+    fullD: typeof segment.fullD === "string" ? segment.fullD : undefined,
+  };
+};
 
 export default function DoodleGameClient({
   apiUrl,
@@ -32,6 +64,13 @@ export default function DoodleGameClient({
         const payload = await response.json().catch(() => ({}));
 
         if (!response.ok) {
+          if (response.status === 404) {
+            if (active) {
+              setPuzzle(null);
+              setError("");
+            }
+            return;
+          }
           throw new Error(payload.error || "Failed to load doodle puzzle");
         }
 
@@ -183,6 +222,10 @@ export default function DoodleGameClient({
     setMessage("");
   };
 
+  const activeStageSegments = Array.isArray(puzzle.stages?.[revealedStages - 1])
+    ? puzzle.stages[revealedStages - 1]
+    : [];
+
   return (
     <>
       <MainNav label={navLabel} hideToday={hideToday} />
@@ -197,18 +240,73 @@ export default function DoodleGameClient({
 
           <div className="doodle-stage-wrap">
             <svg className="doodle-canvas" viewBox={puzzle.viewBox || "0 0 340 340"} role="img" aria-label="Doodle clue drawing">
-              {puzzle.stages.slice(0, revealedStages).map((stage, stageIndex) => (
-                <g key={`stage-${stageIndex}`}>
-                  {stage.map((path, pathIndex) => (
+              {activeStageSegments
+                .map((segment, pathIndex) => ({ segment: normalizeStageSegment(segment), pathIndex }))
+                .filter((entry) => Boolean(entry.segment))
+                .map(({ segment, pathIndex }) => {
+                  const isFillOnly = typeof segment.fillOnly === "boolean"
+                    ? segment.fillOnly
+                    : String(segment.style.stroke || "").toLowerCase() === "none" &&
+                      String(segment.style.fill || "").toLowerCase() !== "none";
+                  const drawFill = isFillOnly ? segment.style.fill : "none";
+                  const drawStroke = isFillOnly ? "none" : segment.style.stroke;
+                  const drawStrokeWidth = isFillOnly ? "1.75" : segment.style.strokeWidth;
+                  const drawStrokeLinecap = isFillOnly ? "round" : segment.style.strokeLinecap;
+                  const drawStrokeLinejoin = isFillOnly ? "round" : segment.style.strokeLinejoin;
+                  const drawFillRule = segment.style.fillRule || "evenodd";
+                  const fullD = segment.fullD || segment.d;
+                  const maskId = `doodle-mask-${revealedStages}-${pathIndex}`;
+                  if (isFillOnly) {
+                    return (
+                      <g key={`fill-${revealedStages}-${pathIndex}`}>
+                        <defs>
+                          <mask id={maskId} maskUnits="userSpaceOnUse">
+                            <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
+                            <path
+                              d={segment.d}
+                              fill="white"
+                              stroke="white"
+                              strokeWidth="18"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fillRule={drawFillRule}
+                            />
+                          </mask>
+                        </defs>
+                        <path
+                          d={fullD}
+                          className="doodle-path"
+                          fill={drawFill}
+                          fillRule={drawFillRule}
+                          stroke="none"
+                          opacity={segment.style.opacity}
+                          fillOpacity={segment.style.fillOpacity}
+                          mask={`url(#${maskId})`}
+                          style={{ animationDelay: `${pathIndex * 55}ms` }}
+                        />
+                      </g>
+                    );
+                  }
+                  return (
                     <path
-                      key={`path-${stageIndex}-${pathIndex}`}
-                      d={path}
+                      key={`path-${revealedStages}-${pathIndex}`}
+                      d={segment.d}
                       className="doodle-path"
-                      style={{ animationDelay: `${stageIndex * 120 + pathIndex * 55}ms` }}
+                      fill={drawFill}
+                      fillRule={drawFillRule}
+                      stroke={drawStroke}
+                      strokeWidth={drawStrokeWidth}
+                      strokeLinecap={drawStrokeLinecap}
+                      strokeLinejoin={drawStrokeLinejoin}
+                      opacity={segment.style.opacity}
+                      fillOpacity={segment.style.fillOpacity}
+                      strokeOpacity={isFillOnly ? "0.92" : segment.style.strokeOpacity}
+                      pathLength={1}
+                      strokeDasharray={`${segment.to} 1`}
+                      style={{ animationDelay: `${pathIndex * 55}ms` }}
                     />
-                  ))}
-                </g>
-              ))}
+                  );
+                })}
             </svg>
           </div>
 

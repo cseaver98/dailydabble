@@ -22,6 +22,29 @@ type StorageSvgItem = {
   updatedAt: string | null;
 };
 
+type ProcessedStageSegment =
+  | string
+  | {
+      id?: string;
+      d: string;
+      to?: number;
+      style?: Record<string, string>;
+      fillOnly?: boolean;
+      complete?: boolean;
+      fullD?: string;
+    };
+
+type ProcessedDoodleRecord = {
+  slug?: string;
+  answer?: string;
+  aliases?: string[];
+  viewBox?: string;
+  stageCount?: number;
+  pathCount?: number;
+  stages?: ProcessedStageSegment[][];
+  stageParts?: ProcessedStageSegment[][];
+};
+
 const DOODLE_STORAGE_BUCKET = process.env.DOODLE_STORAGE_BUCKET || "doodle-sources";
 const DOODLE_STORAGE_PREFIX = (process.env.DOODLE_STORAGE_PREFIX || "raw").replace(/^\/+|\/+$/g, "");
 
@@ -101,6 +124,80 @@ const readManifestSlugs = (): Set<string> => {
   return new Set(items.map((item) => (typeof item.slug === "string" ? item.slug : "")).filter(Boolean));
 };
 
+const reorderArray = <T>(items: T[], fromIndex: number, toIndex: number): T[] => {
+  const copy = [...items];
+  const [moved] = copy.splice(fromIndex, 1);
+  copy.splice(toIndex, 0, moved);
+  return copy;
+};
+
+const buildCumulativeStagesFromParts = (
+  stageParts: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>,
+) => {
+  const state = new Map<string, { id?: string; d: string; [key: string]: unknown }>();
+  return stageParts.map((stage) => {
+    for (const segment of stage) {
+      if (typeof segment === "string") {
+        state.set(segment, { d: segment });
+        continue;
+      }
+      const key = segment.id || segment.d;
+      const previous = state.get(key) ?? null;
+      state.set(key, {
+        ...segment,
+        d: previous ? `${String(previous.d || "")} ${String(segment.d || "")}`.trim() : String(segment.d || ""),
+      });
+    }
+    return Array.from(state.values());
+  });
+};
+
+const updateManifestStagesForSlug = (slug: string, nextStages: unknown): void => {
+  const manifestPath = resolve(getProcessedDir(), "puzzles.generated.json");
+  const parsed = readJsonFile<{
+    generatedAt?: string;
+    strategy?: string;
+    stageCount?: number;
+    items?: Array<Record<string, unknown> & { slug?: string }>;
+  }>(manifestPath);
+
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return;
+  }
+
+  let changed = false;
+  const nextItems = parsed.items.map((item) => {
+    if (item?.slug !== slug) {
+      return item;
+    }
+    changed = true;
+    return {
+      ...item,
+      stages: nextStages,
+      stageCount: Array.isArray(nextStages) ? nextStages.length : item.stageCount,
+    };
+  });
+
+  if (!changed) {
+    return;
+  }
+
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        generatedAt: parsed.generatedAt ?? new Date().toISOString(),
+        strategy: parsed.strategy ?? "balanced",
+        stageCount: parsed.stageCount ?? (Array.isArray(nextStages) ? nextStages.length : 5),
+        items: nextItems,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+};
+
 const readProcessedSummary = (
   slug: string,
 ): { stageCount: number; pathCount: number; viewBox: string | null } | null => {
@@ -115,6 +212,57 @@ const readProcessedSummary = (
     pathCount: Number.isFinite(parsed.pathCount) ? Number(parsed.pathCount) : 0,
     viewBox: typeof parsed.viewBox === "string" ? parsed.viewBox : null,
   };
+};
+
+const readProcessedRecord = (slug: string): ProcessedDoodleRecord | null => {
+  const processedPath = resolve(getProcessedDir(), `${slug}.json`);
+  const parsed = readJsonFile<ProcessedDoodleRecord>(processedPath);
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  return parsed;
+};
+
+const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<void> => {
+  const supabase = getDoodleSupabaseAdmin();
+
+  if (status === "pending") {
+    await supabase.from("puzzles").update({ status }).eq("slug", slug);
+    return;
+  }
+
+  const processed = readProcessedRecord(slug);
+  if (
+    !processed ||
+    typeof processed.answer !== "string" ||
+    typeof processed.viewBox !== "string" ||
+    !Number.isFinite(processed.stageCount) ||
+    !Number.isFinite(processed.pathCount) ||
+    !Array.isArray(processed.stages)
+  ) {
+    throw new Error("Processed puzzle is required before approving. Run staging pipeline first.");
+  }
+
+  const aliases = Array.isArray(processed.aliases)
+    ? processed.aliases.filter((alias): alias is string => typeof alias === "string" && alias.trim().length > 0)
+    : [];
+
+  const upsertPayload = {
+    slug,
+    answer: processed.answer.trim().toLowerCase(),
+    aliases,
+    view_box: processed.viewBox,
+    stage_count: Number(processed.stageCount),
+    path_count: Number(processed.pathCount),
+    stages: processed.stages,
+    status,
+    source_filename: `${slug}.svg`,
+  };
+
+  const { error } = await supabase.from("puzzles").upsert(upsertPayload, { onConflict: "slug" });
+  if (error) {
+    throw new Error(`Could not sync puzzle status to Supabase: ${error.message}`);
+  }
 };
 
 const ensureStorageBucket = async () => {
@@ -292,7 +440,8 @@ export async function GET(request: Request) {
           stageCount?: number;
           pathCount?: number;
           viewBox?: string;
-          stages?: string[][];
+          stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
+          stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
         }>(processedPath),
       };
 
@@ -351,10 +500,82 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const payload = (await request.json()) as { slug?: string; status?: string };
+    const payload = (await request.json()) as {
+      slug?: string;
+      status?: string;
+      action?: string;
+      fromIndex?: number;
+      toIndex?: number;
+    };
     const normalizedSlug = normalizeSlug(payload.slug ?? "");
     if (!normalizedSlug) {
       return NextResponse.json({ error: "Missing slug" }, { status: 400 });
+    }
+
+    if (payload.action === "reorderStages") {
+      const fromIndex = Number(payload.fromIndex);
+      const toIndex = Number(payload.toIndex);
+      if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) {
+        return NextResponse.json({ error: "fromIndex and toIndex must be integers" }, { status: 400 });
+      }
+
+      const processedPath = resolve(getProcessedDir(), `${normalizedSlug}.json`);
+      const processed = readJsonFile<{
+        slug?: string;
+        answer?: string;
+        aliases?: string[];
+        viewBox?: string;
+        stageCount?: number;
+        pathCount?: number;
+        strategy?: string;
+        stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
+        stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
+      }>(processedPath);
+
+      if (!processed || !Array.isArray(processed.stages)) {
+        return NextResponse.json({ error: "Processed doodle stages not found. Run pipeline first." }, { status: 404 });
+      }
+
+      const reorderTarget = Array.isArray(processed.stageParts) && processed.stageParts.length > 0
+        ? processed.stageParts
+        : processed.stages;
+      const stageCount = reorderTarget.length;
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= stageCount ||
+        toIndex >= stageCount
+      ) {
+        return NextResponse.json({ error: "Stage index out of bounds" }, { status: 400 });
+      }
+
+      if (fromIndex !== toIndex) {
+        processed.stageParts = reorderArray(reorderTarget, fromIndex, toIndex);
+        processed.stages = buildCumulativeStagesFromParts(processed.stageParts);
+      } else if (!Array.isArray(processed.stageParts) || processed.stageParts.length === 0) {
+        processed.stageParts = processed.stages;
+      }
+
+      processed.stageCount = processed.stageParts?.length ?? processed.stages.length;
+      writeFileSync(processedPath, `${JSON.stringify(processed, null, 2)}\n`, "utf8");
+      updateManifestStagesForSlug(normalizedSlug, processed.stages);
+
+      let rawSvg = await downloadStorageSvg(normalizedSlug);
+      if (!rawSvg) {
+        const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
+        if (existsSync(localPath)) {
+          rawSvg = readFileSync(localPath, "utf8");
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        item: {
+          slug: normalizedSlug,
+          rawSvg: rawSvg ?? "",
+          processed,
+        },
+      });
     }
 
     if (!isValidStatus(payload.status)) {
@@ -366,6 +587,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Doodle file not found" }, { status: 404 });
     }
 
+    await syncPuzzleStatus(normalizedSlug, payload.status);
     const state = loadReviewState();
     state[normalizedSlug] = {
       status: payload.status,

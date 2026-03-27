@@ -82,10 +82,14 @@ const syncStorageRawToLocal = async (doodleDir: string): Promise<number> => {
   return svgNames.length;
 };
 
-const runDoodlePipeline = async (): Promise<{ stdout: string; stderr: string; doodleDir: string }> => {
+const runDoodlePipeline = async (slug?: string): Promise<{ stdout: string; stderr: string; doodleDir: string }> => {
   const repoRoot = findRepoRoot();
   const doodleDir = resolve(repoRoot, "apps/doodle");
-  const { stdout, stderr } = await execAsync("node scripts/build-doodle-pipeline.mjs", {
+  const seed = Date.now();
+  const command = slug
+    ? `node scripts/build-doodle-pipeline.mjs --slug=${slug} --seed=${seed}`
+    : "node scripts/build-doodle-pipeline.mjs";
+  const { stdout, stderr } = await execAsync(command, {
     cwd: doodleDir,
     env: process.env,
     maxBuffer: 1024 * 1024,
@@ -113,19 +117,24 @@ const readManifestSummary = (doodleDir: string): { itemCount: number; slugs: str
   };
 };
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const payload = (await request.json().catch(() => ({}))) as { slug?: string };
+    const normalizedSlug = typeof payload.slug === "string"
+      ? payload.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "")
+      : "";
     const repoRoot = findRepoRoot();
     const doodleDir = resolve(repoRoot, "apps/doodle");
     const syncedCount = await syncStorageRawToLocal(doodleDir);
 
-    const { stdout, stderr } = await runDoodlePipeline();
+    const { stdout, stderr } = await runDoodlePipeline(normalizedSlug || undefined);
     const summary = readManifestSummary(doodleDir);
     return NextResponse.json({
       ok: true,
       output: stdout || "Pipeline finished.",
       warnings: stderr || null,
       syncedFromStorage: syncedCount,
+      rerunSlug: normalizedSlug || null,
       summary,
     });
   } catch (error) {

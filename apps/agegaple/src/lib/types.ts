@@ -1,4 +1,4 @@
-export type RelationshipType = "spouse" | "partner";
+export type RelationshipType = "spouse" | "couple" | "former_spouse" | "former_couple";
 
 export type CandidateStatus = "pending_review" | "approved" | "rejected";
 

@@ -47,6 +47,13 @@ const mapPuzzle = (scheduleRow, movieRow) => {
   };
 };
 
+const mapAnswerDetails = (movieRow) => ({
+  title: movieRow.title || null,
+  releaseYear: Number.isFinite(movieRow.release_year) ? Number(movieRow.release_year) : null,
+  summary: movieRow.summary || null,
+  leadActors: Array.isArray(movieRow.lead_actors) ? movieRow.lead_actors.filter(Boolean).slice(0, 8) : [],
+});
+
 const getPuzzleByScheduleDate = async (date) => {
   const supabase = getMoviedleSupabaseAdmin();
 
@@ -81,49 +88,9 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, movieRow);
 };
 
-const getLatestPuzzleOnOrBefore = async (date) => {
-  const supabase = getMoviedleSupabaseAdmin();
-
-  const { data: scheduleRow, error: scheduleError } = await supabase
-    .from("daily_schedule")
-    .select("puzzle_date,movie_id")
-    .lte("puzzle_date", date)
-    .order("puzzle_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (scheduleError) {
-    throw new Error(`Failed to load fallback moviedle schedule: ${scheduleError.message}`);
-  }
-
-  if (!scheduleRow) {
-    return null;
-  }
-
-  const { data: movieRow, error: movieError } = await supabase
-    .from("movies")
-    .select("id,title,still_urls")
-    .eq("id", scheduleRow.movie_id)
-    .maybeSingle();
-
-  if (movieError) {
-    throw new Error(`Failed to load fallback moviedle movie: ${movieError.message}`);
-  }
-
-  if (!movieRow) {
-    return null;
-  }
-
-  return mapPuzzle(scheduleRow, movieRow);
-};
-
 export const getTodayMoviedlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  const exact = await getPuzzleByScheduleDate(today);
-  if (exact) {
-    return exact;
-  }
-  return getLatestPuzzleOnOrBefore(today);
+  return getPuzzleByScheduleDate(today);
 };
 
 export const getMoviedlePuzzleByDate = async (date) => {
@@ -157,7 +124,7 @@ export const submitMovieGuess = async (puzzleId, guessTitle, guessCount) => {
 
   const { data: movieRow, error } = await supabase
     .from("movies")
-    .select("id,title,title_normalized,aliases_normalized")
+    .select("id,title,title_normalized,aliases_normalized,release_year,summary,lead_actors")
     .eq("id", puzzleId)
     .maybeSingle();
 
@@ -178,10 +145,11 @@ export const submitMovieGuess = async (puzzleId, guessTitle, guessCount) => {
     puzzleId: movieRow.id,
     isCorrect,
     answerTitle: shouldReveal ? movieRow.title : null,
+    answerDetails: shouldReveal ? mapAnswerDetails(movieRow) : null,
   };
 };
 
-export const createMoviedlePuzzle = async ({ title, aliases, puzzleDate, stillUrls }) => {
+export const createMoviedlePuzzle = async ({ title, aliases, puzzleDate, stillUrls, releaseYear, summary, leadActors }) => {
   const supabase = getMoviedleSupabaseAdmin();
 
   const normalizedTitle = normalizeTitle(title);
@@ -212,6 +180,18 @@ export const createMoviedlePuzzle = async ({ title, aliases, puzzleDate, stillUr
     throw new Error("puzzleDate must be YYYY-MM-DD");
   }
 
+  const parsedReleaseYear =
+    Number.isFinite(Number(releaseYear)) && Number(releaseYear) >= 1888 && Number(releaseYear) <= 2100
+      ? Math.floor(Number(releaseYear))
+      : null;
+  const cleanSummary = typeof summary === "string" ? summary.trim().slice(0, 4000) : null;
+  const cleanLeadActors = Array.isArray(leadActors)
+    ? leadActors
+        .map((actor) => String(actor || "").trim())
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
+
   const { data: movieRow, error: movieError } = await supabase
     .from("movies")
     .insert({
@@ -220,6 +200,9 @@ export const createMoviedlePuzzle = async ({ title, aliases, puzzleDate, stillUr
       aliases: aliasList,
       aliases_normalized: normalizedAliases,
       still_urls: cleanStillUrls,
+      release_year: parsedReleaseYear,
+      summary: cleanSummary || null,
+      lead_actors: cleanLeadActors,
     })
     .select("id")
     .maybeSingle();
@@ -241,4 +224,29 @@ export const createMoviedlePuzzle = async ({ title, aliases, puzzleDate, stillUr
   }
 
   return { movieId: movieRow.id, puzzleDate };
+};
+
+export const searchMoviedleTitles = async (query, limit = 8) => {
+  const supabase = getMoviedleSupabaseAdmin();
+  const normalized = normalizeTitle(String(query || ""));
+  if (!normalized || normalized.length < 2) {
+    return [];
+  }
+
+  const max = Number.isFinite(Number(limit)) ? Math.min(Math.max(1, Number(limit)), 12) : 8;
+  const { data, error } = await supabase
+    .from("movies")
+    .select("id,title")
+    .ilike("title_normalized", `%${normalized}%`)
+    .order("title", { ascending: true })
+    .limit(max);
+
+  if (error) {
+    throw new Error(`Failed to search movie titles: ${error.message}`);
+  }
+
+  return (Array.isArray(data) ? data : []).map((row) => ({
+    id: row.id,
+    title: row.title,
+  }));
 };

@@ -58,8 +58,15 @@ type PuzzleRow = {
   puzzle_candidates: {
     couple_id: string;
     computed_age_gap_years: number;
+    editorial_relationship_note: string | null;
+    editorial_person_a_bio: string | null;
+    editorial_person_a_bio_url: string | null;
+    editorial_person_b_bio: string | null;
+    editorial_person_b_bio_url: string | null;
+    editorial_couple_context: string | null;
+    editorial_couple_context_url: string | null;
     couples: {
-      relationship_type: "spouse" | "partner";
+      relationship_type: "spouse" | "couple" | "former_spouse" | "former_couple";
       person_a: { name: string; birth_date: string | null; wikipedia_title: string | null };
       person_b: { name: string; birth_date: string | null; wikipedia_title: string | null };
     };
@@ -141,6 +148,13 @@ const basePuzzleSelect = `
   puzzle_candidates!inner(
     couple_id,
     computed_age_gap_years,
+    editorial_relationship_note,
+    editorial_person_a_bio,
+    editorial_person_a_bio_url,
+    editorial_person_b_bio,
+    editorial_person_b_bio_url,
+    editorial_couple_context,
+    editorial_couple_context_url,
     couples!inner(
       relationship_type,
       person_a:people!couples_person_a_id_fkey(name,birth_date,wikipedia_title),
@@ -225,23 +239,6 @@ const assignPuzzleForDateFromQueue = async (date: string): Promise<boolean> => {
   throw new Error(`Failed to assign queued puzzle for ${date}: ${error.message}`);
 };
 
-const getFallbackPuzzle = async (date: string): Promise<PuzzleRow | null> => {
-  const supabase = getSupabaseAdmin();
-  const fallback = await supabase
-    .from("daily_puzzles")
-    .select(basePuzzleSelect)
-    .lte("puzzle_date", date)
-    .order("puzzle_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (fallback.error) {
-    throw new Error(`Failed to fetch fallback puzzle: ${fallback.error.message}`);
-  }
-
-  return fallback.data ? (fallback.data as unknown as PuzzleRow) : null;
-};
-
 export const purgeExpiredRejectedCandidates = async (): Promise<number> => {
   const supabase = getSupabaseAdmin();
   const cutoffIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -306,8 +303,7 @@ export const getTodayPuzzle = async (): Promise<PuzzlePublic | null> => {
     }
   }
 
-  const fallback = await getFallbackPuzzle(today);
-  return fallback ? getPublicPuzzleWithGallery(fallback) : null;
+  return null;
 };
 
 export const getPuzzleByDate = async (date: string): Promise<PuzzlePublic | null> => {
@@ -378,8 +374,16 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
     throw new Error(`Failed to fetch couple gallery images: ${error.message}`);
   }
 
-  const relationshipLabel =
-    row.puzzle_candidates.couples.relationship_type === "spouse" ? "married" : "partners";
+  const relationshipLabelByType: Record<
+    "spouse" | "couple" | "former_spouse" | "former_couple",
+    string
+  > = {
+    spouse: "married",
+    couple: "a couple",
+    former_spouse: "no longer married",
+    former_couple: "no longer a couple",
+  };
+  const relationshipLabel = relationshipLabelByType[row.puzzle_candidates.couples.relationship_type];
   const [personASummary, personBSummary, coupleSummary] = await Promise.all([
     getWikipediaSummary(
       row.puzzle_candidates.couples.person_a.wikipedia_title,
@@ -395,14 +399,25 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
     ),
   ]);
 
+  const editorialRelationshipNote =
+    row.puzzle_candidates.editorial_relationship_note?.trim() ||
+    `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
+  const editorialPersonABio = row.puzzle_candidates.editorial_person_a_bio?.trim() || personASummary.summary;
+  const editorialPersonABioUrl = row.puzzle_candidates.editorial_person_a_bio_url?.trim() || personASummary.pageUrl;
+  const editorialPersonBBio = row.puzzle_candidates.editorial_person_b_bio?.trim() || personBSummary.summary;
+  const editorialPersonBBioUrl = row.puzzle_candidates.editorial_person_b_bio_url?.trim() || personBSummary.pageUrl;
+  const editorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || coupleSummary.summary;
+  const editorialCoupleContextUrl =
+    row.puzzle_candidates.editorial_couple_context_url?.trim() || coupleSummary.pageUrl;
+
   return buildPublicPuzzle(row, (galleryData as CoupleGalleryImageRow[]) ?? [], {
-    relationshipNote: `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`,
-    personABio: personASummary.summary,
-    personABioUrl: personASummary.pageUrl,
-    personBBio: personBSummary.summary,
-    personBBioUrl: personBSummary.pageUrl,
-    coupleContext: coupleSummary.summary,
-    coupleContextUrl: coupleSummary.pageUrl,
+    relationshipNote: editorialRelationshipNote,
+    personABio: editorialPersonABio,
+    personABioUrl: editorialPersonABioUrl,
+    personBBio: editorialPersonBBio,
+    personBBioUrl: editorialPersonBBioUrl,
+    coupleContext: editorialCoupleContext,
+    coupleContextUrl: editorialCoupleContextUrl,
   });
 };
 
@@ -462,7 +477,7 @@ type CandidateRow = {
   status: CandidateStatus;
   created_at: string;
   couples: {
-    relationship_type: "spouse" | "partner";
+    relationship_type: "spouse" | "couple" | "former_spouse" | "former_couple";
     person_a: { name: string; birth_date: string | null };
     person_b: { name: string; birth_date: string | null };
   };

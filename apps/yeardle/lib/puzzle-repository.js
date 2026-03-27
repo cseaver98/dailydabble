@@ -81,51 +81,9 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, eventRow);
 };
 
-const getLatestPuzzleOnOrBefore = async (date) => {
-  const supabase = getYeardleSupabaseAdmin();
-
-  const { data: scheduleRow, error: scheduleError } = await supabase
-    .from("daily_schedule")
-    .select("puzzle_date,event_id")
-    .lte("puzzle_date", date)
-    .order("puzzle_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (scheduleError) {
-    throw new Error(`Failed to load fallback yeardle schedule: ${scheduleError.message}`);
-  }
-
-  if (!scheduleRow) {
-    return null;
-  }
-
-  const { data: eventRow, error: eventError } = await supabase
-    .from("events")
-    .select(
-      "id,title,event_year,image_url,image_alt,wikipedia_url,hint_category,hint_region,hint_era,hint_person,hint_description",
-    )
-    .eq("id", scheduleRow.event_id)
-    .maybeSingle();
-
-  if (eventError) {
-    throw new Error(`Failed to load fallback yeardle event: ${eventError.message}`);
-  }
-
-  if (!eventRow) {
-    return null;
-  }
-
-  return mapPuzzle(scheduleRow, eventRow);
-};
-
 export const getTodayYeardlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  const exact = await getPuzzleByScheduleDate(today);
-  if (exact) {
-    return exact;
-  }
-  return getLatestPuzzleOnOrBefore(today);
+  return getPuzzleByScheduleDate(today);
 };
 
 export const getYeardlePuzzleByDate = async (date) => {

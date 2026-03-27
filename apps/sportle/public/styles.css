@@ -7,9 +7,9 @@
   --muted: #4d5b70;
   --outline-soft: rgba(137, 154, 177, 0.32);
 
-  --brand: #2f76d2;
-  --brand-strong: #1f4f99;
-  --brand-soft: #dceafe;
+  --brand: #d97b1e;
+  --brand-strong: #a45508;
+  --brand-soft: #ffe8d0;
 
   --surface-container-low: var(--surface-low);
   --surface-container-high: var(--surface-high);
@@ -19,8 +19,8 @@
   --primary: var(--brand);
   --primary-dim: var(--brand-strong);
   --dd-menu-accent: var(--brand-strong);
-  --dd-menu-hover-bg: #e7f0ff;
-  --dd-menu-focus-ring: rgba(47, 118, 210, 0.35);
+  --dd-menu-hover-bg: #fff1e0;
+  --dd-menu-focus-ring: rgba(217, 123, 30, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -35,8 +35,8 @@ body {
   font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 8% 4%, rgba(47, 118, 210, 0.16), transparent 30%),
-    radial-gradient(circle at 92% 10%, rgba(31, 79, 153, 0.14), transparent 24%),
+    radial-gradient(circle at 8% 4%, rgba(217, 123, 30, 0.16), transparent 30%),
+    radial-gradient(circle at 92% 10%, rgba(164, 85, 8, 0.14), transparent 24%),
     var(--background);
 }
 
@@ -95,7 +95,7 @@ body {
 }
 
 .guess-input:focus-visible {
-  outline: 3px solid rgba(47, 118, 210, 0.28);
+  outline: 3px solid rgba(217, 123, 30, 0.28);
   outline-offset: 1px;
 }
 
@@ -109,7 +109,7 @@ body {
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 10px 20px rgba(31, 79, 153, 0.25);
+  box-shadow: 0 10px 20px rgba(164, 85, 8, 0.25);
   text-decoration: none;
   display: inline-flex;
   align-items: center;

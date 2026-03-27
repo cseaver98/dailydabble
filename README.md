@@ -6,7 +6,6 @@ This repository now contains all Dailydabble apps in one workspace so UI and sha
 
 - `apps/hub` - splash page and game status hub
 - `apps/agegaple` - Agegaple game app
-- `apps/yelple` - Yelple game app
 - `supabase` - shared Supabase config and migrations
 
 ## Workspace Commands
@@ -22,7 +21,6 @@ Run apps:
 ```bash
 npm run dev:hub
 npm run dev:agegaple
-npm run dev:yelple
 ```
 
 Quality/build:
@@ -36,4 +34,3 @@ npm run build
 
 - Hub details: `apps/hub/README.md`
 - Agegaple details: `apps/agegaple/README.md`
-- Yelple details: `apps/yelple/README.md`

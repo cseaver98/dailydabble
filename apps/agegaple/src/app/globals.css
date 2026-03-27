@@ -37,3 +37,14 @@ body {
 .font-headline {
   font-family: var(--font-plus-jakarta), sans-serif;
 }
+
+.no-native-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.no-native-spinner::-webkit-outer-spin-button,
+.no-native-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

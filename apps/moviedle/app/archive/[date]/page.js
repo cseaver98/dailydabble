@@ -8,7 +8,7 @@ export default async function ArchiveDatePage({ params }) {
   return (
     <MoviedleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel="Moviedle archive"
+      navLabel={`Archive game: ${date || "loading..."}`}
       archiveHref="/archive"
       storagePrefix={`moviedle:v1:archive:${date}`}
       completionPrefix="moviedle:v1:archive-completed"

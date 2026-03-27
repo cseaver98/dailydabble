@@ -7,9 +7,9 @@
   --muted: #595c5e;
   --outline-soft: rgba(171, 173, 176, 0.28);
 
-  --brand: #d97b1e;
-  --brand-strong: #a45508;
-  --brand-soft: #ffe8d0;
+  --brand: #e03a3e;
+  --brand-strong: #ba1a1a;
+  --brand-soft: #ffdad6;
 
   --surface-container-low: var(--surface-low);
   --surface-container-high: var(--surface-high);
@@ -19,8 +19,8 @@
   --primary: var(--brand);
   --primary-dim: var(--brand-strong);
   --dd-menu-accent: var(--brand-strong);
-  --dd-menu-hover-bg: #fff1e0;
-  --dd-menu-focus-ring: rgba(217, 123, 30, 0.35);
+  --dd-menu-hover-bg: #ffe9e9;
+  --dd-menu-focus-ring: rgba(224, 58, 62, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -30,8 +30,8 @@ body {
   font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 10% 4%, rgba(217, 123, 30, 0.18), transparent 30%),
-    radial-gradient(circle at 92% 8%, rgba(164, 85, 8, 0.12), transparent 22%),
+    radial-gradient(circle at 10% 4%, rgba(224, 58, 62, 0.1), transparent 28%),
+    radial-gradient(circle at 90% 15%, rgba(224, 58, 62, 0.08), transparent 24%),
     var(--background);
 }
 
@@ -147,7 +147,7 @@ body {
 }
 
 .guess-input:focus-visible {
-  outline: 3px solid rgba(217, 123, 30, 0.3);
+  outline: 3px solid rgba(224, 58, 62, 0.3);
   outline-offset: 1px;
 }
 
@@ -161,7 +161,7 @@ body {
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 10px 20px rgba(164, 85, 8, 0.28);
+  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -179,7 +179,7 @@ body {
 .admin-btn-like {
   background: #fff;
   color: var(--brand-strong);
-  border: 1px solid #f4d0ab;
+  border: 1px solid #f2c0bd;
   box-shadow: none;
 }
 
@@ -187,7 +187,7 @@ body {
   border: 0;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
   color: #fff;
-  box-shadow: 0 10px 20px rgba(164, 85, 8, 0.28);
+  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
 }
 
 .page-title {

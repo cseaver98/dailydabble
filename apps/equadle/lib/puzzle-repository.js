@@ -65,49 +65,9 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, puzzleRow);
 };
 
-const getLatestPuzzleOnOrBefore = async (date) => {
-  const supabase = getEquadleSupabaseAdmin();
-
-  const { data: scheduleRow, error: scheduleError } = await supabase
-    .from("daily_schedule")
-    .select("puzzle_date,puzzle_id")
-    .lte("puzzle_date", date)
-    .order("puzzle_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (scheduleError) {
-    throw new Error(`Failed to load fallback Equadle schedule: ${scheduleError.message}`);
-  }
-
-  if (!scheduleRow) {
-    return null;
-  }
-
-  const { data: puzzleRow, error: puzzleError } = await supabase
-    .from("puzzles")
-    .select("id,equation,equation_length")
-    .eq("id", scheduleRow.puzzle_id)
-    .maybeSingle();
-
-  if (puzzleError) {
-    throw new Error(`Failed to load fallback Equadle puzzle: ${puzzleError.message}`);
-  }
-
-  if (!puzzleRow) {
-    return null;
-  }
-
-  return mapPuzzle(scheduleRow, puzzleRow);
-};
-
 export const getTodayEquadlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  const exact = await getPuzzleByScheduleDate(today);
-  if (exact) {
-    return exact;
-  }
-  return getLatestPuzzleOnOrBefore(today);
+  return getPuzzleByScheduleDate(today);
 };
 
 export const getEquadlePuzzleByDate = async (date) => {

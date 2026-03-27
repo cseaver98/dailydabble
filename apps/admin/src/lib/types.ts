@@ -1,4 +1,4 @@
-export type RelationshipType = "spouse" | "partner";
+export type RelationshipType = "spouse" | "couple" | "former_spouse" | "former_couple";
 
 export type CandidateStatus = "pending_review" | "approved" | "rejected";
 
@@ -54,6 +54,47 @@ export type ReviewCandidate = {
   lastUsedPuzzleDate: string | null;
   isUsedToday: boolean;
   isUpNext: boolean;
+};
+
+export type ReviewCandidateDetails = {
+  candidateId: string;
+  coupleId: string;
+  personAId: string;
+  personBId: string;
+  personAName: string;
+  personABirthDate: string | null;
+  personAWikipediaTitle: string | null;
+  personBName: string;
+  personBBirthDate: string | null;
+  personBWikipediaTitle: string | null;
+  relationshipType: RelationshipType;
+  reviewNotes: string | null;
+  editorialRelationshipNote: string | null;
+  editorialPersonABio: string | null;
+  editorialPersonABioUrl: string | null;
+  editorialPersonBBio: string | null;
+  editorialPersonBBioUrl: string | null;
+  editorialCoupleContext: string | null;
+  editorialCoupleContextUrl: string | null;
+};
+
+export type ReviewCandidateDetailsUpdate = {
+  candidateId: string;
+  personAName: string;
+  personABirthDate: string | null;
+  personAWikipediaTitle: string | null;
+  personBName: string;
+  personBBirthDate: string | null;
+  personBWikipediaTitle: string | null;
+  relationshipType: RelationshipType;
+  reviewNotes: string | null;
+  editorialRelationshipNote: string | null;
+  editorialPersonABio: string | null;
+  editorialPersonABioUrl: string | null;
+  editorialPersonBBio: string | null;
+  editorialPersonBBioUrl: string | null;
+  editorialCoupleContext: string | null;
+  editorialCoupleContextUrl: string | null;
 };
 
 export type QueueHealth = {

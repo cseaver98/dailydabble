@@ -59,50 +59,43 @@ export default function Home() {
         <div id="games" className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
-            const isYelple = game.slug === "yelple";
             const isDoodle = game.slug === "doodle";
             const isYeardle = game.slug === "yeardle";
             const isEquadle = game.slug === "equadle";
             const isMoviedle = game.slug === "moviedle";
             const isSportle = game.slug === "sportle";
-            const iconBackground = isYelple
-              ? "bg-red-100"
-              : isDoodle
+            const iconBackground = isDoodle
                 ? "bg-sky-100"
                 : isYeardle
                   ? "bg-violet-100"
                 : isEquadle
-                    ? "bg-amber-100"
+                    ? "bg-rose-100"
                   : isMoviedle
                     ? "bg-teal-100"
                     : isSportle
-                      ? "bg-blue-100"
+                      ? "bg-amber-100"
                     : "bg-blue-100";
-            const iconAccent = isYelple
-              ? "bg-red-700/12"
-              : isDoodle
+            const iconAccent = isDoodle
                 ? "bg-sky-700/12"
                 : isYeardle
                   ? "bg-violet-700/12"
                 : isEquadle
-                    ? "bg-amber-700/12"
+                    ? "bg-rose-700/12"
                   : isMoviedle
                     ? "bg-teal-700/12"
                     : isSportle
-                      ? "bg-blue-700/12"
+                      ? "bg-amber-700/12"
                     : "bg-[#d87093]/14";
-            const buttonBackground = isYelple
-              ? "bg-gradient-to-r from-red-600 to-red-800 text-white"
-              : isDoodle
+            const buttonBackground = isDoodle
                 ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white"
                 : isYeardle
                   ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white"
                   : isEquadle
-                    ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white"
+                    ? "bg-gradient-to-r from-[#e03a3e] to-[#ba1a1a] text-white"
                   : isMoviedle
                     ? "bg-gradient-to-r from-teal-600 to-emerald-800 text-white"
                     : isSportle
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-800 text-white"
+                      ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white"
                   : "bg-gradient-to-r from-[#d87093] to-[#9e4e6d] text-white";
 
             return (
@@ -118,15 +111,7 @@ export default function Home() {
                 />
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
-                    {isYelple ? (
-                      <Image
-                        src="/yelple-mark.svg"
-                        alt="Yelple logo"
-                        width={38}
-                        height={38}
-                        className="h-9 w-9 object-contain"
-                      />
-                    ) : isDoodle ? (
+                    {isDoodle ? (
                       <Image
                         src="/doodle-mark.svg"
                         alt="Doodle logo"
@@ -212,6 +197,17 @@ export default function Home() {
           >
             Create Free Account
           </a>
+        </section>
+        <section className="mx-auto mt-6 max-w-3xl text-center">
+          <p className="text-sm text-[#595c5e]">
+            Legal:
+            {" "}
+            <a href="/terms" className="font-semibold text-[#2c2f31] underline underline-offset-2 hover:opacity-75">Terms</a>
+            {" "}
+            and
+            {" "}
+            <a href="/privacy" className="font-semibold text-[#2c2f31] underline underline-offset-2 hover:opacity-75">Privacy</a>
+          </p>
         </section>
         </section>
       </main>

@@ -516,21 +516,19 @@ export default function ArchiveGamePage() {
       <DailydabbleNav
         subtitle="Agegaple"
         label={`Archive game: ${date || "loading..."}`}
+        homeHref="https://dailydabble.app"
         rightContent={
           <DailydabbleMenu
             items={[
+              { label: "DailyDabble", href: "https://dailydabble.app", brand: true },
               { label: "Archive games", href: "/archive" },
               { label: "Today", href: "/" },
-            ]}
-            legalLinks={[
-              { label: "Terms", href: "/terms" },
-              { label: "Privacy", href: "/privacy" },
             ]}
           />
         }
       />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 min-h-0 flex-col gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-4">
+      <div className="mx-auto flex w-full max-w-[840px] flex-1 min-h-0 flex-col gap-3 py-3 sm:gap-4 sm:py-4">
         {loading && <p className={mutedTextClass}>Loading game...</p>}
         {error && (
           <p
@@ -697,12 +695,32 @@ export default function ArchiveGamePage() {
                     min={0}
                     max={80}
                     disabled={hasFinishedAttempts}
-                    className={`h-11 w-24 rounded-full border-2 px-3 text-lg font-bold outline-none transition focus:border-[color:var(--primary)] ${
+                    className={`no-native-spinner h-11 w-24 rounded-full border-2 px-3 text-lg font-bold outline-none transition focus:border-[color:var(--primary)] ${
                       isDarkMode
                         ? "border-zinc-600 bg-zinc-950 text-zinc-100"
                         : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--foreground)]"
                     }`}
                   />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setGuess(String(Math.max(0, Number(guess || 0) - 1)))}
+                      disabled={hasFinishedAttempts}
+                      aria-label="Decrease guess by 1"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-lg font-black text-[color:var(--foreground)] transition hover:bg-[color:var(--surface-container-high)] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGuess(String(Math.min(80, Number(guess || 0) + 1)))}
+                      disabled={hasFinishedAttempts}
+                      aria-label="Increase guess by 1"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-lg font-black text-[color:var(--foreground)] transition hover:bg-[color:var(--surface-container-high)] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </label>
               <button
@@ -765,9 +783,10 @@ export default function ArchiveGamePage() {
             <button
               type="button"
               onClick={() => setIsImageOpen(false)}
-              className="absolute right-2 top-2 rounded-md border border-zinc-500 bg-zinc-900/90 px-2 py-1 text-sm font-semibold text-zinc-100 hover:bg-zinc-800"
+              aria-label="Close image"
+              className="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-400/70 bg-zinc-900/92 text-xl font-bold leading-none text-zinc-100 shadow-lg transition hover:bg-zinc-800"
             >
-              Close
+              ×
             </button>
             <div
               ref={imageViewportRef}
@@ -848,24 +867,17 @@ export default function ArchiveGamePage() {
             <p className="mt-2 shrink-0 text-center text-sm text-zinc-300">
               Photo {Math.min(selectedImageIndex + 1, visibleGalleryImages.length)} of {visibleGalleryImages.length}
             </p>
-            <button
-              type="button"
-              onClick={() => setIsImageOpen(false)}
-              className="mt-2 shrink-0 rounded-md border border-zinc-500 bg-zinc-900/90 px-3 py-2 text-sm font-semibold text-zinc-100 hover:bg-zinc-800"
-            >
-              Exit fullscreen
-            </button>
           </div>
         </div>
       )}
 
       {result && isResultOpen && (
         <div
-          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/70 p-3 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4"
           onClick={() => setIsResultOpen(false)}
         >
           <div
-            className={`my-3 w-full max-w-2xl rounded-2xl border p-4 shadow-xl sm:my-0 sm:p-5 ${
+            className={`w-full max-w-2xl rounded-2xl border p-4 shadow-xl sm:p-5 ${
               isDarkMode ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-[color:var(--surface-container)] bg-white text-[color:var(--foreground)]"
             }`}
             onClick={(event) => event.stopPropagation()}

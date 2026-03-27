@@ -1,13 +1,14 @@
 import DoodleGameClient from "../../components/DoodleGameClient";
 
-export default function ArchivePuzzlePage({ params }) {
-  const date = params?.date || "";
+export default async function ArchivePuzzlePage({ params }) {
+  const resolvedParams = await params;
+  const date = resolvedParams?.date || "";
   const encoded = encodeURIComponent(date || "");
 
   return (
     <DoodleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel="Archive game"
+      navLabel={`Archive game: ${date || "loading..."}`}
       archiveHref="/archive"
       storagePrefix={`doodle:v1:archive:${date}`}
     />

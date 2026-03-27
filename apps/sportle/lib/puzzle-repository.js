@@ -67,19 +67,14 @@ const mapPuzzle = (scheduleRow, athleteRow) => ({
   ],
 });
 
-const fetchScheduleRow = async (date, exact = true) => {
+const fetchScheduleRow = async (date) => {
   const supabase = getSportleSupabaseAdmin();
-  let query = supabase
+  const query = supabase
     .from("daily_schedule")
     .select("puzzle_date,athlete_id")
+    .eq("puzzle_date", date)
     .order("puzzle_date", { ascending: false })
     .limit(1);
-
-  if (exact) {
-    query = query.eq("puzzle_date", date);
-  } else {
-    query = query.lte("puzzle_date", date);
-  }
 
   const { data, error } = await query.maybeSingle();
   if (error) {
@@ -113,13 +108,8 @@ const fetchPuzzleByScheduleRow = async (scheduleRow) => {
 
 export const getTodaySportlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  const exact = await fetchScheduleRow(today, true);
-  if (exact) {
-    return fetchPuzzleByScheduleRow(exact);
-  }
-
-  const fallback = await fetchScheduleRow(today, false);
-  return fetchPuzzleByScheduleRow(fallback);
+  const schedule = await fetchScheduleRow(today);
+  return fetchPuzzleByScheduleRow(schedule);
 };
 
 export const getSportlePuzzleByDate = async (date) => {
@@ -127,7 +117,7 @@ export const getSportlePuzzleByDate = async (date) => {
     throw new Error("Date must be YYYY-MM-DD");
   }
 
-  const schedule = await fetchScheduleRow(date, true);
+  const schedule = await fetchScheduleRow(date);
   return fetchPuzzleByScheduleRow(schedule);
 };
 

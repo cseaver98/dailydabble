@@ -16,6 +16,7 @@ export type DailydabbleMenuLink = {
   href: string;
   id?: string;
   hidden?: boolean;
+  brand?: boolean;
 };
 
 export type DailydabbleMenuProps = {

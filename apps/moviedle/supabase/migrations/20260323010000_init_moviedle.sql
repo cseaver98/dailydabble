@@ -7,8 +7,12 @@ create table if not exists moviedle.movies (
   title_normalized text not null unique,
   aliases text[] not null default '{}',
   aliases_normalized text[] not null default '{}',
+  release_year int,
+  summary text,
+  lead_actors text[] not null default '{}',
   still_urls text[] not null,
   created_at timestamptz not null default now(),
+  constraint movies_release_year_range check (release_year is null or (release_year >= 1888 and release_year <= 2100)),
   constraint movies_still_urls_count check (cardinality(still_urls) >= 1 and cardinality(still_urls) <= 6)
 );
 

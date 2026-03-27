@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { addManualCoupleImage, markCoupleImageUnusable } from "@/lib/puzzle-repository";
+import { addManualCoupleImage, getReviewCandidateGallery, markCoupleImageUnusable } from "@/lib/puzzle-repository";
 
 type PatchPayload = {
   imageId?: string;
@@ -47,6 +47,23 @@ export async function POST(request: Request) {
       attributionText: payload.attributionText,
     });
     return NextResponse.json({ ok: true, imageId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const candidateId = searchParams.get("candidateId") ?? "";
+
+  if (!candidateId) {
+    return NextResponse.json({ error: "candidateId is required" }, { status: 400 });
+  }
+
+  try {
+    const data = await getReviewCandidateGallery(candidateId);
+    return NextResponse.json({ ok: true, ...data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 400 });

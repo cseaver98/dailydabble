@@ -101,11 +101,6 @@ body {
 }
 
 .doodle-path {
-  fill: none;
-  stroke: var(--brand-strong);
-  stroke-width: 8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
   stroke-dasharray: 1200;
   stroke-dashoffset: 1200;
   animation: drawPath 760ms ease forwards;

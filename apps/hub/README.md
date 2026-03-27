@@ -1,6 +1,6 @@
 # Dailydabble Hub
 
-Hub app for daily games (Agegaple, Yelple, etc.) with anonymous per-device completion tracking.
+Hub app for daily games with anonymous per-device completion tracking.
 
 ## Getting Started
 

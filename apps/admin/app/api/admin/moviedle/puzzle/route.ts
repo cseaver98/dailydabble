@@ -24,6 +24,12 @@ export async function POST(request: Request) {
       .split(",")
       .map((value: string) => value.trim())
       .filter(Boolean);
+    const releaseYearRaw = String(payload?.releaseYear || "").trim();
+    const summary = String(payload?.summary || "").trim();
+    const leadActors = String(payload?.leadActors || "")
+      .split(",")
+      .map((value: string) => value.trim())
+      .filter(Boolean);
 
     if (!title) {
       return NextResponse.json({ error: "Movie title is required" }, { status: 400 });
@@ -52,6 +58,11 @@ export async function POST(request: Request) {
       .filter((alias) => alias && alias !== normalizedTitle)
       .slice(0, 20);
 
+    const parsedReleaseYear = Number(releaseYearRaw);
+    const releaseYear = Number.isFinite(parsedReleaseYear) && parsedReleaseYear >= 1888 && parsedReleaseYear <= 2100
+      ? Math.floor(parsedReleaseYear)
+      : null;
+
     const supabase = getMoviedleSupabaseAdmin();
 
     const { data: movieRow, error: movieError } = await supabase
@@ -62,6 +73,9 @@ export async function POST(request: Request) {
         aliases: aliases.slice(0, 20),
         aliases_normalized: normalizedAliases,
         still_urls: cleanStillUrls,
+        release_year: releaseYear,
+        summary: summary ? summary.slice(0, 4000) : null,
+        lead_actors: leadActors.slice(0, 8),
       })
       .select("id")
       .maybeSingle();
