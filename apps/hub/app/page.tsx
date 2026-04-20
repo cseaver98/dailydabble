@@ -43,7 +43,7 @@ export default function Home() {
         rightContent={
           <a
             href="#"
-            className="font-headline rounded-full bg-[#2f672d] px-6 py-2 text-sm font-bold text-[#d1ffc7] transition hover:opacity-90"
+            className="font-headline inline-flex h-[36px] items-center justify-center rounded-full bg-[#2f672d] px-5 text-sm font-bold text-[#d1ffc7] transition hover:opacity-90"
           >
             Login
           </a>

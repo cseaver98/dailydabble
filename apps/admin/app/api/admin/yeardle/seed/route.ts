@@ -277,6 +277,8 @@ export async function POST(request: Request) {
             hint_era: inferEra(chosen.year),
             hint_person: inferKeyPerson(chosen.pageTitle, chosen.text),
             hint_description: hintDescription,
+            status: "approved",
+            reviewed_at: new Date().toISOString(),
           },
           { onConflict: "source_key" },
         )

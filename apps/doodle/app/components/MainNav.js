@@ -23,6 +23,7 @@ export default function MainNav({ label = "Doodle", hideToday = false }) {
   return (
     <DailydabbleNav
       subtitle="Doodle"
+      subtitleHref="/"
       label={label}
       labelId="challengeDate"
       labelClassName="subtle nav-date"

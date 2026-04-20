@@ -7,6 +7,9 @@ export const runtime = "nodejs";
 
 const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 const allowedEquation = /^[0-9+\-*/=]+$/;
+const validStatuses = ["pending_review", "approved"] as const;
+type CandidateStatus = (typeof validStatuses)[number];
+type CandidateFilter = CandidateStatus | "finished" | "all";
 
 const precedence: Record<string, number> = {
   "+": 1,
@@ -133,27 +136,95 @@ const validateEquation = (raw: string, expectedLength = 9): string => {
   return equation;
 };
 
-export async function GET() {
+const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+
+export async function GET(request: Request) {
   try {
+    const requestUrl = new URL(request.url);
+    const status = String(requestUrl.searchParams.get("status") || "pending_review") as CandidateFilter;
+    const page = Math.max(1, Number(requestUrl.searchParams.get("page") || "1"));
+    const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || "10")));
+
+    if (!["all", "pending_review", "approved", "finished"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
+    }
+
     const supabase = getSupabaseEquadleAdmin();
+    const { data: puzzleRows, error: puzzlesError } = await supabase
+      .from("puzzles")
+      .select("id,equation,equation_length,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(5000);
 
-    const [puzzlesResult, scheduleResult] = await Promise.all([
-      supabase.from("puzzles").select("id,equation,equation_length,created_at").order("created_at", { ascending: false }).limit(200),
-      supabase.from("daily_schedule").select("puzzle_date,puzzle_id,created_at").order("puzzle_date", { ascending: false }).limit(200),
-    ]);
-
-    if (puzzlesResult.error) {
-      throw new Error(`Failed to load Equadle puzzles: ${puzzlesResult.error.message}`);
+    if (puzzlesError) {
+      throw new Error(`Failed to load Equadle puzzles: ${puzzlesError.message}`);
     }
 
-    if (scheduleResult.error) {
-      throw new Error(`Failed to load Equadle schedule: ${scheduleResult.error.message}`);
+    const rows = (puzzleRows as Array<{ id: string; equation: string; equation_length: number; status: CandidateStatus; created_at: string }> | null) ?? [];
+    const puzzleIds = rows.map((row) => row.id);
+
+    let scheduleRows: Array<{ puzzle_id: string; puzzle_date: string }> = [];
+    if (puzzleIds.length > 0) {
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from("daily_schedule")
+        .select("puzzle_id,puzzle_date")
+        .in("puzzle_id", puzzleIds);
+      if (scheduleError) {
+        throw new Error(`Failed to load Equadle schedule: ${scheduleError.message}`);
+      }
+      scheduleRows = (scheduleData as Array<{ puzzle_id: string; puzzle_date: string }> | null) ?? [];
     }
+
+    const byPuzzleId = new Map<string, string[]>();
+    for (const row of scheduleRows) {
+      const current = byPuzzleId.get(row.puzzle_id) ?? [];
+      current.push(row.puzzle_date);
+      byPuzzleId.set(row.puzzle_id, current);
+    }
+
+    const today = getToday();
+    const hydrated = rows.map((row) => {
+      const dates = (byPuzzleId.get(row.id) ?? []).sort((a, b) => b.localeCompare(a));
+      const isFinished = dates.some((date) => date <= today);
+      const nextScheduledDate = dates.filter((date) => date >= today).sort((a, b) => a.localeCompare(b))[0] || null;
+      return {
+        ...row,
+        scheduleCount: dates.length,
+        lastScheduledDate: dates[0] || null,
+        nextScheduledDate,
+        isFinished,
+      };
+    });
+
+    const filtered = hydrated.filter((row) => {
+      if (status === "pending_review") return row.status === "pending_review";
+      if (status === "approved") return row.status === "approved" && !row.isFinished;
+      if (status === "finished") return row.isFinished;
+      return true;
+    });
+
+    const offset = (page - 1) * pageSize;
+    const items = filtered.slice(offset, offset + pageSize);
+
+    const pending = hydrated.filter((row) => row.status === "pending_review").length;
+    const approved = hydrated.filter((row) => row.status === "approved").length;
+    const finished = hydrated.filter((row) => row.isFinished).length;
+    const approvedUnused = hydrated.filter((row) => row.status === "approved" && !row.isFinished).length;
 
     return NextResponse.json({
       ok: true,
-      puzzles: puzzlesResult.data ?? [],
-      schedule: scheduleResult.data ?? [],
+      items,
+      total: filtered.length,
+      page,
+      pageSize,
+      queueHealth: {
+        runwayDays: approvedUnused,
+        approved,
+        approvedUnused,
+        pending,
+        finished,
+        total: hydrated.length,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load Equadle admin data";
@@ -180,8 +251,9 @@ export async function POST(request: Request) {
         .insert({
           equation,
           equation_length: 9,
+          status: "pending_review",
         })
-        .select("id,equation,equation_length,created_at")
+        .select("id,equation,equation_length,created_at,status")
         .single();
 
       if (error) {
@@ -198,6 +270,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Missing puzzleId or invalid puzzleDate" }, { status: 400 });
       }
 
+      const { data: puzzle, error: puzzleError } = await supabase
+        .from("puzzles")
+        .select("id,status")
+        .eq("id", puzzleId)
+        .maybeSingle();
+      if (puzzleError) {
+        throw new Error(`Failed to validate puzzle before scheduling: ${puzzleError.message}`);
+      }
+      if (!puzzle) {
+        return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
+      }
+      if (puzzle.status !== "approved") {
+        return NextResponse.json({ error: "Only approved puzzles can be scheduled." }, { status: 400 });
+      }
+
       const { error } = await supabase
         .from("daily_schedule")
         .upsert({ puzzle_date: puzzleDate, puzzle_id: puzzleId }, { onConflict: "puzzle_date" });
@@ -212,6 +299,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update Equadle admin data";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const payload = (await request.json().catch(() => ({}))) as { puzzleId?: string; status?: CandidateStatus };
+    const puzzleId = String(payload.puzzleId || "");
+    const status = String(payload.status || "") as CandidateStatus;
+    if (!puzzleId || !validStatuses.includes(status)) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+
+    const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
+    const supabase = getSupabaseEquadleAdmin();
+    const { error } = await supabase
+      .from("puzzles")
+      .update({ status, reviewed_at: reviewedAt })
+      .eq("id", puzzleId);
+
+    if (error) {
+      throw new Error(`Failed to update puzzle status: ${error.message}`);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update Equadle candidate";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const payload = (await request.json().catch(() => ({}))) as { id?: string };
+    const id = String(payload.id || "");
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const supabase = getSupabaseEquadleAdmin();
+    const { error: scheduleError } = await supabase.from("daily_schedule").delete().eq("puzzle_id", id);
+    if (scheduleError) {
+      throw new Error(`Failed deleting schedule rows: ${scheduleError.message}`);
+    }
+
+    const { error: deleteError } = await supabase.from("puzzles").delete().eq("id", id);
+    if (deleteError) {
+      throw new Error(`Failed deleting puzzle: ${deleteError.message}`);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete Equadle candidate";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,52 +1,55 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const statuses = ["pending_review", "approved", "finished"];
+const candidatePageSize = 10;
 
 export default function EquadleAdminTab() {
+  const [items, setItems] = useState([]);
+  const [queueHealth, setQueueHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [puzzles, setPuzzles] = useState([]);
-  const [schedule, setSchedule] = useState([]);
-  const [newEquation, setNewEquation] = useState("");
-  const [selectedPuzzleId, setSelectedPuzzleId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(today());
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
+  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCandidates, setTotalCandidates] = useState(0);
+
+  const [newEquation, setNewEquation] = useState("");
+  const [scheduleById, setScheduleById] = useState({});
+
+  const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
-      const response = await fetch("/api/admin/equadle", { cache: "no-store" });
+      setError("");
+      const search = new URLSearchParams({
+        status,
+        page: String(page),
+        pageSize: String(candidatePageSize),
+      });
+      const response = await fetch(`/api/admin/equadle?${search.toString()}`, { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || "Failed to load Equadle admin data");
+        throw new Error(payload.error || "Failed to load Equadle candidates");
       }
-
-      const nextPuzzles = Array.isArray(payload.puzzles) ? payload.puzzles : [];
-      setPuzzles(nextPuzzles);
-      setSchedule(Array.isArray(payload.schedule) ? payload.schedule : []);
-      if (!selectedPuzzleId && nextPuzzles[0]?.id) {
-        setSelectedPuzzleId(nextPuzzles[0].id);
-      }
+      setItems(Array.isArray(payload.items) ? payload.items : []);
+      setQueueHealth(payload.queueHealth || null);
+      setTotalCandidates(Number(payload.total) || 0);
+      setCurrentPage(Number(payload.page) || page);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load Equadle admin data");
+      setError(loadError instanceof Error ? loadError.message : "Failed to load Equadle candidates");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setCurrentPage(1);
+    void load({ page: 1, status: statusFilter });
+  }, [statusFilter]);
 
-  const schedulePreview = useMemo(
-    () => [...schedule].sort((a, b) => String(b.puzzle_date).localeCompare(String(a.puzzle_date))).slice(0, 20),
-    [schedule],
-  );
+  const totalPages = Math.max(1, Math.ceil(Math.max(totalCandidates, 0) / candidatePageSize));
 
   const addPuzzle = async () => {
     setBusy(true);
@@ -66,8 +69,8 @@ export default function EquadleAdminTab() {
         throw new Error(payload.error || "Could not add puzzle");
       }
       setNewEquation("");
-      setMessage("Puzzle added.");
-      await load();
+      setMessage("Puzzle added as pending review.");
+      await load({ page: 1, status: statusFilter });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not add puzzle");
     } finally {
@@ -75,7 +78,31 @@ export default function EquadleAdminTab() {
     }
   };
 
-  const assignDate = async () => {
+  const patchStatus = async (id, status) => {
+    if (status === "finished") {
+      return;
+    }
+    setError("");
+    const response = await fetch("/api/admin/equadle", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ puzzleId: id, status }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "Failed to update status");
+      return;
+    }
+    await load({ page: currentPage, status: statusFilter });
+  };
+
+  const assignDate = async (id) => {
+    const puzzleDate = String(scheduleById[id] || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
+      setError("Schedule date must be YYYY-MM-DD.");
+      return;
+    }
+
     setBusy(true);
     setError("");
     setMessage("");
@@ -85,16 +112,16 @@ export default function EquadleAdminTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "assign-date",
-          puzzleId: selectedPuzzleId,
-          puzzleDate: selectedDate,
+          puzzleId: id,
+          puzzleDate,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(payload.error || "Could not assign date");
       }
-      setMessage(`Assigned puzzle to ${selectedDate}.`);
-      await load();
+      setMessage(`Assigned puzzle to ${puzzleDate}.`);
+      await load({ page: currentPage, status: statusFilter });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not assign date");
     } finally {
@@ -102,13 +129,45 @@ export default function EquadleAdminTab() {
     }
   };
 
+  const deleteCandidate = async (id) => {
+    const shouldDelete = window.confirm("Delete this Equadle candidate and its stored data?");
+    if (!shouldDelete) {
+      return;
+    }
+
+    setError("");
+    const response = await fetch("/api/admin/equadle", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "Could not delete candidate");
+      return;
+    }
+
+    await load({ page: currentPage, status: statusFilter });
+  };
+
   return (
     <section className="admin-card">
       <h1 className="admin-title">Equadle Curation</h1>
-      <p className="admin-copy">Add valid 9-character equations and assign them to daily dates.</p>
+      <p className="admin-copy">Review candidate equations, approve them, and schedule future dates.</p>
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Add puzzle candidate</p>
+      {queueHealth ? (
+        <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
+          <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
+          <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
+            Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
+            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
+            Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
+          </p>
+        </div>
+      ) : null}
+
+      <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem" }}>
+        <p style={{ margin: 0, fontWeight: 900 }}>Add puzzle candidate</p>
         <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap" }}>
           <input
             value={newEquation}
@@ -122,52 +181,107 @@ export default function EquadleAdminTab() {
         </div>
       </div>
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Assign to date</p>
-        <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-          <select
-            value={selectedPuzzleId}
-            onChange={(event) => setSelectedPuzzleId(event.target.value)}
-            style={{ minWidth: 260, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          >
-            <option value="">Choose puzzle</option>
-            {puzzles.map((item) => (
-              <option key={item.id} value={item.id}>{item.equation}</option>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
+        <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
+          Status
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
+            <option value="all">all</option>
+            {statuses.map((status) => (
+              <option key={status} value={status}>{status}</option>
             ))}
           </select>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          />
-          <button className="admin-btn" type="button" onClick={() => void assignDate()} disabled={busy || !selectedPuzzleId}>
-            Assign Date
-          </button>
-        </div>
+        </label>
       </div>
 
-      {loading ? <p className="admin-copy" style={{ marginTop: ".75rem" }}>Loading Equadle data...</p> : null}
+      {loading ? <p className="admin-copy" style={{ marginTop: ".75rem" }}>Loading Equadle candidates...</p> : null}
       {error ? <p className="admin-copy" style={{ marginTop: ".75rem", color: "#8b2d2d" }}>{error}</p> : null}
       {message ? <p className="admin-copy" style={{ marginTop: ".75rem", color: "#2f672d" }}>{message}</p> : null}
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Recent schedule</p>
-        {schedulePreview.length === 0 ? (
-          <p className="admin-copy" style={{ marginTop: ".45rem" }}>No scheduled Equadle dates yet.</p>
-        ) : (
-          <ul style={{ marginTop: ".45rem", paddingLeft: "1.1rem", color: "#4d5662" }}>
-            {schedulePreview.map((row) => {
-              const puzzle = puzzles.find((item) => item.id === row.puzzle_id);
-              return (
-                <li key={`${row.puzzle_date}-${row.puzzle_id}`} style={{ marginBottom: ".2rem" }}>
-                  {row.puzzle_date}: {puzzle?.equation || row.puzzle_id}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
+        {items.map((item) => (
+          <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+            <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.equation}</p>
+            <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
+              Length: {item.equation_length} | Status: {item.status}
+            </p>
+            <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
+              Usage: {item.scheduleCount === 0 ? "Not used yet" : `${item.scheduleCount}x (last ${item.lastScheduledDate})`}
+            </p>
+            {item.nextScheduledDate ? (
+              <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
+                Scheduled: <b>{item.nextScheduledDate}</b>
+              </p>
+            ) : null}
+
+            <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
+              {statuses.map((status) => {
+                const isSelected = status === "finished" ? item.isFinished : item.status === status;
+                return (
+                  <button
+                    key={status}
+                    className="admin-btn"
+                    type="button"
+                    onClick={() => void patchStatus(item.id, status)}
+                    disabled={status === "finished"}
+                    style={{
+                      borderColor: isSelected ? "#2f672d" : undefined,
+                      background: isSelected ? "#d1ffc7" : undefined,
+                      opacity: status === "finished" ? 0.55 : 1,
+                    }}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+              <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
+            </div>
+
+            <div style={{ marginTop: ".45rem", display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                type="date"
+                value={scheduleById[item.id] || ""}
+                onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
+                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
+              />
+              <button
+                className="admin-btn primary"
+                type="button"
+                onClick={() => void assignDate(item.id)}
+                disabled={busy || item.status !== "approved"}
+              >
+                Schedule candidate
+              </button>
+            </div>
+          </article>
+        ))}
+        {!loading && items.length === 0 ? <p className="admin-copy">No Equadle candidates in this filter yet.</p> : null}
       </div>
+
+      {!loading && totalCandidates > 0 ? (
+        <div style={{ marginTop: ".9rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
+          <p className="admin-copy" style={{ margin: 0 }}>
+            Showing page <b>{currentPage}</b> of <b>{totalPages}</b> ({totalCandidates} candidates)
+          </p>
+          <div style={{ display: "flex", gap: ".45rem" }}>
+            <button
+              className="admin-btn"
+              type="button"
+              onClick={() => void load({ page: Math.max(1, currentPage - 1), status: statusFilter })}
+              disabled={currentPage <= 1}
+            >
+              Previous
+            </button>
+            <button
+              className="admin-btn"
+              type="button"
+              onClick={() => void load({ page: Math.min(totalPages, currentPage + 1), status: statusFilter })}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

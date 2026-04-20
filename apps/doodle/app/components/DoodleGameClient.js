@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 const normalizeGuess = (value) => value.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "");
+const getSegmentKey = (segment, index) => segment.id || segment.fullD || segment.d || `segment-${index}`;
 const normalizeStageSegment = (segment) => {
   if (typeof segment === "string") {
     return { d: segment, to: 1 };
@@ -28,6 +30,7 @@ const normalizeStageSegment = (segment) => {
     fillRule: typeof sourceStyle["fill-rule"] === "string" ? sourceStyle["fill-rule"] : "evenodd",
   };
   return {
+    id: typeof segment.id === "string" ? segment.id : undefined,
     d: segment.d,
     to: safeTo,
     style: normalizedStyle,
@@ -149,6 +152,28 @@ export default function DoodleGameClient({
     window.localStorage.setItem(storageKey, JSON.stringify(payload));
   }, [attempts, gameState, guess, message, puzzle, storageKey]);
 
+  const maxGuesses = Number.isFinite(puzzle?.stageCount) && puzzle.stageCount > 0 ? puzzle.stageCount : 5;
+  const revealedStages = Math.min(maxGuesses, attempts.length + 1);
+  const guessesLeft = Math.max(0, maxGuesses - attempts.length);
+  const clueList = Array.isArray(puzzle?.clues) && puzzle.clues.length > 0 ? puzzle.clues : [`Clue 1: Start guessing.`];
+  const activeClue = clueList[Math.min(revealedStages - 1, clueList.length - 1)];
+  const activeStageSegments = Array.isArray(puzzle?.stages?.[revealedStages - 1])
+    ? puzzle.stages[revealedStages - 1]
+    : [];
+  const previousStageSegments = Array.isArray(puzzle?.stages?.[revealedStages - 2])
+    ? puzzle.stages[revealedStages - 2]
+    : [];
+  const previousStageMap = useMemo(() => {
+    const map = new Map();
+    previousStageSegments
+      .map((segment, index) => ({ segment: normalizeStageSegment(segment), index }))
+      .filter((entry) => Boolean(entry.segment))
+      .forEach(({ segment, index }) => {
+        map.set(getSegmentKey(segment, index), segment);
+      });
+    return map;
+  }, [previousStageSegments]);
+
   if (loading) {
     return (
       <>
@@ -167,20 +192,11 @@ export default function DoodleGameClient({
       <>
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <section className="card legal-card">
-            <h1 className="page-title">Doodle unavailable</h1>
-            <p className="page-subtle">{error || "No puzzle available right now."}</p>
-          </section>
+          <DailydabbleUnavailable title="Doodle unavailable" message={error || "No puzzle available right now."} />
         </main>
       </>
     );
   }
-
-  const maxGuesses = Number.isFinite(puzzle.stageCount) && puzzle.stageCount > 0 ? puzzle.stageCount : 5;
-  const revealedStages = Math.min(maxGuesses, attempts.length + 1);
-  const guessesLeft = Math.max(0, maxGuesses - attempts.length);
-  const clueList = Array.isArray(puzzle.clues) && puzzle.clues.length > 0 ? puzzle.clues : [`Clue 1: Start guessing.`];
-  const activeClue = clueList[Math.min(revealedStages - 1, clueList.length - 1)];
 
   const submitGuess = (event) => {
     event.preventDefault();
@@ -222,10 +238,6 @@ export default function DoodleGameClient({
     setMessage("");
   };
 
-  const activeStageSegments = Array.isArray(puzzle.stages?.[revealedStages - 1])
-    ? puzzle.stages[revealedStages - 1]
-    : [];
-
   return (
     <>
       <MainNav label={navLabel} hideToday={hideToday} />
@@ -244,6 +256,20 @@ export default function DoodleGameClient({
                 .map((segment, pathIndex) => ({ segment: normalizeStageSegment(segment), pathIndex }))
                 .filter((entry) => Boolean(entry.segment))
                 .map(({ segment, pathIndex }) => {
+                  const segmentKey = getSegmentKey(segment, pathIndex);
+                  const previousSegment = previousStageMap.get(segmentKey) ?? null;
+                  const previousD =
+                    previousSegment && typeof previousSegment.d === "string"
+                      ? previousSegment.d.trim()
+                      : "";
+                  const currentD = typeof segment.d === "string" ? segment.d.trim() : "";
+                  const hasPreviousPortion =
+                    Boolean(previousD) &&
+                    Boolean(currentD) &&
+                    currentD.startsWith(previousD) &&
+                    currentD.length > previousD.length;
+                  const deltaD = hasPreviousPortion ? currentD.slice(previousD.length).trim() : "";
+                  const hasDelta = Boolean(deltaD);
                   const isFillOnly = typeof segment.fillOnly === "boolean"
                     ? segment.fillOnly
                     : String(segment.style.stroke || "").toLowerCase() === "none" &&
@@ -255,41 +281,122 @@ export default function DoodleGameClient({
                   const drawStrokeLinejoin = isFillOnly ? "round" : segment.style.strokeLinejoin;
                   const drawFillRule = segment.style.fillRule || "evenodd";
                   const fullD = segment.fullD || segment.d;
-                  const maskId = `doodle-mask-${revealedStages}-${pathIndex}`;
+                  const safeMaskKey = String(segmentKey).replace(/[^a-zA-Z0-9_-]/g, "_");
+                  const baseMaskId = `doodle-mask-${safeMaskKey}`;
+                  const animateMaskId = `doodle-mask-anim-${safeMaskKey}-${revealedStages}`;
+
+                  const renderFillMasked = (maskPath, maskId, animate = false) => (
+                    <g key={`${maskId}`}>
+                      <defs>
+                        <mask id={maskId} maskUnits="userSpaceOnUse">
+                          <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
+                          <path
+                            d={maskPath}
+                            className={animate ? "doodle-mask-path" : undefined}
+                            fill="none"
+                            stroke="white"
+                            strokeWidth="18"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fillRule={drawFillRule}
+                            pathLength={1}
+                            strokeDasharray={`${segment.to} 1`}
+                            strokeDashoffset={animate ? segment.to : 0}
+                            style={animate ? { animationDelay: `${pathIndex * 55}ms` } : undefined}
+                          />
+                        </mask>
+                      </defs>
+                      <path
+                        d={fullD}
+                        className={animate ? "doodle-path" : undefined}
+                        fill={drawFill}
+                        fillRule={drawFillRule}
+                        stroke="none"
+                        opacity={segment.style.opacity}
+                        fillOpacity={segment.style.fillOpacity}
+                        mask={`url(#${maskId})`}
+                        style={animate ? { animationDelay: `${pathIndex * 55}ms` } : undefined}
+                      />
+                    </g>
+                  );
+
                   if (isFillOnly) {
+                    if (hasDelta) {
+                      return (
+                        <g key={`fill-split-${segmentKey}`}>
+                          {renderFillMasked(previousD, `${baseMaskId}-static`, false)}
+                          {renderFillMasked(deltaD, animateMaskId, true)}
+                        </g>
+                      );
+                    }
+
+                    if (previousSegment && !hasDelta) {
+                      return renderFillMasked(currentD || segment.d, `${baseMaskId}-current`, false);
+                    }
+
                     return (
-                      <g key={`fill-${revealedStages}-${pathIndex}`}>
-                        <defs>
-                          <mask id={maskId} maskUnits="userSpaceOnUse">
-                            <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
-                            <path
-                              d={segment.d}
-                              fill="white"
-                              stroke="white"
-                              strokeWidth="18"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              fillRule={drawFillRule}
-                            />
-                          </mask>
-                        </defs>
+                      renderFillMasked(currentD || segment.d, animateMaskId, true)
+                    );
+                  }
+
+                  if (hasDelta) {
+                    return (
+                      <g key={`stroke-split-${segmentKey}`}>
                         <path
-                          d={fullD}
-                          className="doodle-path"
+                          d={previousD}
                           fill={drawFill}
                           fillRule={drawFillRule}
-                          stroke="none"
+                          stroke={drawStroke}
+                          strokeWidth={drawStrokeWidth}
+                          strokeLinecap={drawStrokeLinecap}
+                          strokeLinejoin={drawStrokeLinejoin}
                           opacity={segment.style.opacity}
                           fillOpacity={segment.style.fillOpacity}
-                          mask={`url(#${maskId})`}
-                          style={{ animationDelay: `${pathIndex * 55}ms` }}
+                          strokeOpacity={segment.style.strokeOpacity}
+                        />
+                        <path
+                          key={`path-anim-${segmentKey}-${revealedStages}`}
+                          d={deltaD}
+                          className="doodle-path"
+                          fill="none"
+                          stroke={drawStroke}
+                          strokeWidth={drawStrokeWidth}
+                          strokeLinecap={drawStrokeLinecap}
+                          strokeLinejoin={drawStrokeLinejoin}
+                          opacity={segment.style.opacity}
+                          strokeOpacity={segment.style.strokeOpacity}
+                          pathLength={1}
+                          strokeDasharray={`${segment.to} 1`}
+                          strokeDashoffset={segment.to}
+                          style={{
+                            animationDelay: `${pathIndex * 55}ms`,
+                          }}
                         />
                       </g>
                     );
                   }
+
+                  if (previousSegment && !hasDelta) {
+                    return (
+                      <path
+                        key={`path-static-${segmentKey}`}
+                        d={segment.d}
+                        fill={drawFill}
+                        fillRule={drawFillRule}
+                        stroke={drawStroke}
+                        strokeWidth={drawStrokeWidth}
+                        strokeLinecap={drawStrokeLinecap}
+                        strokeLinejoin={drawStrokeLinejoin}
+                        opacity={segment.style.opacity}
+                        fillOpacity={segment.style.fillOpacity}
+                        strokeOpacity={segment.style.strokeOpacity}
+                      />
+                    );
+                  }
+
                   return (
                     <path
-                      key={`path-${revealedStages}-${pathIndex}`}
+                      key={`path-${segmentKey}-${revealedStages}`}
                       d={segment.d}
                       className="doodle-path"
                       fill={drawFill}
@@ -303,7 +410,10 @@ export default function DoodleGameClient({
                       strokeOpacity={isFillOnly ? "0.92" : segment.style.strokeOpacity}
                       pathLength={1}
                       strokeDasharray={`${segment.to} 1`}
-                      style={{ animationDelay: `${pathIndex * 55}ms` }}
+                      strokeDashoffset={segment.to}
+                      style={{
+                        animationDelay: `${pathIndex * 55}ms`,
+                      }}
                     />
                   );
                 })}

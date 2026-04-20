@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
+import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import EditorialDrawer from "@/components/editorial-drawer";
@@ -591,13 +591,14 @@ export default function Home() {
 
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
-  const panelClass = "rounded-[2rem] border border-[color:var(--surface-container)] bg-white p-3 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-4";
+  const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
   const imageFrameClass = "relative overflow-hidden rounded-[2rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-high)]";
 
   return (
     <main className={`${mainClass} flex flex-col`}>
       <DailydabbleNav
         subtitle="Agegaple"
+        subtitleHref="/"
         homeHref="https://dailydabble.app"
         rightContent={
           <DailydabbleMenu
@@ -609,18 +610,15 @@ export default function Home() {
         }
       />
 
-      <div className="mx-auto flex w-full max-w-[840px] flex-1 min-h-0 flex-col gap-3 py-3 sm:gap-4 sm:py-4">
+      <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
         {loading && <p className={mutedTextClass}>Loading puzzle...</p>}
 
         {!loading && !puzzle && !error && (
-          <section className={panelClass}>
-            <h1 className="font-headline text-2xl font-black text-[color:var(--foreground)]">Agegaple unavailable</h1>
-            <p className={`mt-2 text-sm ${mutedTextClass}`}>No puzzle available right now.</p>
-          </section>
+          <DailydabbleUnavailable title="Agegaple unavailable" message="No puzzle available right now." />
         )}
 
         {!loading && puzzle && (
-          <section className={`${panelClass} flex h-full min-h-0 flex-col gap-2 sm:gap-3`}>
+          <section className={panelClass}>
             {isCompleted && (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className={`text-sm font-semibold ${isDarkMode ? "text-zinc-300" : "text-[color:var(--outline)]"}`}>

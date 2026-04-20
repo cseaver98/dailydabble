@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 export default function SportleGameClient({
@@ -291,10 +292,7 @@ export default function SportleGameClient({
       <>
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <section className="card sportle-card">
-            <h1 className="page-title">Sportle unavailable</h1>
-            <p className="page-subtle">{error || "No puzzle available right now."}</p>
-          </section>
+          <DailydabbleUnavailable title="Sportle unavailable" message={error || "No puzzle available right now."} />
         </main>
       </>
     );

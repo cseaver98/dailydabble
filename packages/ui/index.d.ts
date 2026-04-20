@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 export type DailydabbleNavProps = {
   subtitle?: string;
+  subtitleHref?: string;
   label?: string;
   labelId?: string;
   labelClassName?: string;
@@ -19,6 +20,12 @@ export type DailydabbleMenuLink = {
   brand?: boolean;
 };
 
+export type DailydabbleUnavailableProps = {
+  title?: string;
+  message?: string;
+  className?: string;
+};
+
 export type DailydabbleMenuProps = {
   items?: DailydabbleMenuLink[];
   legalLinks?: DailydabbleMenuLink[];
@@ -30,3 +37,4 @@ export type DailydabbleMenuProps = {
 
 export declare function DailydabbleNav(props: DailydabbleNavProps): ReactNode;
 export declare function DailydabbleMenu(props: DailydabbleMenuProps): ReactNode;
+export declare function DailydabbleUnavailable(props: DailydabbleUnavailableProps): ReactNode;

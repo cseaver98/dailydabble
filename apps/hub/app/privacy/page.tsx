@@ -5,7 +5,7 @@ const legalContactEmail = process.env.LEGAL_CONTACT_EMAIL ?? "legal@dailydabble.
 export default function PrivacyPage() {
   return (
     <>
-      <DailydabbleNav subtitle="Dailydabble" label="Privacy Policy" headerClassName="hub-nav" />
+      <DailydabbleNav label="Privacy Policy" headerClassName="hub-nav" />
       <main className="min-h-screen bg-transparent px-5 pb-12 text-[#2c2f31] sm:px-8">
         <section className="mx-auto mt-6 max-w-4xl rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
           <h1 className="font-headline text-3xl font-extrabold text-[#2c2f31]">Privacy Policy</h1>

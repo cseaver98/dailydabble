@@ -101,8 +101,10 @@ body {
 }
 
 .doodle-path {
-  stroke-dasharray: 1200;
-  stroke-dashoffset: 1200;
+  animation: drawPath 760ms ease forwards;
+}
+
+.doodle-mask-path {
   animation: drawPath 760ms ease forwards;
 }
 

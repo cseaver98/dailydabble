@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const statuses = ["pending_review", "approved", "rejected"];
+const statuses = ["pending_review", "approved", "finished"];
 const batchSizeOptions = [1, 5, 10, 15, 20];
 const candidatePageSize = 10;
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -95,6 +95,9 @@ export default function AgegapleAdminTab() {
   }, [galleryImages.length, galleryIndex]);
 
   const patchStatus = async (id, status) => {
+    if (status === "finished") {
+      return;
+    }
     setError("");
     const response = await fetch("/api/admin/candidates", {
       method: "PATCH",
@@ -108,6 +111,25 @@ export default function AgegapleAdminTab() {
       return;
     }
 
+    await load({ page: currentPage, status: statusFilter });
+  };
+
+  const deleteCandidate = async (id) => {
+    const shouldDelete = window.confirm("Delete this candidate and its stored data?");
+    if (!shouldDelete) {
+      return;
+    }
+    setError("");
+    const response = await fetch("/api/admin/candidates", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "Failed to delete candidate");
+      return;
+    }
     await load({ page: currentPage, status: statusFilter });
   };
 
@@ -339,7 +361,7 @@ export default function AgegapleAdminTab() {
             <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
             <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
               Runway: <b>{queueHealth.runwayDays}</b> day(s) | Approved unused: <b>{queueHealth.approvedUnused}</b> |
-              Approved used: <b>{queueHealth.approvedUsed}</b> | Pending: <b>{queueHealth.pending}</b> | Rejected: <b>{queueHealth.rejected}</b>
+              Approved used: <b>{queueHealth.approvedUsed}</b> | Pending: <b>{queueHealth.pending}</b> | Finished: <b>{queueHealth.finished}</b>
             </p>
           </div>
         ) : null}
@@ -385,23 +407,38 @@ export default function AgegapleAdminTab() {
                     Usage: {item.usedCount === 0 ? "Not used yet" : `${item.usedCount}x (last ${item.lastUsedPuzzleDate})`}
                     {item.isUsedToday ? " | Currently used today" : ""}
                   </p>
+                  {item.nextScheduledPuzzleDate ? (
+                    <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
+                      Scheduled: <b>{item.nextScheduledPuzzleDate}</b>
+                    </p>
+                  ) : null}
                   <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
                     <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage photos</button>
                     <button className="admin-btn" type="button" onClick={() => void openDetails(item.id)}>Edit details</button>
                     {statuses.map((status) => (
+                      (() => {
+                        const isSelected = status === "finished" ? item.isFinished : item.status === status;
+                        return (
                       <button
                         key={status}
                         type="button"
                         className="admin-btn"
                         onClick={() => void patchStatus(item.id, status)}
+                        disabled={status === "finished"}
                         style={{
-                          borderColor: item.status === status ? "#2f672d" : undefined,
-                          background: item.status === status ? "#d1ffc7" : undefined,
+                          borderColor: isSelected ? "#2f672d" : undefined,
+                          background: isSelected ? "#d1ffc7" : undefined,
+                          opacity: status === "finished" ? 0.55 : 1,
                         }}
                       >
                         {status}
                       </button>
+                        );
+                      })()
                     ))}
+                    <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>
+                      Delete
+                    </button>
                   </div>
                 </div>
               </div>

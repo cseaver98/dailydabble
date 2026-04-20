@@ -19,6 +19,8 @@ create table if not exists sportle.athletes (
   wikipedia_url text,
   headshot_url text,
   is_active boolean not null default true,
+  status text not null default 'pending_review' check (status in ('pending_review', 'approved')),
+  reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -30,6 +32,7 @@ create table if not exists sportle.daily_schedule (
 );
 
 create index if not exists sportle_athletes_sport_name_idx on sportle.athletes (sport, full_name);
+create index if not exists sportle_athletes_status_idx on sportle.athletes (status);
 create index if not exists sportle_daily_schedule_athlete_id_idx on sportle.daily_schedule (athlete_id);
 
 insert into sportle.athletes (

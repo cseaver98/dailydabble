@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 const isValidYear = (value) => /^\d{4}$/.test(value.trim());
@@ -33,6 +34,7 @@ export default function YeardleGameClient({
   const [message, setMessage] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +64,7 @@ export default function YeardleGameClient({
         setPuzzle(payload);
         setImageFailed(false);
         setIsImageOpen(false);
+        setSelectedImageIndex(0);
         setGuess("");
         setAttempts([]);
         setGameState("playing");
@@ -173,7 +176,23 @@ export default function YeardleGameClient({
   const hints = Array.isArray(puzzle?.hints) ? puzzle.hints : [];
   const revealedHintCount = Math.min(maxGuesses, attempts.length);
   const visibleHints = hints.slice(0, revealedHintCount);
-  const imageSrc = !imageFailed && puzzle?.imageUrl ? puzzle.imageUrl : "/event-placeholder.svg";
+  const galleryImages = Array.isArray(puzzle?.galleryImages) && puzzle.galleryImages.length
+    ? puzzle.galleryImages
+    : [{ imageUrl: puzzle?.imageUrl, imageAlt: puzzle?.imageAlt }];
+  const normalizedGallery = galleryImages.map((item, index) => ({
+    imageUrl: item?.imageUrl || "/event-placeholder.svg",
+    imageAlt: item?.imageAlt || `Historical event photo ${index + 1}`,
+  }));
+  const canNavigateGallery = normalizedGallery.length > 1;
+  const activeImage = normalizedGallery[selectedImageIndex] ?? normalizedGallery[0];
+  const imageSrc = !imageFailed && activeImage?.imageUrl ? activeImage.imageUrl : "/event-placeholder.svg";
+
+  useEffect(() => {
+    if (selectedImageIndex < normalizedGallery.length) {
+      return;
+    }
+    setSelectedImageIndex(Math.max(0, normalizedGallery.length - 1));
+  }, [normalizedGallery.length, selectedImageIndex]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -281,10 +300,7 @@ export default function YeardleGameClient({
       <>
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <section className="card yeardle-card">
-            <h1 className="page-title">Yeardle unavailable</h1>
-            <p className="page-subtle">{error || "No puzzle available right now."}</p>
-          </section>
+          <DailydabbleUnavailable title="Yeardle unavailable" message={error || "No puzzle available right now."} />
         </main>
       </>
     );
@@ -378,21 +394,48 @@ export default function YeardleGameClient({
 
       {isImageOpen ? (
         <div className="image-modal-backdrop" onClick={() => setIsImageOpen(false)}>
-          <div className="image-modal-panel" onClick={(event) => event.stopPropagation()}>
+          <div className="image-modal-stage" onClick={(event) => event.stopPropagation()}>
+            {canNavigateGallery ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedImageIndex((current) => (current - 1 + normalizedGallery.length) % normalizedGallery.length)
+                  }
+                  className="image-modal-nav image-modal-prev"
+                  aria-label="Previous photo"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedImageIndex((current) => (current + 1) % normalizedGallery.length)}
+                  className="image-modal-nav image-modal-next"
+                  aria-label="Next photo"
+                >
+                  ›
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               className="image-modal-close"
               onClick={() => setIsImageOpen(false)}
               aria-label="Close image"
             >
-              Close
+              ×
             </button>
-            <img
-              src={imageSrc}
-              alt={puzzle.imageAlt || "Historical event"}
-              className="image-modal-image"
-              onError={() => setImageFailed(true)}
-            />
+            <div className="image-modal-viewport">
+              <img
+                src={imageSrc}
+                alt={activeImage?.imageAlt || puzzle.imageAlt || "Historical event"}
+                className="image-modal-image"
+                onError={() => setImageFailed(true)}
+              />
+            </div>
+            <p className="image-modal-caption">
+              Photo {Math.min(selectedImageIndex + 1, normalizedGallery.length)} of {normalizedGallery.length}
+            </p>
           </div>
         </div>
       ) : null}

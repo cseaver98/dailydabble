@@ -25,10 +25,15 @@
   gap: 0.75rem;
 }
 
-.dd-brand-link {
+.dd-brand {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.dd-brand-link {
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
 }
 
@@ -39,6 +44,7 @@
 .dd-brand-word {
   font-size: clamp(1.25rem, 1rem + 1vw, 1.85rem);
   font-weight: 900;
+  line-height: 1;
   letter-spacing: -0.03em;
   color: var(--primary, #2f672d);
 }
@@ -52,9 +58,24 @@
 .dd-brand-subtitle {
   font-size: 0.95rem;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: -0.01em;
   font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #75777a;
+}
+
+.dd-brand-subtitle-link {
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #75777a;
+}
+
+.dd-brand-subtitle-link:hover {
+  opacity: 0.85;
 }
 
 .dd-nav-label {
@@ -149,7 +170,7 @@
   margin: 0;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.5rem;
   width: 100%;
   padding: 0.72rem 0.82rem;
@@ -170,20 +191,17 @@
 
 .nav-menu-item-brand,
 .dd-nav .nav-menu-item-brand {
-  color: #2f672d;
+  color: var(--dd-menu-accent, var(--primary, #2f672d));
   font-weight: 900;
   letter-spacing: -0.01em;
 }
 
 .nav-menu-item-brand:hover,
 .dd-nav .nav-menu-item-brand:hover {
-  background: #e8f6e4;
-}
-
-.nav-menu-item-icon,
-.dd-nav .nav-menu-item-icon {
-  flex: 0 0 auto;
-  opacity: 0.9;
+  background: var(
+    --dd-menu-brand-hover-bg,
+    color-mix(in srgb, var(--primary-container, #e8f6e4) 75%, white)
+  );
 }
 
 .nav-menu-footer,
@@ -212,4 +230,32 @@
   .dd-nav-label {
     display: block;
   }
+}
+
+.dd-empty-state {
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+  border-radius: 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--surface-container, #e6e8ec) 88%, transparent);
+  background: var(--surface-container-lowest, #fff);
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
+}
+
+.dd-empty-state-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: clamp(1.2rem, 0.95rem + 0.9vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--foreground, #2c2f31);
+}
+
+.dd-empty-state-copy {
+  margin: 0;
+  color: var(--outline, #595c5e);
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }

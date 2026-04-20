@@ -1,5 +1,6 @@
 import type {
   ArchivePuzzleListItem,
+  CandidateFilter,
   CandidateStatus,
   PuzzleAnswer,
   PuzzlePublic,
@@ -559,7 +560,7 @@ export const listReviewCandidates = async ({
   page = 1,
   pageSize = 25,
 }: {
-  status?: CandidateStatus | "all";
+  status?: CandidateFilter;
   page?: number;
   pageSize?: number;
 } = {}): Promise<{ items: ReviewCandidate[]; total: number }> => {
@@ -571,6 +572,7 @@ export const listReviewCandidates = async ({
   const safePageSize = Math.max(1, Math.min(100, Math.floor(Number(pageSize) || 25)));
   const rangeStart = (safePage - 1) * safePageSize;
   const rangeEnd = rangeStart + safePageSize - 1;
+  const needsDerivedFiltering = status === "finished" || status === "approved";
 
   let query = supabase
     .from("puzzle_candidates")
@@ -591,11 +593,13 @@ export const listReviewCandidates = async ({
     `,
       { count: "exact" },
     )
-    .order("quality_score", { ascending: false })
-    .range(rangeStart, rangeEnd);
+    .order("quality_score", { ascending: false });
 
-  if (status !== "all") {
+  if (status === "pending_review") {
     query = query.eq("status", status);
+  }
+  if (!needsDerivedFiltering) {
+    query = query.range(rangeStart, rangeEnd);
   }
 
   const { data, error, count } = await query;
@@ -642,18 +646,27 @@ export const listReviewCandidates = async ({
     usageByCandidate.set(usageRow.candidate_id, existing);
   }
 
-  const items = rows.map((row) => ({
+  const hydrated = rows.map((row) => ({
     ...((): {
       usedCount: number;
       lastUsedPuzzleDate: string | null;
+      nextScheduledPuzzleDate: string | null;
       isUsedToday: boolean;
+      isFinished: boolean;
       isUpNext: boolean;
     } => {
       const dates = (usageByCandidate.get(row.id) ?? []).sort((a, b) => b.localeCompare(a));
+      const nextScheduledPuzzleDate =
+        dates
+          .filter((date) => date >= today)
+          .sort((a, b) => a.localeCompare(b))[0] ?? null;
+      const isFinished = dates.some((date) => date <= today);
       return {
         usedCount: dates.length,
         lastUsedPuzzleDate: dates[0] ?? null,
+        nextScheduledPuzzleDate,
         isUsedToday: dates.includes(today),
+        isFinished,
         isUpNext: row.id === upNextCandidateId,
       };
     })(),
@@ -673,9 +686,25 @@ export const listReviewCandidates = async ({
     createdAt: row.created_at,
   }));
 
+  const filtered = hydrated.filter((item) => {
+    if (status === "finished") {
+      return item.isFinished;
+    }
+    if (status === "approved") {
+      return item.status === "approved" && !item.isFinished;
+    }
+    if (status === "pending_review") {
+      return item.status === "pending_review";
+    }
+    return true;
+  });
+  const items = needsDerivedFiltering ? filtered.slice(rangeStart, rangeEnd + 1) : filtered;
+
   return {
     items,
-    total: Number.isFinite(count) ? Number(count) : items.length,
+    total: needsDerivedFiltering
+      ? filtered.length
+      : (Number.isFinite(count) ? Number(count) : items.length),
   };
 };
 
@@ -979,6 +1008,26 @@ export const updateCandidateStatus = async (id: string, status: CandidateStatus)
   }
 };
 
+export const deleteReviewCandidate = async (id: string): Promise<void> => {
+  const supabase = getSupabaseAdmin();
+
+  const { error: deleteDailyError } = await supabase
+    .from("daily_puzzles")
+    .delete()
+    .eq("candidate_id", id);
+  if (deleteDailyError) {
+    throw new Error(`Failed deleting candidate schedules: ${deleteDailyError.message}`);
+  }
+
+  const { error: deleteCandidateError } = await supabase
+    .from("puzzle_candidates")
+    .delete()
+    .eq("id", id);
+  if (deleteCandidateError) {
+    throw new Error(`Failed deleting candidate: ${deleteCandidateError.message}`);
+  }
+};
+
 export const getQueueHealth = async (): Promise<QueueHealth> => {
   const supabase = getSupabaseAdmin();
   const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
@@ -1005,7 +1054,7 @@ export const getQueueHealth = async (): Promise<QueueHealth> => {
   let approvedTotal = 0;
   let approvedUsed = 0;
   let pending = 0;
-  let rejected = 0;
+  let finished = 0;
 
   for (const row of rows) {
     if (row.status === "approved") {
@@ -1017,8 +1066,8 @@ export const getQueueHealth = async (): Promise<QueueHealth> => {
     if (row.status === "pending_review") {
       pending += 1;
     }
-    if (row.status === "rejected") {
-      rejected += 1;
+    if (usedIds.has(row.id)) {
+      finished += 1;
     }
   }
 
@@ -1030,7 +1079,7 @@ export const getQueueHealth = async (): Promise<QueueHealth> => {
     approvedUnused,
     approvedUsed,
     pending,
-    rejected,
+    finished,
     runwayDays,
     lowQueueThreshold,
     isLow: approvedUnused < lowQueueThreshold,

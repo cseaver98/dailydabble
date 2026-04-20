@@ -36,6 +36,8 @@ export default function LegalPageShell({ title, updatedLabel, children }: LegalP
     <main className={mainClass}>
       <DailydabbleNav
         subtitle="Agegaple"
+        subtitleHref="/"
+        homeHref="https://dailydabble.app"
         rightContent={
           <DailydabbleMenu
             items={[

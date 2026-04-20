@@ -508,13 +508,14 @@ export default function ArchiveGamePage() {
 
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
-  const panelClass = "rounded-[2rem] border border-[color:var(--surface-container)] bg-white p-3 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-4";
+  const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
   const imageFrameClass = "relative overflow-hidden rounded-[2rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-high)]";
 
   return (
     <main className={`${mainClass} flex flex-col`}>
       <DailydabbleNav
         subtitle="Agegaple"
+        subtitleHref="/"
         label={`Archive game: ${date || "loading..."}`}
         homeHref="https://dailydabble.app"
         rightContent={
@@ -528,7 +529,7 @@ export default function ArchiveGamePage() {
         }
       />
 
-      <div className="mx-auto flex w-full max-w-[840px] flex-1 min-h-0 flex-col gap-3 py-3 sm:gap-4 sm:py-4">
+      <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
         {loading && <p className={mutedTextClass}>Loading game...</p>}
         {error && (
           <p
@@ -543,7 +544,7 @@ export default function ArchiveGamePage() {
         )}
 
         {!loading && puzzle && (
-          <section className={`${panelClass} flex h-full min-h-0 flex-col gap-2 sm:gap-3`}>
+          <section className={panelClass}>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
               <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
                 <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Attempts</p>

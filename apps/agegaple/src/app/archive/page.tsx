@@ -61,6 +61,7 @@ export default function ArchivePage() {
     <main className={`${mainClass} flex flex-col`}>
       <DailydabbleNav
         subtitle="Agegaple"
+        subtitleHref="/"
         label="Archive games"
         homeHref="https://dailydabble.app"
         rightContent={
@@ -74,7 +75,7 @@ export default function ArchivePage() {
         }
       />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 min-h-0 flex-col gap-5 px-5 py-6 sm:py-8">
+      <div className="container flex flex-1 min-h-0 flex-col gap-5">
         {loading && <p className={mutedTextClass}>Loading archive...</p>}
         {error && (
           <p

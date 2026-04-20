@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STATUS_VALUES = ["pending", "approved", "used"];
+const FILTER_VALUES = ["pending_review", "approved", "finished"];
+const candidatePageSize = 10;
 
 const statusLabel = {
   pending: "Pending",
@@ -39,6 +41,8 @@ export default function DoodleAdminTab() {
   const [reorderMessage, setReorderMessage] = useState("");
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [deletingSlug, setDeletingSlug] = useState("");
+  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const hydrateOverview = (payload) => {
     if (Array.isArray(payload.items)) {
@@ -273,14 +277,44 @@ export default function DoodleAdminTab() {
     }
   };
 
+  const filteredItems = useMemo(() => {
+    if (statusFilter === "pending_review") {
+      return items.filter((item) => item.status === "pending");
+    }
+    if (statusFilter === "approved") {
+      return items.filter((item) => item.status === "approved");
+    }
+    if (statusFilter === "finished") {
+      return items.filter((item) => item.status === "used");
+    }
+    return items;
+  }, [items, statusFilter]);
+
+  const totalCandidates = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(Math.max(totalCandidates, 0) / candidatePageSize));
+  const paginatedItems = useMemo(() => {
+    const offset = (currentPage - 1) * candidatePageSize;
+    return filteredItems.slice(offset, offset + candidatePageSize);
+  }, [filteredItems, currentPage]);
+
   const groupedItems = useMemo(
     () => ({
-      pending: items.filter((item) => item.status === "pending"),
-      approved: items.filter((item) => item.status === "approved"),
-      used: items.filter((item) => item.status === "used"),
+      pending: paginatedItems.filter((item) => item.status === "pending"),
+      approved: paginatedItems.filter((item) => item.status === "approved"),
+      used: paginatedItems.filter((item) => item.status === "used"),
     }),
-    [items],
+    [paginatedItems],
   );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const processedStages = useMemo(() => {
     const stages = previewItem?.processed?.stages;
@@ -417,11 +451,26 @@ export default function DoodleAdminTab() {
           </p>
         </div>
 
+        <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
+          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
+            Status
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
+              <option value="all">all</option>
+              {FILTER_VALUES.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         {loadingFiles ? <p className="admin-copy">Loading SVG files...</p> : null}
         {!loadingFiles && loadError ? <p className="admin-copy" style={{ color: "#8b2d2d" }}>{loadError}</p> : null}
         {!loadingFiles && !loadError && items.length === 0 ? <p className="admin-copy">No SVGs uploaded yet.</p> : null}
+        {!loadingFiles && !loadError && items.length > 0 && filteredItems.length === 0 ? (
+          <p className="admin-copy">No doodle candidates in this filter yet.</p>
+        ) : null}
 
-        {!loadingFiles && !loadError && items.length > 0 ? (
+        {!loadingFiles && !loadError && paginatedItems.length > 0 ? (
           <div style={{ marginTop: ".9rem", display: "grid", gap: ".8rem" }}>
             {STATUS_VALUES.map((status) => (
               <div key={status} style={{ border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem", background: "#fff" }}>
@@ -493,6 +542,32 @@ export default function DoodleAdminTab() {
                 )}
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {!loadingFiles && !loadError && totalCandidates > 0 ? (
+          <div style={{ marginTop: ".9rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
+            <p className="admin-copy" style={{ margin: 0 }}>
+              Showing page <b>{currentPage}</b> of <b>{totalPages}</b> ({totalCandidates} candidates)
+            </p>
+            <div style={{ display: "flex", gap: ".45rem" }}>
+              <button
+                className="admin-btn"
+                type="button"
+                onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
+                disabled={currentPage <= 1}
+              >
+                Previous
+              </button>
+              <button
+                className="admin-btn"
+                type="button"
+                onClick={() => setCurrentPage((current) => Math.min(totalPages, current + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </button>
+            </div>
           </div>
         ) : null}
       </section>

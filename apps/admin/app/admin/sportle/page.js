@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const sportOptions = [
   { value: "nba", label: "NBA" },
@@ -11,6 +11,8 @@ const sportOptions = [
 ];
 
 const batchSizeOptions = [1, 3, 5, 7, 10, 14];
+const statuses = ["pending_review", "approved", "finished"];
+const candidatePageSize = 10;
 const today = () => new Date().toISOString().slice(0, 10);
 
 const parseAliases = (value) =>
@@ -20,113 +22,58 @@ const parseAliases = (value) =>
     .filter(Boolean);
 
 export default function SportleAdminTab() {
+  const [items, setItems] = useState([]);
+  const [queueHealth, setQueueHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [seedBusy, setSeedBusy] = useState(false);
 
-  const [athletes, setAthletes] = useState([]);
-  const [schedule, setSchedule] = useState([]);
-  const [selectedAthleteId, setSelectedAthleteId] = useState("");
-  const [selectedDate, setSelectedDate] = useState(today());
+  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCandidates, setTotalCandidates] = useState(0);
 
   const [newSport, setNewSport] = useState("nba");
   const [newFullName, setNewFullName] = useState("");
   const [seedSport, setSeedSport] = useState("nba");
   const [seedBatchSize, setSeedBatchSize] = useState(5);
   const [seedStartDate, setSeedStartDate] = useState(today());
+  const [scheduleById, setScheduleById] = useState({});
 
-  const [form, setForm] = useState({
-    sport: "nba",
-    fullName: "",
-    aliases: "",
-    teamName: "",
-    teamLogoUrl: "",
-    yearsWithTeam: "",
-    position: "",
-    keyStat1: "",
-    keyStat2: "",
-    finalClue: "",
-    wikipediaUrl: "",
-    headshotUrl: "",
-    isActive: true,
-  });
+  const [detailsAthleteId, setDetailsAthleteId] = useState(null);
+  const [detailsForm, setDetailsForm] = useState(null);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
+  const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
-      const response = await fetch("/api/admin/sportle", { cache: "no-store" });
+      setError("");
+      const search = new URLSearchParams({
+        status,
+        page: String(page),
+        pageSize: String(candidatePageSize),
+      });
+      const response = await fetch(`/api/admin/sportle?${search.toString()}`, { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || "Failed to load Sportle admin data");
+        throw new Error(payload.error || "Failed to load Sportle candidates");
       }
-
-      const nextAthletes = Array.isArray(payload.athletes) ? payload.athletes : [];
-      const nextSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
-      setAthletes(nextAthletes);
-      setSchedule(nextSchedule);
-
-      const nextSelected = selectedAthleteId || nextAthletes[0]?.id || "";
-      setSelectedAthleteId(nextSelected);
-
-      const selected = nextAthletes.find((item) => item.id === nextSelected);
-      if (selected) {
-        setForm({
-          sport: selected.sport || "nba",
-          fullName: selected.full_name || "",
-          aliases: Array.isArray(selected.aliases) ? selected.aliases.join(", ") : "",
-          teamName: selected.team_name || "",
-          teamLogoUrl: selected.team_logo_url || "",
-          yearsWithTeam: selected.years_with_team || "",
-          position: selected.position || "",
-          keyStat1: selected.key_stat_1 || "",
-          keyStat2: selected.key_stat_2 || "",
-          finalClue: selected.final_clue || "",
-          wikipediaUrl: selected.wikipedia_url || "",
-          headshotUrl: selected.headshot_url || "",
-          isActive: selected.is_active !== false,
-        });
-      }
+      setItems(Array.isArray(payload.items) ? payload.items : []);
+      setQueueHealth(payload.queueHealth || null);
+      setTotalCandidates(Number(payload.total) || 0);
+      setCurrentPage(Number(payload.page) || page);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load Sportle admin data");
+      setError(loadError instanceof Error ? loadError.message : "Failed to load Sportle candidates");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setCurrentPage(1);
+    void load({ page: 1, status: statusFilter });
+  }, [statusFilter]);
 
-  useEffect(() => {
-    const selected = athletes.find((item) => item.id === selectedAthleteId);
-    if (!selected) {
-      return;
-    }
-    setForm({
-      sport: selected.sport || "nba",
-      fullName: selected.full_name || "",
-      aliases: Array.isArray(selected.aliases) ? selected.aliases.join(", ") : "",
-      teamName: selected.team_name || "",
-      teamLogoUrl: selected.team_logo_url || "",
-      yearsWithTeam: selected.years_with_team || "",
-      position: selected.position || "",
-      keyStat1: selected.key_stat_1 || "",
-      keyStat2: selected.key_stat_2 || "",
-      finalClue: selected.final_clue || "",
-      wikipediaUrl: selected.wikipedia_url || "",
-      headshotUrl: selected.headshot_url || "",
-      isActive: selected.is_active !== false,
-    });
-  }, [athletes, selectedAthleteId]);
-
-  const schedulePreview = useMemo(
-    () => [...schedule].sort((a, b) => String(b.puzzle_date).localeCompare(String(a.puzzle_date))).slice(0, 24),
-    [schedule],
-  );
+  const totalPages = Math.max(1, Math.ceil(Math.max(totalCandidates, 0) / candidatePageSize));
 
   const addAthlete = async () => {
     setBusy(true);
@@ -147,78 +94,10 @@ export default function SportleAdminTab() {
         throw new Error(payload.error || "Could not add athlete");
       }
       setNewFullName("");
-      setMessage("Athlete added.");
-      await load();
-      if (payload?.item?.id) {
-        setSelectedAthleteId(payload.item.id);
-      }
+      setMessage("Athlete added as pending review.");
+      await load({ page: 1, status: statusFilter });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not add athlete");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const assignDate = async () => {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/admin/sportle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "assign-date",
-          athleteId: selectedAthleteId,
-          puzzleDate: selectedDate,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not assign date");
-      }
-      setMessage(`Assigned puzzle to ${selectedDate}.`);
-      await load();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not assign date");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const saveAthlete = async () => {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/admin/sportle", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          athleteId: selectedAthleteId,
-          sport: form.sport,
-          fullName: form.fullName,
-          aliases: parseAliases(form.aliases),
-          teamName: form.teamName,
-          teamLogoUrl: form.teamLogoUrl,
-          yearsWithTeam: form.yearsWithTeam,
-          position: form.position,
-          keyStat1: form.keyStat1,
-          keyStat2: form.keyStat2,
-          finalClue: form.finalClue,
-          wikipediaUrl: form.wikipediaUrl,
-          headshotUrl: form.headshotUrl,
-          isActive: form.isActive,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not save athlete");
-      }
-      setMessage("Athlete updated.");
-      await load();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not save athlete");
     } finally {
       setBusy(false);
     }
@@ -243,12 +122,8 @@ export default function SportleAdminTab() {
         throw new Error(payload.details || payload.error || "Seed failed");
       }
       const summary = payload?.summary;
-      setMessage(
-        summary
-          ? `Seeded ${summary.insertedCount} candidates, scheduled ${summary.scheduledCount}.`
-          : payload.output || "Seed completed.",
-      );
-      await load();
+      setMessage(summary ? `Seeded ${summary.insertedCount} candidates, scheduled ${summary.scheduledCount}.` : "Seed completed.");
+      await load({ page: 1, status: statusFilter });
     } catch (seedError) {
       setError(seedError instanceof Error ? seedError.message : "Could not run seed.");
     } finally {
@@ -256,240 +131,347 @@ export default function SportleAdminTab() {
     }
   };
 
+  const patchStatus = async (id, status) => {
+    if (status === "finished") {
+      return;
+    }
+    setError("");
+    const response = await fetch("/api/admin/sportle", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ athleteId: id, status }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "Failed to update status");
+      return;
+    }
+    await load({ page: currentPage, status: statusFilter });
+  };
+
+  const assignDate = async (id) => {
+    const puzzleDate = String(scheduleById[id] || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
+      setError("Schedule date must be YYYY-MM-DD.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/sportle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "assign-date", athleteId: id, puzzleDate }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not assign date");
+      }
+      setMessage(`Assigned puzzle to ${puzzleDate}.`);
+      await load({ page: currentPage, status: statusFilter });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Could not assign date");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteCandidate = async (id) => {
+    const shouldDelete = window.confirm("Delete this Sportle candidate and its stored data?");
+    if (!shouldDelete) {
+      return;
+    }
+
+    setError("");
+    const response = await fetch("/api/admin/sportle", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(payload.error || "Could not delete candidate");
+      return;
+    }
+
+    await load({ page: currentPage, status: statusFilter });
+  };
+
+  const openDetails = (item) => {
+    setDetailsAthleteId(item.id);
+    setDetailsForm({
+      sport: item.sport || "nba",
+      fullName: item.full_name || "",
+      aliases: Array.isArray(item.aliases) ? item.aliases.join(", ") : "",
+      teamName: item.team_name || "",
+      yearsWithTeam: item.years_with_team || "",
+      position: item.position || "",
+      keyStat1: item.key_stat_1 || "",
+      keyStat2: item.key_stat_2 || "",
+      finalClue: item.final_clue || "",
+      wikipediaUrl: item.wikipedia_url || "",
+      headshotUrl: item.headshot_url || "",
+      isActive: item.is_active !== false,
+    });
+  };
+
+  const saveDetails = async () => {
+    if (!detailsAthleteId || !detailsForm) {
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/sportle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          athleteId: detailsAthleteId,
+          sport: detailsForm.sport,
+          fullName: detailsForm.fullName,
+          aliases: parseAliases(detailsForm.aliases),
+          teamName: detailsForm.teamName,
+          yearsWithTeam: detailsForm.yearsWithTeam,
+          position: detailsForm.position,
+          keyStat1: detailsForm.keyStat1,
+          keyStat2: detailsForm.keyStat2,
+          finalClue: detailsForm.finalClue,
+          wikipediaUrl: detailsForm.wikipediaUrl,
+          headshotUrl: detailsForm.headshotUrl,
+          isActive: detailsForm.isActive,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not save athlete details");
+      }
+      setDetailsAthleteId(null);
+      setDetailsForm(null);
+      await load({ page: currentPage, status: statusFilter });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save athlete details");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="admin-card">
       <h1 className="admin-title">Sportle Curation</h1>
-      <p className="admin-copy">
-        Manage athlete clues and daily scheduling. Seed starts from Wikipedia category pages, then you can refine clues manually.
-      </p>
+      <p className="admin-copy">Review athlete candidates, approve them, and schedule future dates.</p>
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Wikipedia seed</p>
-        <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-          <select
-            value={seedSport}
-            onChange={(event) => setSeedSport(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          >
-            {sportOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <select
-            value={seedBatchSize}
-            onChange={(event) => setSeedBatchSize(Number(event.target.value))}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          >
-            {batchSizeOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={seedStartDate}
-            onChange={(event) => setSeedStartDate(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          />
-          <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={seedBusy}>
-            {seedBusy ? "Seeding..." : "Seed from Wikipedia"}
-          </button>
+      {queueHealth ? (
+        <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
+          <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
+          <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
+            Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
+            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
+            Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
+          </p>
         </div>
-      </div>
+      ) : null}
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Add athlete candidate</p>
-        <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-          <select
-            value={newSport}
-            onChange={(event) => setNewSport(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          >
-            {sportOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <input
-            value={newFullName}
-            onChange={(event) => setNewFullName(event.target.value)}
-            placeholder="Athlete name"
-            style={{ minWidth: 220, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          />
-          <button className="admin-btn primary" type="button" onClick={() => void addAthlete()} disabled={busy}>
-            Add Athlete
-          </button>
-        </div>
-      </div>
-
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Edit athlete clues</p>
-        <div style={{ display: "grid", gap: ".55rem", marginTop: ".55rem" }}>
-          <select
-            value={selectedAthleteId}
-            onChange={(event) => setSelectedAthleteId(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          >
-            <option value="">Choose athlete</option>
-            {athletes.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.full_name} ({String(item.sport || "").toUpperCase()})
-              </option>
-            ))}
-          </select>
-
-          <div style={{ display: "grid", gap: ".5rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Sport
-              <select
-                value={form.sport}
-                onChange={(event) => setForm((prev) => ({ ...prev, sport: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              >
-                {sportOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Full name
-              <input
-                value={form.fullName}
-                onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Aliases (comma-separated)
-              <input
-                value={form.aliases}
-                onChange={(event) => setForm((prev) => ({ ...prev, aliases: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Team name
-              <input
-                value={form.teamName}
-                onChange={(event) => setForm((prev) => ({ ...prev, teamName: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Team logo URL
-              <input
-                value={form.teamLogoUrl}
-                onChange={(event) => setForm((prev) => ({ ...prev, teamLogoUrl: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Years with team
-              <input
-                value={form.yearsWithTeam}
-                onChange={(event) => setForm((prev) => ({ ...prev, yearsWithTeam: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Position
-              <input
-                value={form.position}
-                onChange={(event) => setForm((prev) => ({ ...prev, position: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Key stat #1
-              <input
-                value={form.keyStat1}
-                onChange={(event) => setForm((prev) => ({ ...prev, keyStat1: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Key stat #2 / accolade
-              <input
-                value={form.keyStat2}
-                onChange={(event) => setForm((prev) => ({ ...prev, keyStat2: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Final clue
-              <input
-                value={form.finalClue}
-                onChange={(event) => setForm((prev) => ({ ...prev, finalClue: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Wikipedia URL
-              <input
-                value={form.wikipediaUrl}
-                onChange={(event) => setForm((prev) => ({ ...prev, wikipediaUrl: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
-            <label style={{ fontWeight: 700, fontSize: ".86rem" }}>
-              Headshot URL
-              <input
-                value={form.headshotUrl}
-                onChange={(event) => setForm((prev) => ({ ...prev, headshotUrl: event.target.value }))}
-                style={{ width: "100%", marginTop: ".2rem", padding: ".52rem .66rem", borderRadius: 10, border: "1px solid #d8dce2" }}
-              />
-            </label>
+      <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem", display: "grid", gap: ".7rem" }}>
+        <div>
+          <p style={{ margin: 0, fontWeight: 900 }}>Wikipedia seed</p>
+          <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
+            <select value={seedSport} onChange={(event) => setSeedSport(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
+              {sportOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <select value={seedBatchSize} onChange={(event) => setSeedBatchSize(Number(event.target.value))} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
+              {batchSizeOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            <input type="date" value={seedStartDate} onChange={(event) => setSeedStartDate(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }} />
+            <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={seedBusy}>
+              {seedBusy ? "Seeding..." : "Seed from Wikipedia"}
+            </button>
           </div>
+        </div>
 
-          <label style={{ fontWeight: 700, fontSize: ".86rem", display: "inline-flex", alignItems: "center", gap: ".5rem" }}>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-            Active for autocomplete and gameplay
-          </label>
-
-          <button className="admin-btn primary" type="button" onClick={() => void saveAthlete()} disabled={busy || !selectedAthleteId}>
-            Save Athlete
-          </button>
+        <div>
+          <p style={{ margin: 0, fontWeight: 900 }}>Add athlete candidate</p>
+          <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
+            <select value={newSport} onChange={(event) => setNewSport(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
+              {sportOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <input value={newFullName} onChange={(event) => setNewFullName(event.target.value)} placeholder="Athlete name" style={{ minWidth: 220, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }} />
+            <button className="admin-btn primary" type="button" onClick={() => void addAthlete()} disabled={busy}>Add Athlete</button>
+          </div>
         </div>
       </div>
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Assign to date</p>
-        <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-            style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
-          />
-          <button className="admin-btn" type="button" onClick={() => void assignDate()} disabled={busy || !selectedAthleteId}>
-            Assign Date
-          </button>
-        </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
+        <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
+          Status
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
+            <option value="all">all</option>
+            {statuses.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {loading ? <p className="admin-copy" style={{ marginTop: ".75rem" }}>Loading Sportle data...</p> : null}
+      {loading ? <p className="admin-copy" style={{ marginTop: ".75rem" }}>Loading Sportle candidates...</p> : null}
       {error ? <p className="admin-copy" style={{ marginTop: ".75rem", color: "#8b2d2d" }}>{error}</p> : null}
       {message ? <p className="admin-copy" style={{ marginTop: ".75rem", color: "#2f672d" }}>{message}</p> : null}
 
-      <div style={{ marginTop: ".95rem", borderTop: "1px solid #e4e8ee", paddingTop: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 800 }}>Recent schedule</p>
-        {schedulePreview.length === 0 ? (
-          <p className="admin-copy" style={{ marginTop: ".45rem" }}>No scheduled Sportle dates yet.</p>
-        ) : (
-          <ul style={{ marginTop: ".45rem", paddingLeft: "1.1rem", color: "#4d5662" }}>
-            {schedulePreview.map((row) => {
-              const athlete = athletes.find((item) => item.id === row.athlete_id);
-              return (
-                <li key={`${row.puzzle_date}-${row.athlete_id}`} style={{ marginBottom: ".2rem" }}>
-                  {row.puzzle_date}: {athlete?.full_name || row.athlete_id}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
+        {items.map((item) => (
+          <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+            <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.full_name}</p>
+            <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
+              Sport: {String(item.sport || "").toUpperCase()} | Status: {item.status} | Position: {item.position || "unknown"}
+            </p>
+            <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
+              Usage: {item.scheduleCount === 0 ? "Not used yet" : `${item.scheduleCount}x (last ${item.lastScheduledDate})`}
+            </p>
+            {item.nextScheduledDate ? (
+              <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
+                Scheduled: <b>{item.nextScheduledDate}</b>
+              </p>
+            ) : null}
+
+            <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
+              <button className="admin-btn" type="button" onClick={() => openDetails(item)}>Edit details</button>
+              {statuses.map((status) => {
+                const isSelected = status === "finished" ? item.isFinished : item.status === status;
+                return (
+                  <button
+                    key={status}
+                    className="admin-btn"
+                    type="button"
+                    onClick={() => void patchStatus(item.id, status)}
+                    disabled={status === "finished"}
+                    style={{
+                      borderColor: isSelected ? "#2f672d" : undefined,
+                      background: isSelected ? "#d1ffc7" : undefined,
+                      opacity: status === "finished" ? 0.55 : 1,
+                    }}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+              <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
+            </div>
+
+            <div style={{ marginTop: ".45rem", display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                type="date"
+                value={scheduleById[item.id] || ""}
+                onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
+                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
+              />
+              <button className="admin-btn primary" type="button" onClick={() => void assignDate(item.id)} disabled={busy || item.status !== "approved"}>
+                Schedule candidate
+              </button>
+            </div>
+          </article>
+        ))}
+        {!loading && items.length === 0 ? <p className="admin-copy">No Sportle candidates in this filter yet.</p> : null}
       </div>
+
+      {!loading && totalCandidates > 0 ? (
+        <div style={{ marginTop: ".9rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
+          <p className="admin-copy" style={{ margin: 0 }}>
+            Showing page <b>{currentPage}</b> of <b>{Math.max(1, Math.ceil(totalCandidates / candidatePageSize))}</b> ({totalCandidates} candidates)
+          </p>
+          <div style={{ display: "flex", gap: ".45rem" }}>
+            <button className="admin-btn" type="button" onClick={() => void load({ page: Math.max(1, currentPage - 1), status: statusFilter })} disabled={currentPage <= 1}>Previous</button>
+            <button className="admin-btn" type="button" onClick={() => void load({ page: Math.min(totalPages, currentPage + 1), status: statusFilter })} disabled={currentPage >= totalPages}>Next</button>
+          </div>
+        </div>
+      ) : null}
+
+      {detailsAthleteId && detailsForm ? (
+        <div onClick={() => { setDetailsAthleteId(null); setDetailsForm(null); }} style={{ position: "fixed", inset: 0, zIndex: 125, background: "rgba(0,0,0,0.65)", display: "grid", placeItems: "center", padding: "1rem" }}>
+          <div onClick={(event) => event.stopPropagation()} style={{ width: "min(900px, 96vw)", maxHeight: "92vh", overflow: "auto", borderRadius: 16, border: "1px solid #d8dce2", background: "#fff", padding: ".9rem" }}>
+            <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Sport
+                <select value={detailsForm.sport} onChange={(event) => setDetailsForm((current) => ({ ...current, sport: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}>
+                  {sportOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Full name
+                <input value={detailsForm.fullName} onChange={(event) => setDetailsForm((current) => ({ ...current, fullName: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+            </div>
+
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Aliases (comma-separated)
+                <input value={detailsForm.aliases} onChange={(event) => setDetailsForm((current) => ({ ...current, aliases: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Team name
+                <input value={detailsForm.teamName} onChange={(event) => setDetailsForm((current) => ({ ...current, teamName: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+            </div>
+
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Position
+                <input value={detailsForm.position} onChange={(event) => setDetailsForm((current) => ({ ...current, position: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Years with team
+                <input value={detailsForm.yearsWithTeam} onChange={(event) => setDetailsForm((current) => ({ ...current, yearsWithTeam: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+            </div>
+
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Key stat #1
+                <textarea rows={2} value={detailsForm.keyStat1} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat1: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Key stat #2
+                <textarea rows={2} value={detailsForm.keyStat2} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat2: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+            </div>
+
+            <label style={{ marginTop: ".55rem", display: "grid", gap: ".28rem", fontWeight: 700 }}>
+              Final clue
+              <textarea rows={2} value={detailsForm.finalClue} onChange={(event) => setDetailsForm((current) => ({ ...current, finalClue: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+            </label>
+
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Wikipedia URL
+                <input value={detailsForm.wikipediaUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, wikipediaUrl: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Headshot URL
+                <input value={detailsForm.headshotUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, headshotUrl: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
+              </label>
+            </div>
+
+            <label style={{ marginTop: ".55rem", fontWeight: 700, fontSize: ".86rem", display: "inline-flex", alignItems: "center", gap: ".5rem" }}>
+              <input type="checkbox" checked={detailsForm.isActive} onChange={(event) => setDetailsForm((current) => ({ ...current, isActive: event.target.checked }))} />
+              Active for gameplay
+            </label>
+
+            <div style={{ marginTop: ".8rem", display: "flex", justifyContent: "flex-end", gap: ".45rem" }}>
+              <button className="admin-btn" type="button" onClick={() => { setDetailsAthleteId(null); setDetailsForm(null); }}>Cancel</button>
+              <button className="admin-btn primary" type="button" onClick={() => void saveDetails()} disabled={busy}>Save details</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

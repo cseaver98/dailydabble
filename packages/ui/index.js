@@ -2,6 +2,7 @@ import React from "react";
 
 export function DailydabbleNav({
   subtitle,
+  subtitleHref,
   label,
   labelId,
   labelClassName = "",
@@ -20,15 +21,21 @@ export function DailydabbleNav({
         "div",
         { className: "dd-nav-left" },
         React.createElement(
-          "a",
-          { className: "dd-brand-link", href: homeHref },
-          React.createElement("span", { className: "dd-brand-word" }, "DailyDabble"),
+          "div",
+          { className: "dd-brand" },
+          React.createElement(
+            "a",
+            { className: "dd-brand-link", href: homeHref },
+            React.createElement("span", { className: "dd-brand-word" }, "DailyDabble"),
+          ),
           subtitle
             ? React.createElement(
                 React.Fragment,
                 null,
                 React.createElement("span", { className: "dd-brand-separator", "aria-hidden": "true" }),
-                React.createElement("span", { className: "dd-brand-subtitle" }, subtitle),
+                subtitleHref
+                  ? React.createElement("a", { className: "dd-brand-subtitle-link", href: subtitleHref }, subtitle)
+                  : React.createElement("span", { className: "dd-brand-subtitle" }, subtitle),
               )
             : null,
         ),
@@ -115,40 +122,6 @@ export function DailydabbleMenu({
             onClick: closeMenu,
           },
           React.createElement("span", null, item.label),
-          item.brand
-            ? React.createElement(
-                "svg",
-                {
-                  className: "nav-menu-item-icon",
-                  width: "17",
-                  height: "17",
-                  viewBox: "0 0 24 24",
-                  fill: "none",
-                  "aria-hidden": "true",
-                },
-                React.createElement("path", {
-                  d: "M3 10.5 12 3l9 7.5",
-                  stroke: "currentColor",
-                  strokeWidth: "2.5",
-                  strokeLinecap: "round",
-                  strokeLinejoin: "round",
-                }),
-                React.createElement("path", {
-                  d: "M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10",
-                  stroke: "currentColor",
-                  strokeWidth: "2.5",
-                  strokeLinecap: "round",
-                  strokeLinejoin: "round",
-                }),
-                React.createElement("path", {
-                  d: "M10 21v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5",
-                  stroke: "currentColor",
-                  strokeWidth: "2.5",
-                  strokeLinecap: "round",
-                  strokeLinejoin: "round",
-                }),
-              )
-            : null,
         ),
       ),
       legalLinks.length
@@ -165,5 +138,18 @@ export function DailydabbleMenu({
           )
         : null,
     ),
+  );
+}
+
+export function DailydabbleUnavailable({
+  title = "Game unavailable",
+  message = "No puzzle available right now.",
+  className = "",
+}) {
+  return React.createElement(
+    "section",
+    { className: `dd-empty-state ${className}`.trim() },
+    React.createElement("h1", { className: "dd-empty-state-title" }, title),
+    React.createElement("p", { className: "dd-empty-state-copy" }, message),
   );
 }

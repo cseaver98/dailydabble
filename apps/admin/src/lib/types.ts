@@ -1,6 +1,7 @@
 export type RelationshipType = "spouse" | "couple" | "former_spouse" | "former_couple";
 
 export type CandidateStatus = "pending_review" | "approved" | "rejected";
+export type CandidateFilter = "pending_review" | "approved" | "finished" | "all";
 
 export type EditorialContext = {
   relationshipNote: string;
@@ -52,7 +53,9 @@ export type ReviewCandidate = {
   createdAt: string;
   usedCount: number;
   lastUsedPuzzleDate: string | null;
+  nextScheduledPuzzleDate: string | null;
   isUsedToday: boolean;
+  isFinished: boolean;
   isUpNext: boolean;
 };
 
@@ -102,7 +105,7 @@ export type QueueHealth = {
   approvedUnused: number;
   approvedUsed: number;
   pending: number;
-  rejected: number;
+  finished: number;
   runwayDays: number;
   lowQueueThreshold: number;
   isLow: boolean;

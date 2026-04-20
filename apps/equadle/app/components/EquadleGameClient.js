@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 const EMPTY_ROW = Array.from({ length: 9 }, () => ({ char: "", state: "empty" }));
@@ -276,10 +277,7 @@ export default function EquadleGameClient({
       <>
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <section className="card equadle-card">
-            <h1 className="page-title">Equadle unavailable</h1>
-            <p className="page-subtle">{error || "No puzzle available right now."}</p>
-          </section>
+          <DailydabbleUnavailable title="Equadle unavailable" message={error || "No puzzle available right now."} />
         </main>
       </>
     );

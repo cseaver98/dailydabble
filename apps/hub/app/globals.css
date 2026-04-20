@@ -44,6 +44,7 @@ body {
 .hub-nav .dd-nav-inner {
   width: min(1320px, 96vw);
   margin: 0 auto;
+  min-height: 66px;
   padding-left: 0.25rem;
   padding-right: 0.25rem;
 }

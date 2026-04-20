@@ -13,6 +13,8 @@ create table if not exists yeardle.events (
   hint_era text,
   hint_person text,
   hint_description text,
+  status text not null default 'pending_review' check (status in ('pending_review', 'approved')),
+  reviewed_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -23,6 +25,7 @@ create table if not exists yeardle.daily_schedule (
 );
 
 create index if not exists yeardle_events_created_at_idx on yeardle.events (created_at desc);
+create index if not exists yeardle_events_status_idx on yeardle.events (status);
 create index if not exists yeardle_daily_schedule_event_id_idx on yeardle.daily_schedule (event_id);
 
 alter table yeardle.events enable row level security;
