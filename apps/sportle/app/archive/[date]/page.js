@@ -8,7 +8,7 @@ export default async function ArchivePuzzlePage({ params }) {
   return (
     <SportleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel={`Archive game: ${date || "loading..."}`}
+      navLabel=""
       archiveHref="/archive"
       storagePrefix={`sportle:v1:archive:${date}`}
       completionPrefix="sportle:v1:archive-completed"

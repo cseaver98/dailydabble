@@ -5,6 +5,25 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 const EMPTY_ROW = Array.from({ length: 9 }, () => ({ char: "", state: "empty" }));
+const getNextGameCountdown = () => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
+  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
+  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
+  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
+  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+};
 
 export default function EquadleGameClient({
   apiUrl,
@@ -15,6 +34,7 @@ export default function EquadleGameClient({
   completionPrefix = "equadle:v1:completed",
   lockDailyCompletion = true,
 }) {
+  const isArchiveView = apiUrl.includes("/by-date");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [puzzle, setPuzzle] = useState(null);
@@ -22,6 +42,12 @@ export default function EquadleGameClient({
   const [attempts, setAttempts] = useState([]);
   const [gameState, setGameState] = useState("playing");
   const [message, setMessage] = useState("");
+  const [resolvedAnswer, setResolvedAnswer] = useState("");
+  const [isResultOpen, setIsResultOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
+  const [nextGameCountdown, setNextGameCountdown] = useState("");
+  const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
 
   useEffect(() => {
     let active = true;
@@ -53,6 +79,9 @@ export default function EquadleGameClient({
         setAttempts([]);
         setGameState("playing");
         setMessage("");
+        setResolvedAnswer("");
+        setIsResultOpen(false);
+        setCopyStatus("");
       } catch (loadError) {
         if (!active) {
           return;
@@ -98,14 +127,20 @@ export default function EquadleGameClient({
 
     try {
       const parsed = JSON.parse(raw);
+      const parsedState = parsed.gameState;
+      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
+        window.localStorage.removeItem(progressKey);
+        return;
+      }
       setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
       setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
+      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
+      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
     } catch {
       window.localStorage.removeItem(progressKey);
     }
-  }, [progressKey]);
+  }, [lockDailyCompletion, progressKey]);
 
   useEffect(() => {
     if (!completionKey || !lockDailyCompletion) {
@@ -126,6 +161,7 @@ export default function EquadleGameClient({
       setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
       setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
+      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
     } catch {
       window.localStorage.removeItem(completionKey);
     }
@@ -138,13 +174,30 @@ export default function EquadleGameClient({
 
     window.localStorage.setItem(
       progressKey,
-      JSON.stringify({ guess, attempts, gameState, message }),
+      JSON.stringify({ guess, attempts, gameState, message, resolvedAnswer }),
     );
-  }, [attempts, gameState, guess, message, progressKey, puzzle]);
+  }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
+
+  useEffect(() => {
+    if (gameState === "playing") {
+      setIsResultOpen(false);
+      return;
+    }
+    setIsResultOpen(true);
+  }, [gameState]);
+
+  useEffect(() => {
+    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
+      setNextGameCountdown("");
+      return;
+    }
+    setNextGameCountdown(getNextGameCountdown());
+    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 6;
   const equationLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle.equationLength) : 9;
-  const guessesLeft = Math.max(0, maxGuesses - attempts.length);
 
   const boardRows = useMemo(() => {
     const rows = attempts.map((attempt) =>
@@ -209,6 +262,7 @@ export default function EquadleGameClient({
         const finalMessage = `Correct. Equation: ${payload.answer}`;
         setGameState("won");
         setMessage(finalMessage);
+        setResolvedAnswer(payload.answer || "");
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -217,6 +271,7 @@ export default function EquadleGameClient({
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
+              resolvedAnswer: payload.answer || "",
             }),
           );
         }
@@ -227,6 +282,7 @@ export default function EquadleGameClient({
         const finalMessage = `Out of guesses. Answer: ${payload.answer}`;
         setGameState("lost");
         setMessage(finalMessage);
+        setResolvedAnswer(payload.answer || "");
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -235,6 +291,7 @@ export default function EquadleGameClient({
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
+              resolvedAnswer: payload.answer || "",
             }),
           );
         }
@@ -253,10 +310,42 @@ export default function EquadleGameClient({
       setAttempts([]);
       setGameState("playing");
       setMessage("");
+      setResolvedAnswer("");
+      setIsResultOpen(false);
+      setCopyStatus("");
       return;
     }
 
     setMessage("Today’s puzzle is locked after completion. Try archive games.");
+  };
+
+  const effectiveAnswer = resolvedAnswer || puzzle?.answer || "Unavailable";
+  const shareText = [
+    `Equadle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
+    `${attempts.length}/${maxGuesses} tries`,
+    `Answer: ${effectiveAnswer}`,
+  ].join("\n");
+  const handleShareResult = async () => {
+    if (!shareText) {
+      return;
+    }
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Equadle", text: shareText });
+        setCopyStatus("Shared");
+        return;
+      } catch (shareError) {
+        if (shareError instanceof DOMException && shareError.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopyStatus("Copied to clipboard");
+    } catch {
+      setCopyStatus("Share failed");
+    }
   };
 
   if (loading) {
@@ -290,8 +379,8 @@ export default function EquadleGameClient({
       <main className="container">
         <section className="card equadle-card">
           <div className="game-meta-row">
+            <span className="chip">{contextDateLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Remaining: {guessesLeft}</span>
             <span className="chip">Length: {equationLength}</span>
           </div>
 
@@ -323,23 +412,52 @@ export default function EquadleGameClient({
               aria-label="Guess equation"
               disabled={gameState !== "playing"}
             />
-            <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
-              Guess
-            </button>
+            {gameState === "playing" ? (
+              <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
+                Guess
+              </button>
+            ) : (
+              <button className="guess-submit-btn" type="button" onClick={() => setIsResultOpen(true)}>
+                Review result
+              </button>
+            )}
           </form>
 
           <p className="message" data-kind={gameState}>{message || "Green = exact, Yellow = present, Gray = absent."}</p>
 
-          {gameState !== "playing" ? (
-            <div className="post-actions">
-              <button className="admin-btn-like" type="button" onClick={resetArchivePuzzle}>
-                {lockDailyCompletion ? "Today Locked" : "Play Again"}
+          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
+            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
+          ) : null}
+
+        </section>
+      </main>
+
+      {isResultOpen && gameState !== "playing" ? (
+        <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
+          <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <button
+              className="result-modal-close"
+              type="button"
+              onClick={() => setIsResultOpen(false)}
+              aria-label="Close result dialog"
+            >
+              ×
+            </button>
+            <h2 className="result-modal-title">Result</h2>
+            {lockDailyCompletion && !isArchiveView ? (
+              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
+            ) : null}
+            <p className="result-modal-answer">{effectiveAnswer}</p>
+            <div className="result-modal-actions">
+              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
+                Share
               </button>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
             </div>
-          ) : null}
-        </section>
-      </main>
+            {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -62,11 +62,9 @@ export default function EditorialDrawer({
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
         aria-expanded={isOpen}
       >
-        <p className="font-semibold">Editorial context</p>
+        <p className="font-semibold">Editorial content</p>
         <span
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${
-            isDarkMode ? "text-zinc-300" : "text-[color:var(--outline)]"
-          }`}
+          className={`text-[color:var(--primary)] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           aria-hidden="true"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -88,7 +86,7 @@ export default function EditorialDrawer({
           }`}
         >
           <div className={`flex items-center justify-between border-b px-4 py-3 ${isDarkMode ? "border-zinc-700" : "border-[color:var(--surface-container)]"}`}>
-            <p className="font-semibold">Editorial context</p>
+            <p className="font-semibold">Editorial content</p>
             <button
               type="button"
               onClick={() => setIsOpen(false)}

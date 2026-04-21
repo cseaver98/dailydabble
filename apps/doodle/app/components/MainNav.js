@@ -34,8 +34,8 @@ export default function MainNav({ label = "Doodle", hideToday = false }) {
           menuId="navMenu"
           items={[
             { label: "DailyDabble", href: "https://dailydabble.app", brand: true },
-            { label: "Archive games", href: "/archive" },
             { label: "Today", href: "/", id: "todayGameBtn", hidden: hideTodayOption },
+            { label: "Archive games", href: "/archive" },
           ]}
         />
       }

@@ -5,6 +5,25 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
 const isValidYear = (value) => /^\d{4}$/.test(value.trim());
+const getNextGameCountdown = () => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
+  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
+  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
+  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
+  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+};
 
 const buildDirectionCopy = (direction) => {
   if (direction === "earlier") {
@@ -25,6 +44,7 @@ export default function YeardleGameClient({
   completionPrefix = "yeardle:v1:completed",
   lockDailyCompletion = true,
 }) {
+  const isArchiveView = apiUrl.includes("/by-date");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [puzzle, setPuzzle] = useState(null);
@@ -32,9 +52,15 @@ export default function YeardleGameClient({
   const [attempts, setAttempts] = useState([]);
   const [gameState, setGameState] = useState("playing");
   const [message, setMessage] = useState("");
+  const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [isResultOpen, setIsResultOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
+  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
 
   useEffect(() => {
     let active = true;
@@ -69,6 +95,9 @@ export default function YeardleGameClient({
         setAttempts([]);
         setGameState("playing");
         setMessage("");
+        setResolvedAnswer("");
+        setIsResultOpen(false);
+        setCopyStatus("");
       } catch (loadError) {
         if (!active) {
           return;
@@ -114,14 +143,20 @@ export default function YeardleGameClient({
 
     try {
       const parsed = JSON.parse(raw);
+      const parsedState = parsed.gameState;
+      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
+        window.localStorage.removeItem(progressKey);
+        return;
+      }
       setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
       setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
+      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
+      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
     } catch {
       window.localStorage.removeItem(progressKey);
     }
-  }, [progressKey]);
+  }, [lockDailyCompletion, progressKey]);
 
   useEffect(() => {
     if (!completionKey || !lockDailyCompletion) {
@@ -142,6 +177,7 @@ export default function YeardleGameClient({
       setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
       setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
+      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
     } catch {
       window.localStorage.removeItem(completionKey);
     }
@@ -152,9 +188,27 @@ export default function YeardleGameClient({
       return;
     }
 
-    const payload = { guess, attempts, gameState, message };
+    const payload = { guess, attempts, gameState, message, resolvedAnswer };
     window.localStorage.setItem(progressKey, JSON.stringify(payload));
-  }, [attempts, gameState, guess, message, progressKey, puzzle]);
+  }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
+
+  useEffect(() => {
+    if (gameState === "playing") {
+      setIsResultOpen(false);
+      return;
+    }
+    setIsResultOpen(true);
+  }, [gameState]);
+
+  useEffect(() => {
+    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
+      setNextGameCountdown("");
+      return;
+    }
+    setNextGameCountdown(getNextGameCountdown());
+    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   useEffect(() => {
     if (!isImageOpen) {
@@ -172,7 +226,6 @@ export default function YeardleGameClient({
   }, [isImageOpen]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
-  const guessesLeft = Math.max(0, maxGuesses - attempts.length);
   const hints = Array.isArray(puzzle?.hints) ? puzzle.hints : [];
   const revealedHintCount = Math.min(maxGuesses, attempts.length);
   const visibleHints = hints.slice(0, revealedHintCount);
@@ -232,6 +285,7 @@ export default function YeardleGameClient({
         const finalMessage = `Correct. The event happened in ${payload.answerYear}. ${payload.eventTitle}`;
         setGameState("won");
         setMessage(finalMessage);
+        setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -240,6 +294,7 @@ export default function YeardleGameClient({
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
+              resolvedAnswer: `${payload.answerYear} — ${payload.eventTitle}`,
             }),
           );
         }
@@ -250,6 +305,7 @@ export default function YeardleGameClient({
         const finalMessage = `Out of guesses. The year was ${payload.answerYear}. ${payload.eventTitle}`;
         setGameState("lost");
         setMessage(finalMessage);
+        setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -258,6 +314,7 @@ export default function YeardleGameClient({
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
+              resolvedAnswer: `${payload.answerYear} — ${payload.eventTitle}`,
             }),
           );
         }
@@ -276,10 +333,42 @@ export default function YeardleGameClient({
       setAttempts([]);
       setGameState("playing");
       setMessage("");
+      setResolvedAnswer("");
+      setIsResultOpen(false);
+      setCopyStatus("");
       return;
     }
 
     setMessage("Today’s puzzle is locked after completion. Try archive games.");
+  };
+
+  const effectiveAnswer = resolvedAnswer || "Unavailable";
+  const shareText = [
+    `Yeardle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
+    `${attempts.length}/${maxGuesses} tries`,
+    `Answer: ${effectiveAnswer}`,
+  ].join("\n");
+  const handleShareResult = async () => {
+    if (!shareText) {
+      return;
+    }
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Yeardle", text: shareText });
+        setCopyStatus("Shared");
+        return;
+      } catch (shareError) {
+        if (shareError instanceof DOMException && shareError.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopyStatus("Copied to clipboard");
+    } catch {
+      setCopyStatus("Share failed");
+    }
   };
 
   if (loading) {
@@ -313,8 +402,8 @@ export default function YeardleGameClient({
       <main className="container">
         <section className="card yeardle-card">
           <div className="game-meta-row">
+            <span className="chip">{contextDateLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Remaining: {guessesLeft}</span>
             <span className="chip">Date: {puzzle.puzzleDate}</span>
           </div>
 
@@ -346,14 +435,24 @@ export default function YeardleGameClient({
               aria-label="Guess the year"
               disabled={gameState !== "playing"}
             />
-            <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
-              Guess
-            </button>
+            {gameState === "playing" ? (
+              <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
+                Guess
+              </button>
+            ) : (
+              <button className="guess-submit-btn" type="button" onClick={() => setIsResultOpen(true)}>
+                Review result
+              </button>
+            )}
           </form>
 
           <p className="message" data-kind={gameState}>
             {message || "Guess the year to unlock earlier/later feedback and new hints."}
           </p>
+
+          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
+            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
+          ) : null}
 
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
@@ -381,14 +480,6 @@ export default function YeardleGameClient({
             </ul>
           </div>
 
-          {gameState !== "playing" ? (
-            <div className="post-actions">
-              <button className="admin-btn-like" type="button" onClick={resetArchivePuzzle}>
-                {lockDailyCompletion ? "Today Locked" : "Play Again"}
-              </button>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
-            </div>
-          ) : null}
         </section>
       </main>
 
@@ -437,6 +528,40 @@ export default function YeardleGameClient({
               Photo {Math.min(selectedImageIndex + 1, normalizedGallery.length)} of {normalizedGallery.length}
             </p>
           </div>
+        </div>
+      ) : null}
+
+      {isResultOpen && gameState !== "playing" ? (
+        <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
+          <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <button
+              className="result-modal-close"
+              type="button"
+              onClick={() => setIsResultOpen(false)}
+              aria-label="Close result dialog"
+            >
+              ×
+            </button>
+            <h2 className="result-modal-title">Result</h2>
+            {lockDailyCompletion && !isArchiveView ? (
+              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
+            ) : null}
+            <p className="result-modal-answer">{effectiveAnswer}</p>
+            {activeImage?.imageUrl ? (
+              <img
+                src={activeImage.imageUrl}
+                alt={activeImage.imageAlt || "Historical event"}
+                className="result-modal-image"
+              />
+            ) : null}
+            <div className="result-modal-actions">
+              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
+                Share
+              </button>
+              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+            </div>
+            {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
+          </section>
         </div>
       ) : null}
     </>

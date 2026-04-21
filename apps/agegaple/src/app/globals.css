@@ -52,6 +52,38 @@ body {
   box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
 }
 
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-container) 58%, white);
+  color: var(--primary-dim);
+  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding: 0.45rem 0.62rem;
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.stat-chip-value {
+  color: var(--primary-dim);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.stat-chip-separator {
+  color: color-mix(in srgb, var(--primary-dim) 62%, var(--outline));
+}
+
 .no-native-spinner {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -61,4 +93,134 @@ body {
 .no-native-spinner::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+.agegaple-guess-history-wrap {
+  border-top: 1px solid var(--surface-container);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.agegaple-guess-history-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agegaple-guess-history-title {
+  margin: 0;
+  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--outline);
+}
+
+.agegaple-guess-history-toggle-icon {
+  display: inline-flex;
+  color: var(--primary-dim);
+  transition: transform 200ms ease;
+}
+
+.agegaple-guess-history-latest {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--primary-container) 56%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--foreground);
+  font-size: 0.92rem;
+}
+
+.agegaple-guess-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.agegaple-guess-history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--surface-container-low);
+  padding: 0.5rem 0.65rem;
+  color: var(--foreground);
+  font-size: 0.9rem;
+}
+
+.agegaple-guess-history-guess {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.agegaple-guess-history-status-correct {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.agegaple-guess-history-status-wrong {
+  color: #b02500;
+  font-weight: 800;
+}
+
+.result-modal-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-variant));
+  background: var(--surface-container-lowest, #fff);
+  color: var(--foreground);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.result-modal-close:hover {
+  background: var(--surface-container-high, #f3f4f6);
+}
+
+.agegaple-result-modal-close {
+  position: absolute !important;
+  top: 0.55rem !important;
+  right: 0.55rem !important;
+  left: auto !important;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-variant));
+  background: var(--surface-container-lowest, #fff);
+  color: var(--foreground);
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.agegaple-result-modal-close:hover {
+  background: var(--surface-container-high, #f3f4f6);
 }

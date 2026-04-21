@@ -62,14 +62,13 @@ export default function ArchivePage() {
       <DailydabbleNav
         subtitle="Agegaple"
         subtitleHref="/"
-        label="Archive games"
         homeHref="https://dailydabble.app"
         rightContent={
           <DailydabbleMenu
             items={[
               { label: "DailyDabble", href: "https://dailydabble.app", brand: true },
-              { label: "Archive games", href: "/archive" },
               { label: "Today", href: "/" },
+              { label: "Archive games", href: "/archive" },
             ]}
           />
         }

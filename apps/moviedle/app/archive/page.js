@@ -59,7 +59,7 @@ export default function ArchivePage() {
 
   return (
     <>
-      <MainNav label="Archive games" />
+      <MainNav label="" />
       <main className="container">
         <section className="card legal-card archive-card">
           <h1 className="page-title">Archive Games</h1>

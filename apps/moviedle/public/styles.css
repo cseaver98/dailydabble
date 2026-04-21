@@ -70,6 +70,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--brand-soft) 58%, white);
   color: var(--brand-strong);
@@ -78,7 +79,10 @@ body {
   font-size: 0.76rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.45rem 0.6rem;
+  line-height: 1.1;
+  padding: 0.45rem 0.62rem;
+  min-height: 2rem;
+  white-space: nowrap;
 }
 
 .still-figure {
@@ -179,19 +183,37 @@ body {
   position: absolute;
   top: 0.55rem;
   right: 0.55rem;
-  border-radius: 0.6rem;
-  border: 1px solid var(--outline-soft);
-  background: #fff;
-  color: var(--text);
-  padding: 0.35rem 0.55rem;
-  cursor: pointer;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-soft));
+  background: var(--surface-container-lowest, var(--surface));
+  color: var(--foreground, var(--text));
+  font-size: 1.125rem;
   font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.result-modal-close:hover {
+  background: var(--surface-container-high, var(--surface-high));
 }
 
 .result-modal-title {
   margin: 0 0 0.4rem;
   font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 1.1rem;
+}
+
+.result-modal-timer {
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--brand-strong);
 }
 
 .result-modal-answer {
@@ -201,10 +223,25 @@ body {
   color: var(--brand-strong);
 }
 
+.result-modal-image {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 0.8rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+}
+
 .result-modal-copy {
   margin: 0 0 0.55rem;
   color: var(--text);
   line-height: 1.4;
+}
+
+.result-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
 }
 
 .guess-form {
@@ -270,6 +307,15 @@ body {
   cursor: not-allowed;
 }
 
+.guess-submit-btn:not(:disabled):hover,
+.admin-btn-like.primary:hover {
+  background: linear-gradient(135deg, var(--brand-strong), var(--brand-strong));
+}
+
+.admin-btn-like:hover {
+  background: color-mix(in srgb, var(--surface-low) 82%, white);
+}
+
 .message {
   margin: 0;
   font-size: 0.95rem;
@@ -279,6 +325,12 @@ body {
 
 .message[data-kind="won"] { color: #0a7a37; }
 .message[data-kind="lost"] { color: #b02500; }
+.next-game-copy {
+  margin: -0.15rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
 
 .answer-banner {
   margin: 0;
@@ -292,15 +344,64 @@ body {
 .guess-history-wrap {
   border-top: 1px solid var(--outline-soft);
   padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
 }
 
 .guess-history-title {
-  margin: 0 0 0.45rem;
+  margin: 0;
   font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.guess-history-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.guess-history-toggle-icon {
+  display: inline-flex;
+  color: var(--brand-strong);
+  transition: transform 200ms ease;
+}
+
+.guess-history-toggle[aria-expanded="true"] .guess-history-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.guess-history-latest {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--brand-soft) 56%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.guess-history-guess {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.guess-history-status-correct {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.guess-history-status-wrong {
+  color: #b02500;
+  font-weight: 800;
 }
 
 .guess-history-list {
@@ -399,6 +500,9 @@ body {
 
   .guess-form,
   .post-actions {
+    grid-template-columns: 1fr;
+  }
+  .result-modal-actions {
     grid-template-columns: 1fr;
   }
 }

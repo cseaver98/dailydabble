@@ -123,6 +123,7 @@ export default function Home() {
   const [attempts, setAttempts] = useState<GuessAttempt[]>([]);
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -474,8 +475,10 @@ export default function Home() {
   const activeImage = visibleGalleryImages[selectedImageIndex] ?? visibleGalleryImages[0];
   const primaryImage = galleryImages[0];
   const canNavigateGallery = visibleGalleryImages.length > 1;
-  const attemptsRemaining = Math.max(0, maxGuesses - attempts.length);
+  const todayDateLabel = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
   const lastAttempt = attempts[attempts.length - 1];
+  const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
+  const earlierAttempts = attempts.slice(0, -1).reverse();
   const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
   const hasFinishedAttempts = isCompleted || attempts.length >= maxGuesses;
   const hintHeat = lastAttempt
@@ -631,24 +634,17 @@ export default function Home() {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
-                <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Attempts</p>
-                <p className="text-[0.88rem] font-black text-[color:var(--foreground)]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+              <div className="stat-chip">
+                <span>Today's game</span>
+                <span className="stat-chip-value">{puzzle.puzzleDate || todayDateLabel}</span>
+              </div>
+              <div className="stat-chip">
+                <span>Attempts</span>
+                <span className="stat-chip-value">
                   {attempts.length}
-                  <span className={`text-[0.72rem] font-semibold ${mutedTextClass}`}> / {maxGuesses}</span>
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
-                <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Remaining</p>
-                <p className="text-[0.88rem] font-black text-[color:var(--primary-dim)]">{attemptsRemaining}</p>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 rounded-full bg-[color:color-mix(in_srgb,var(--primary-container)_52%,white)] px-2.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary)_20%,transparent)]">
-                <p className="font-headline text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-[color:var(--primary-dim)]">Photos</p>
-                <p className="text-[0.88rem] font-black text-[color:var(--primary-dim)]">
-                  {revealedPhotoCount}
-                  <span className={`text-[0.72rem] font-semibold ${mutedTextClass}`}> / {galleryImages.length || 0}</span>
-                </p>
+                  <span className="stat-chip-separator"> / {maxGuesses}</span>
+                </span>
               </div>
             </div>
             <h2 className="px-1 text-xl font-bold tracking-tight text-[color:var(--foreground)]">{title}</h2>
@@ -721,7 +717,9 @@ export default function Home() {
                             <div className={`flex h-full w-full items-center justify-center ${
                               isDarkMode ? "bg-zinc-800 text-zinc-300" : "bg-[color:var(--surface-container)] text-[color:var(--outline)]"
                             }`}>
-                              <span aria-hidden="true" className="text-sm">🔒</span>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                                <path d="M7.75 10V7.6a4.25 4.25 0 118.5 0V10h.6A2.15 2.15 0 0119 12.15v7.1A2.15 2.15 0 0116.85 21h-9.7A2.15 2.15 0 015 19.25v-7.1A2.15 2.15 0 017.15 10h.6zm1.7 0h5.1V7.6a2.55 2.55 0 10-5.1 0V10z" />
+                              </svg>
                             </div>
                           ) : (
                             <>
@@ -752,16 +750,6 @@ export default function Home() {
                 personBName={puzzle.personBName}
                 isDarkMode={false}
               />
-            )}
-            {!isCompleted && lastAttempt && lastAttempt.direction !== "exact" && (
-              <div
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  isDarkMode ? "border-zinc-700 bg-zinc-800/50 text-zinc-200" : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)]"
-                }`}
-              >
-                <p className="font-semibold">{hintHeat}</p>
-                {hintTemperature && <p>{hintTemperature}</p>}
-              </div>
             )}
             <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={onSubmit}>
               <label className={`flex-1 text-sm font-semibold ${isDarkMode ? "text-zinc-300" : "text-[color:var(--foreground)]"}`}>
@@ -817,24 +805,69 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setIsResultOpen(true)}
-                    className={`h-11 rounded-full border px-5 font-bold transition ${
-                    isDarkMode
-                      ? "border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                      : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
-                  }`}
+                  className="rounded-full bg-[color:var(--primary)] px-5 py-2.5 font-extrabold text-white shadow-[0_10px_20px_rgba(158,78,109,0.28)] transition hover:bg-[color:var(--primary-dim)]"
                 >
                   Review result
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="rounded-full bg-[color:var(--primary)] px-5 py-2.5 font-extrabold text-white transition hover:bg-[color:var(--primary-dim)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-full bg-[color:var(--primary)] px-5 py-2.5 font-extrabold text-white shadow-[0_10px_20px_rgba(158,78,109,0.28)] transition hover:bg-[color:var(--primary-dim)] disabled:cursor-not-allowed disabled:opacity-40"
                   disabled={hasFinishedAttempts}
                 >
-                  {attempts.length === maxGuesses - 1 ? "Final Guess" : "Submit Guess"}
+                  Guess
                 </button>
               )}
             </form>
+            {!isCompleted && lastAttempt && lastAttempt.direction !== "exact" && (
+              <div className="space-y-1 text-sm">
+                <p className={`font-semibold ${isDarkMode ? "text-zinc-200" : "text-[color:var(--foreground)]"}`}>{hintHeat}</p>
+                {hintTemperature && <p className={mutedTextClass}>{hintTemperature}</p>}
+              </div>
+            )}
+            {attempts.length > 0 && latestAttempt && (
+              <div className="agegaple-guess-history-wrap">
+                <button
+                  type="button"
+                  className="agegaple-guess-history-toggle"
+                  aria-expanded={isHistoryOpen}
+                  aria-controls="agegaple-guess-history-panel"
+                  onClick={() => setIsHistoryOpen((current) => !current)}
+                >
+                  <span className="agegaple-guess-history-title">Guess history</span>
+                  <span
+                    className={`agegaple-guess-history-toggle-icon ${isHistoryOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 14 12 8l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+                <div className="agegaple-guess-history-latest">
+                  <span className="agegaple-guess-history-guess">{latestAttempt.guessYears} years</span>
+                  {latestAttempt.direction === "exact" ? (
+                    <strong className="agegaple-guess-history-status-correct">Correct</strong>
+                  ) : (
+                    <strong className="agegaple-guess-history-status-wrong">Wrong</strong>
+                  )}
+                </div>
+                {isHistoryOpen && earlierAttempts.length > 0 && (
+                  <ul id="agegaple-guess-history-panel" className="agegaple-guess-history-list">
+                    {earlierAttempts.map((attempt, index) => (
+                      <li key={`${attempt.guessYears}-${index}`} className="agegaple-guess-history-item">
+                        <span className="agegaple-guess-history-guess">{attempt.guessYears} years</span>
+                        {attempt.direction === "exact" ? (
+                          <strong className="agegaple-guess-history-status-correct">Correct</strong>
+                        ) : (
+                          <strong className="agegaple-guess-history-status-wrong">Wrong</strong>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </section>
         )}
 
@@ -980,30 +1013,37 @@ export default function Home() {
           onClick={() => setIsResultOpen(false)}
         >
           <div
-            className={`w-full max-w-2xl rounded-2xl border p-4 shadow-xl sm:p-5 ${
+            className={`relative w-full max-w-2xl rounded-2xl border p-4 shadow-xl sm:p-5 ${
               isDarkMode ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-[color:var(--surface-container)] bg-white text-[color:var(--foreground)]"
             }`}
+            style={{ position: "relative" }}
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label="Guess result"
           >
-            <div className="mb-3 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsResultOpen(false)}
+              aria-label="Close result dialog"
+              className="agegaple-result-modal-close"
+              style={{
+                position: "absolute",
+                top: "0.55rem",
+                right: "0.55rem",
+                left: "auto",
+                width: "2.25rem",
+                height: "2.25rem",
+                cursor: "pointer",
+                zIndex: 5,
+              }}
+            >
+              ×
+            </button>
+            <div className="mb-3">
               <h3 className="text-xl font-bold text-[color:var(--primary-dim)]">
                 Next game in {nextGameCountdown || "--:--:--"}
               </h3>
-              <button
-                type="button"
-                onClick={() => setIsResultOpen(false)}
-                aria-label="Close result dialog"
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border text-lg font-bold leading-none transition ${
-                  isDarkMode
-                    ? "border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
-                }`}
-              >
-                ×
-              </button>
             </div>
             <div className="space-y-2">
               <p className={mutedTextClass}>

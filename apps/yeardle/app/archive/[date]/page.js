@@ -8,7 +8,7 @@ export default async function ArchivePuzzlePage({ params }) {
   return (
     <YeardleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel={`Archive game: ${date || "loading..."}`}
+      navLabel=""
       archiveHref="/archive"
       storagePrefix={`yeardle:v1:archive:${date}`}
       completionPrefix="yeardle:v1:archive-completed"

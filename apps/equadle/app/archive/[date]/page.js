@@ -8,7 +8,7 @@ export default async function ArchivePuzzlePage({ params }) {
   return (
     <EquadleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel={`Archive game: ${date || "loading..."}`}
+      navLabel=""
       archiveHref="/archive"
       storagePrefix={`equadle:v1:archive:${date}`}
       completionPrefix="equadle:v1:archive-completed"

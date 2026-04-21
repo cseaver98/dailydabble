@@ -87,16 +87,16 @@ export default function Home() {
                       ? "bg-amber-700/12"
                     : "bg-[#d87093]/14";
             const buttonBackground = isDoodle
-                ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white"
+                ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white transition-colors hover:from-sky-700 hover:to-blue-900"
                 : isYeardle
-                  ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white"
+                  ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white transition-colors hover:from-violet-700 hover:to-indigo-900"
                   : isEquadle
-                    ? "bg-gradient-to-r from-[#e03a3e] to-[#ba1a1a] text-white"
+                    ? "bg-gradient-to-r from-[#e03a3e] to-[#ba1a1a] text-white transition-colors hover:from-[#c92f34] hover:to-[#9f1414]"
                   : isMoviedle
-                    ? "bg-gradient-to-r from-teal-600 to-emerald-800 text-white"
+                    ? "bg-gradient-to-r from-teal-600 to-emerald-800 text-white transition-colors hover:from-teal-700 hover:to-emerald-900"
                     : isSportle
-                      ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white"
-                  : "bg-gradient-to-r from-[#d87093] to-[#9e4e6d] text-white";
+                      ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white transition-colors hover:from-amber-700 hover:to-orange-900"
+                  : "bg-gradient-to-r from-[#d87093] to-[#9e4e6d] text-white transition-colors hover:from-[#c45f81] hover:to-[#8a435f]";
 
             return (
               <a

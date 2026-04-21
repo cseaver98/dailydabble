@@ -11,6 +11,25 @@ const normalizeGuess = (value) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+const getNextGameCountdown = () => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
+  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
+  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
+  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
+  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+};
 
 export default function MoviedleGameClient({
   apiUrl,
@@ -21,6 +40,7 @@ export default function MoviedleGameClient({
   completionPrefix = "moviedle:v1:completed",
   lockDailyCompletion = true,
 }) {
+  const isArchiveView = apiUrl.includes("/by-date");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [puzzle, setPuzzle] = useState(null);
@@ -32,7 +52,12 @@ export default function MoviedleGameClient({
   const [revealedDetails, setRevealedDetails] = useState(null);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
+  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
 
   useEffect(() => {
     let active = true;
@@ -68,6 +93,8 @@ export default function MoviedleGameClient({
         setRevealedDetails(null);
         setIsImageOpen(false);
         setIsResultOpen(false);
+        setIsHistoryOpen(false);
+        setCopyStatus("");
       } catch (loadError) {
         if (!active) {
           return;
@@ -113,9 +140,14 @@ export default function MoviedleGameClient({
 
     try {
       const parsed = JSON.parse(raw);
+      const parsedState = parsed.gameState;
+      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
+        window.localStorage.removeItem(progressKey);
+        return;
+      }
       setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
       setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
+      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
       setMessage(typeof parsed.message === "string" ? parsed.message : "");
       setRevealedAnswer(typeof parsed.revealedAnswer === "string" ? parsed.revealedAnswer : "");
       setRevealedDetails(
@@ -124,7 +156,7 @@ export default function MoviedleGameClient({
     } catch {
       window.localStorage.removeItem(progressKey);
     }
-  }, [progressKey]);
+  }, [lockDailyCompletion, progressKey]);
 
   useEffect(() => {
     if (!completionKey || !lockDailyCompletion) {
@@ -201,16 +233,29 @@ export default function MoviedleGameClient({
   }, [gameState, guess]);
 
   useEffect(() => {
-    if (gameState === "won" || gameState === "lost") {
-      setIsResultOpen(true);
+    if (gameState === "playing") {
+      setIsResultOpen(false);
+      return;
     }
+    setIsResultOpen(true);
   }, [gameState]);
+
+  useEffect(() => {
+    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
+      setNextGameCountdown("");
+      return;
+    }
+    setNextGameCountdown(getNextGameCountdown());
+    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
   const stills = Array.isArray(puzzle?.stillImages) ? puzzle.stillImages : [];
   const revealedStillCount = Math.max(1, Math.min(stills.length || 1, 1 + attempts.length));
   const visibleStill = stills[Math.max(0, revealedStillCount - 1)] || null;
-  const guessesLeft = Math.max(0, maxGuesses - attempts.length);
+  const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
+  const earlierAttempts = attempts.slice(0, -1).reverse();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -317,10 +362,40 @@ export default function MoviedleGameClient({
       setRevealedAnswer("");
       setRevealedDetails(null);
       setIsResultOpen(false);
+      setIsHistoryOpen(false);
+      setCopyStatus("");
       return;
     }
 
     setMessage("Today’s puzzle is locked after completion. Try archive games.");
+  };
+
+  const shareText = [
+    `Moviedle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
+    `${attempts.length}/${maxGuesses} tries`,
+    `Answer: ${revealedAnswer || revealedDetails?.title || "Unavailable"}`,
+  ].join("\n");
+  const handleShareResult = async () => {
+    if (!shareText) {
+      return;
+    }
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Moviedle", text: shareText });
+        setCopyStatus("Shared");
+        return;
+      } catch (shareError) {
+        if (shareError instanceof DOMException && shareError.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopyStatus("Copied to clipboard");
+    } catch {
+      setCopyStatus("Share failed");
+    }
   };
 
   if (loading) {
@@ -354,8 +429,8 @@ export default function MoviedleGameClient({
       <main className="container">
         <section className="card moviedle-card">
           <div className="game-meta-row">
+            <span className="chip">{contextDateLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Remaining: {guessesLeft}</span>
             <span className="chip">Still: {revealedStillCount}/{Math.max(1, stills.length)}</span>
           </div>
 
@@ -386,9 +461,15 @@ export default function MoviedleGameClient({
               disabled={gameState !== "playing"}
               autoCapitalize="words"
             />
-            <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
-              Guess
-            </button>
+            {gameState === "playing" ? (
+              <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
+                Guess
+              </button>
+            ) : (
+              <button className="guess-submit-btn" type="button" onClick={() => setIsResultOpen(true)}>
+                Review result
+              </button>
+            )}
           </form>
           {gameState === "playing" && suggestions.length > 0 ? (
             <div className="suggestions-wrap" role="listbox" aria-label="Movie title suggestions">
@@ -412,6 +493,10 @@ export default function MoviedleGameClient({
             {message || "Guess the movie. Wrong guesses reveal additional stills."}
           </p>
 
+          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
+            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
+          ) : null}
+
           {revealedAnswer ? (
             <p className="answer-banner">
               Answer: <strong>{revealedAnswer}</strong>
@@ -420,26 +505,53 @@ export default function MoviedleGameClient({
 
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
-              <p className="guess-history-title">Guess History</p>
-              <ul className="guess-history-list">
-                {attempts.map((attempt, index) => (
-                  <li key={`${attempt.normalizedGuess}-${index}`} className="guess-history-item">
-                    <span>{attempt.guess}</span>
-                    <strong>{attempt.isCorrect ? "Correct" : "Wrong"}</strong>
-                  </li>
-                ))}
-              </ul>
+              <button
+                type="button"
+                className="guess-history-toggle"
+                aria-expanded={isHistoryOpen}
+                aria-controls="moviedle-guess-history-panel"
+                onClick={() => setIsHistoryOpen((value) => !value)}
+              >
+                <span className="guess-history-title">Guess History</span>
+                <span className="guess-history-toggle-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M6 14 12 8l6 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+              {latestAttempt ? (
+                <div className="guess-history-latest">
+                  <span className="guess-history-guess">{latestAttempt.guess}</span>
+                  {latestAttempt.isCorrect ? (
+                    <strong className="guess-history-status-correct">Correct</strong>
+                  ) : (
+                    <strong className="guess-history-status-wrong">Wrong</strong>
+                  )}
+                </div>
+              ) : null}
+              {isHistoryOpen && earlierAttempts.length > 0 ? (
+                <ul id="moviedle-guess-history-panel" className="guess-history-list">
+                  {earlierAttempts.map((attempt, index) => (
+                    <li key={`${attempt.normalizedGuess}-${index}`} className="guess-history-item">
+                      <span className="guess-history-guess">{attempt.guess}</span>
+                      {attempt.isCorrect ? (
+                        <strong className="guess-history-status-correct">Correct</strong>
+                      ) : (
+                        <strong className="guess-history-status-wrong">Wrong</strong>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 
-          {gameState !== "playing" ? (
-            <div className="post-actions">
-              <button className="admin-btn-like" type="button" onClick={resetArchivePuzzle}>
-                {lockDailyCompletion ? "Today Locked" : "Play Again"}
-              </button>
-              <a className="admin-btn-like primary" href={archiveHref}>Archive Games</a>
-            </div>
-          ) : null}
         </section>
       </main>
 
@@ -462,11 +574,22 @@ export default function MoviedleGameClient({
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
           <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
-            <button className="result-modal-close" type="button" onClick={() => setIsResultOpen(false)}>
-              Close
+            <button
+              className="result-modal-close"
+              type="button"
+              onClick={() => setIsResultOpen(false)}
+              aria-label="Close result dialog"
+            >
+              ×
             </button>
-            <h2 className="result-modal-title">Results</h2>
+            <h2 className="result-modal-title">Result</h2>
+            {lockDailyCompletion && !isArchiveView ? (
+              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
+            ) : null}
             <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
+            {visibleStill ? (
+              <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="result-modal-image" />
+            ) : null}
             {Number.isFinite(revealedDetails?.releaseYear) ? (
               <p className="result-modal-copy"><strong>Year:</strong> {revealedDetails.releaseYear}</p>
             ) : null}
@@ -478,6 +601,13 @@ export default function MoviedleGameClient({
             {revealedDetails?.summary ? (
               <p className="result-modal-copy">{revealedDetails.summary}</p>
             ) : null}
+            <div className="result-modal-actions">
+              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
+                Share
+              </button>
+              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+            </div>
+            {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
       ) : null}

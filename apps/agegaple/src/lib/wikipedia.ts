@@ -30,7 +30,7 @@ const fetchWikipediaSummary = async (title: string): Promise<WikipediaSummary | 
     `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
     {
       headers: {
-        "Api-User-Agent": "Agegaple/1.0 (editorial context)",
+        "Api-User-Agent": "Agegaple/1.0 (editorial content)",
       },
       next: { revalidate: 86_400 },
     },

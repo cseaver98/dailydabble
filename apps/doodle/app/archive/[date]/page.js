@@ -8,9 +8,11 @@ export default async function ArchivePuzzlePage({ params }) {
   return (
     <DoodleGameClient
       apiUrl={`/api/puzzle/by-date?date=${encoded}`}
-      navLabel={`Archive game: ${date || "loading..."}`}
+      navLabel=""
       archiveHref="/archive"
       storagePrefix={`doodle:v1:archive:${date}`}
+      completionPrefix="doodle:v1:archive-completed"
+      lockDailyCompletion={false}
     />
   );
 }
