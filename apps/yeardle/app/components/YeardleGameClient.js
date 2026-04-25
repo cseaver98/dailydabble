@@ -35,6 +35,28 @@ const buildDirectionCopy = (direction) => {
   return "Correct";
 };
 
+const getPerformanceLabel = (didWin, attemptsUsed, maxGuesses) => {
+  if (!didWin) {
+    return "Better luck next time.";
+  }
+  if (attemptsUsed <= 1) {
+    return "Amazing!";
+  }
+  if (attemptsUsed === 2) {
+    return "Nice!";
+  }
+  if (attemptsUsed === 3) {
+    return "Great!";
+  }
+  if (attemptsUsed === 4) {
+    return "Good!";
+  }
+  if (maxGuesses >= 6 && attemptsUsed === 5) {
+    return "Not bad!";
+  }
+  return "Phew, close!";
+};
+
 export default function YeardleGameClient({
   apiUrl,
   navLabel = "Yeardle",
@@ -54,11 +76,9 @@ export default function YeardleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
-  const [isImageOpen, setIsImageOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
   const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
 
@@ -89,8 +109,6 @@ export default function YeardleGameClient({
 
         setPuzzle(payload);
         setImageFailed(false);
-        setIsImageOpen(false);
-        setSelectedImageIndex(0);
         setGuess("");
         setAttempts([]);
         setGameState("playing");
@@ -210,21 +228,6 @@ export default function YeardleGameClient({
     return () => window.clearInterval(intervalId);
   }, [gameState, isArchiveView, lockDailyCompletion]);
 
-  useEffect(() => {
-    if (!isImageOpen) {
-      return;
-    }
-
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setIsImageOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isImageOpen]);
-
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
   const hints = Array.isArray(puzzle?.hints) ? puzzle.hints : [];
   const revealedHintCount = Math.min(maxGuesses, attempts.length);
@@ -236,16 +239,8 @@ export default function YeardleGameClient({
     imageUrl: item?.imageUrl || "/event-placeholder.svg",
     imageAlt: item?.imageAlt || `Historical event photo ${index + 1}`,
   }));
-  const canNavigateGallery = normalizedGallery.length > 1;
-  const activeImage = normalizedGallery[selectedImageIndex] ?? normalizedGallery[0];
+  const activeImage = normalizedGallery[0];
   const imageSrc = !imageFailed && activeImage?.imageUrl ? activeImage.imageUrl : "/event-placeholder.svg";
-
-  useEffect(() => {
-    if (selectedImageIndex < normalizedGallery.length) {
-      return;
-    }
-    setSelectedImageIndex(Math.max(0, normalizedGallery.length - 1));
-  }, [normalizedGallery.length, selectedImageIndex]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -343,6 +338,7 @@ export default function YeardleGameClient({
   };
 
   const effectiveAnswer = resolvedAnswer || "Unavailable";
+  const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const shareText = [
     `Yeardle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
     `${attempts.length}/${maxGuesses} tries`,
@@ -407,21 +403,14 @@ export default function YeardleGameClient({
             <span className="chip">Date: {puzzle.puzzleDate}</span>
           </div>
 
-          <button
-            type="button"
-            className="event-figure-button"
-            onClick={() => setIsImageOpen(true)}
-            aria-label="Open image fullscreen"
-          >
-            <figure className="event-figure">
-              <img
-                src={imageSrc}
-                alt={puzzle.imageAlt || "Historical event"}
-                className="event-image"
-                onError={() => setImageFailed(true)}
-              />
-            </figure>
-          </button>
+          <figure className="event-figure">
+            <img
+              src={imageSrc}
+              alt={puzzle.imageAlt || "Historical event"}
+              className="event-image"
+              onError={() => setImageFailed(true)}
+            />
+          </figure>
 
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
@@ -483,54 +472,6 @@ export default function YeardleGameClient({
         </section>
       </main>
 
-      {isImageOpen ? (
-        <div className="image-modal-backdrop" onClick={() => setIsImageOpen(false)}>
-          <div className="image-modal-stage" onClick={(event) => event.stopPropagation()}>
-            {canNavigateGallery ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedImageIndex((current) => (current - 1 + normalizedGallery.length) % normalizedGallery.length)
-                  }
-                  className="image-modal-nav image-modal-prev"
-                  aria-label="Previous photo"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedImageIndex((current) => (current + 1) % normalizedGallery.length)}
-                  className="image-modal-nav image-modal-next"
-                  aria-label="Next photo"
-                >
-                  ›
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              className="image-modal-close"
-              onClick={() => setIsImageOpen(false)}
-              aria-label="Close image"
-            >
-              ×
-            </button>
-            <div className="image-modal-viewport">
-              <img
-                src={imageSrc}
-                alt={activeImage?.imageAlt || puzzle.imageAlt || "Historical event"}
-                className="image-modal-image"
-                onError={() => setImageFailed(true)}
-              />
-            </div>
-            <p className="image-modal-caption">
-              Photo {Math.min(selectedImageIndex + 1, normalizedGallery.length)} of {normalizedGallery.length}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
           <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
@@ -546,6 +487,7 @@ export default function YeardleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
+            <p className="result-modal-copy">{performanceLabel}</p>
             <p className="result-modal-answer">{effectiveAnswer}</p>
             {activeImage?.imageUrl ? (
               <img
@@ -558,6 +500,7 @@ export default function YeardleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
+              <a className="admin-btn-like" href="https://dailydabble.app">DailyDabble</a>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}

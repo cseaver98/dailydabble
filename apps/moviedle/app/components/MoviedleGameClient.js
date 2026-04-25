@@ -31,6 +31,28 @@ const getNextGameCountdown = () => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
+const getPerformanceLabel = (didWin, attemptsUsed, maxGuesses) => {
+  if (!didWin) {
+    return "Better luck next time.";
+  }
+  if (attemptsUsed <= 1) {
+    return "Amazing!";
+  }
+  if (attemptsUsed === 2) {
+    return "Nice!";
+  }
+  if (attemptsUsed === 3) {
+    return "Great!";
+  }
+  if (attemptsUsed === 4) {
+    return "Good!";
+  }
+  if (maxGuesses >= 6 && attemptsUsed === 5) {
+    return "Not bad!";
+  }
+  return "Phew, close!";
+};
+
 export default function MoviedleGameClient({
   apiUrl,
   navLabel = "Moviedle",
@@ -50,7 +72,6 @@ export default function MoviedleGameClient({
   const [message, setMessage] = useState("");
   const [revealedAnswer, setRevealedAnswer] = useState("");
   const [revealedDetails, setRevealedDetails] = useState(null);
-  const [isImageOpen, setIsImageOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -91,7 +112,6 @@ export default function MoviedleGameClient({
         setMessage("");
         setRevealedAnswer("");
         setRevealedDetails(null);
-        setIsImageOpen(false);
         setIsResultOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
@@ -375,6 +395,7 @@ export default function MoviedleGameClient({
     `${attempts.length}/${maxGuesses} tries`,
     `Answer: ${revealedAnswer || revealedDetails?.title || "Unavailable"}`,
   ].join("\n");
+  const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const handleShareResult = async () => {
     if (!shareText) {
       return;
@@ -434,21 +455,13 @@ export default function MoviedleGameClient({
             <span className="chip">Still: {revealedStillCount}/{Math.max(1, stills.length)}</span>
           </div>
 
-          <button
-            type="button"
-            className="still-figure-button"
-            onClick={() => setIsImageOpen(true)}
-            aria-label="Open still fullscreen"
-            disabled={!visibleStill}
-          >
-            <figure className="still-figure">
-              {visibleStill ? (
-                <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="still-image" />
-              ) : (
-                <p className="page-subtle">No still image available.</p>
-              )}
-            </figure>
-          </button>
+          <figure className="still-figure">
+            {visibleStill ? (
+              <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="still-image" />
+            ) : (
+              <p className="page-subtle">No still image available.</p>
+            )}
+          </figure>
 
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
@@ -555,22 +568,6 @@ export default function MoviedleGameClient({
         </section>
       </main>
 
-      {isImageOpen && visibleStill ? (
-        <div className="image-modal-backdrop" onClick={() => setIsImageOpen(false)}>
-          <div className="image-modal-panel" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              className="image-modal-close"
-              onClick={() => setIsImageOpen(false)}
-              aria-label="Close image"
-            >
-              Close
-            </button>
-            <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="image-modal-image" />
-          </div>
-        </div>
-      ) : null}
-
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
           <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
@@ -586,6 +583,7 @@ export default function MoviedleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
+            <p className="result-modal-copy">{performanceLabel}</p>
             <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {visibleStill ? (
               <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="result-modal-image" />
@@ -605,6 +603,7 @@ export default function MoviedleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
+              <a className="admin-btn-like" href="https://dailydabble.app">DailyDabble</a>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}

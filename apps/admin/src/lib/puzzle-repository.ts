@@ -593,7 +593,9 @@ export const listReviewCandidates = async ({
     `,
       { count: "exact" },
     )
-    .order("quality_score", { ascending: false });
+    .order("quality_score", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
 
   if (status === "pending_review") {
     query = query.eq("status", status);

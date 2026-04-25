@@ -17,11 +17,13 @@ const formatDateLabel = (date: string) => {
     ? date
     : parsed.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 };
+const archivePageSize = 30;
 
 export default function ArchivePage() {
   const [items, setItems] = useState<ArchivePuzzleListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const isDarkMode = false;
 
   useEffect(() => {
@@ -46,14 +48,29 @@ export default function ArchivePage() {
     void load();
   }, []);
 
-  const rows = useMemo(
-    () =>
-      items.map((item) => ({
-        ...item,
-        dateLabel: formatDateLabel(item.puzzleDate),
-      })),
-    [items],
-  );
+  const rows = useMemo(() => {
+    const sequenceByDate = new Map(
+      [...items]
+        .sort((left, right) => left.puzzleDate.localeCompare(right.puzzleDate))
+        .map((item, index) => [item.puzzleDate, index + 1]),
+    );
+
+    return items.map((item) => ({
+      ...item,
+      dateLabel: formatDateLabel(item.puzzleDate),
+      tileLabel: `Agegaple #${sequenceByDate.get(item.puzzleDate) ?? 1}`,
+    }));
+  }, [items]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / archivePageSize));
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * archivePageSize;
+    return rows.slice(start, start + archivePageSize);
+  }, [currentPage, rows]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(Math.max(1, page), totalPages));
+  }, [totalPages]);
+
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
 
@@ -75,48 +92,59 @@ export default function ArchivePage() {
       />
 
       <div className="container flex flex-1 min-h-0 flex-col gap-5">
-        {loading && <p className={mutedTextClass}>Loading archive...</p>}
-        {error && (
-          <p
-            className={`rounded-md border p-3 ${
-              isDarkMode
-                ? "border-rose-400/50 bg-rose-950/40 text-rose-200"
-                : "border-rose-300 bg-rose-50 text-rose-700"
-            }`}
-          >
-            {error}
-          </p>
-        )}
-
-        {!loading && !error && (
-          <div className="min-h-0 overflow-y-auto pr-1">
-            <div className="grid gap-3">
-            {rows.length === 0 && (
-              <p
-                className={`rounded-md border p-3 ${
-                  isDarkMode ? "border-zinc-700 bg-zinc-900 text-zinc-300" : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--outline)]"
-                }`}
-              >
-                No archived games yet.
-              </p>
-            )}
-            {rows.map((item) => (
-              <Link
-                key={item.puzzleDate}
-                href={`/archive/${item.puzzleDate}`}
-                className={`flex items-center justify-between rounded-full border px-5 py-4 font-semibold ${
-                  isDarkMode
-                    ? "border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
-                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] hover:bg-[color:var(--surface-container-high)]"
-                }`}
-              >
-                <span>{item.couple}</span>
-                <span className={`text-sm ${isDarkMode ? "text-zinc-400" : "text-[color:var(--outline)]"}`}>{item.dateLabel}</span>
-              </Link>
-            ))}
+        <section className="card grid gap-[0.8rem] border border-[color:var(--surface-container)]">
+          <h1 className="m-0 mb-1 font-headline text-[1.4rem] font-bold">Archive Games</h1>
+          {loading && <p className={mutedTextClass}>Loading archive...</p>}
+          {error && (
+            <p
+              className={`rounded-md border p-3 ${
+                isDarkMode
+                  ? "border-rose-400/50 bg-rose-950/40 text-rose-200"
+                  : "border-rose-300 bg-rose-50 text-rose-700"
+              }`}
+            >
+              {error}
+            </p>
+          )}
+          {!loading && !error && (
+            <div className="grid gap-[0.55rem] sm:grid-cols-2 lg:grid-cols-5">
+              {rows.length === 0 ? (
+                <p className={mutedTextClass}>No archived games yet.</p>
+              ) : null}
+              {pagedRows.map((item) => (
+                <Link
+                  key={item.puzzleDate}
+                  href={`/archive/${item.puzzleDate}`}
+                  className="grid gap-[0.18rem] rounded-[0.9rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] px-[0.8rem] py-[0.75rem] hover:bg-[color:var(--surface-container-high)]"
+                >
+                  <span className="font-extrabold">{item.tileLabel}</span>
+                  <span className="text-[0.84rem] text-[#595c5e]">{item.dateLabel}</span>
+                </Link>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+          {!loading && !error && rows.length > archivePageSize ? (
+            <div className="mt-[0.35rem] flex items-center justify-between gap-2">
+              <button
+                className="rounded-full border border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage <= 1}
+              >
+                Previous
+              </button>
+              <p className={mutedTextClass}>Page <b>{currentPage}</b> of <b>{totalPages}</b></p>
+              <button
+                className="rounded-full border border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
+        </section>
       </div>
     </main>
   );

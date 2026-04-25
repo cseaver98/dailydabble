@@ -29,14 +29,16 @@ html,
 body {
   margin: 0;
   padding: 0;
+  min-height: 100%;
 }
 
 body {
+  min-height: 100dvh;
   font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 8% 4%, rgba(217, 123, 30, 0.16), transparent 30%),
-    radial-gradient(circle at 92% 10%, rgba(164, 85, 8, 0.14), transparent 24%),
+    radial-gradient(1200px 700px at 0% 0%, color-mix(in srgb, var(--brand-soft) 35%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--brand) 14%, transparent) 0%, transparent 64%),
     var(--background);
 }
 
@@ -44,6 +46,10 @@ body {
   width: min(840px, 94vw);
   margin: 0 auto;
   padding: 0.85rem 0 2.2rem;
+}
+
+main.container {
+  min-height: calc(100dvh - var(--nav-height, 78px));
 }
 
 .card {
@@ -298,7 +304,7 @@ body {
 
 .result-modal-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
@@ -331,25 +337,42 @@ body {
   color: #8b2d2d;
 }
 
-.archive-list {
+.archive-grid {
   display: grid;
-  gap: 0.45rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
-.archive-link {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.6rem;
+.archive-tile {
   text-decoration: none;
   color: var(--text);
-  border-radius: 0.8rem;
+  border-radius: 0.9rem;
   background: var(--surface-low);
-  padding: 0.66rem 0.75rem;
-  font-weight: 700;
+  border: 1px solid var(--outline-soft);
+  padding: 0.75rem 0.8rem;
+  display: grid;
+  gap: 0.18rem;
 }
 
-.archive-link:hover {
+.archive-tile:hover {
   background: var(--surface-high);
+}
+
+.archive-tile-title {
+  font-weight: 800;
+}
+
+.archive-tile-date {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.archive-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
 }
 
 @media (max-width: 640px) {
@@ -359,6 +382,9 @@ body {
     grid-template-columns: 1fr;
   }
   .result-modal-actions {
+    grid-template-columns: 1fr;
+  }
+  .archive-grid {
     grid-template-columns: 1fr;
   }
 }

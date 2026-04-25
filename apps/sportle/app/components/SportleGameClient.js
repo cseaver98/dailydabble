@@ -24,6 +24,28 @@ const getNextGameCountdown = () => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
+const getPerformanceLabel = (didWin, attemptsUsed, maxGuesses) => {
+  if (!didWin) {
+    return "Better luck next time.";
+  }
+  if (attemptsUsed <= 1) {
+    return "Amazing!";
+  }
+  if (attemptsUsed === 2) {
+    return "Nice!";
+  }
+  if (attemptsUsed === 3) {
+    return "Great!";
+  }
+  if (attemptsUsed === 4) {
+    return "Good!";
+  }
+  if (maxGuesses >= 6 && attemptsUsed === 5) {
+    return "Not bad!";
+  }
+  return "Phew, close!";
+};
+
 export default function SportleGameClient({
   apiUrl,
   navLabel = "Sportle",
@@ -336,6 +358,7 @@ export default function SportleGameClient({
   };
 
   const effectiveAnswer = resolvedAnswer || "Unavailable";
+  const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const answerImageUrl = typeof clues?.[0]?.logoUrl === "string" ? clues[0].logoUrl : "";
   const shareText = [
     `Sportle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
@@ -489,12 +512,14 @@ export default function SportleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
+            <p className="result-modal-copy">{performanceLabel}</p>
             <p className="result-modal-answer">{effectiveAnswer}</p>
             {answerImageUrl ? <img src={answerImageUrl} alt={effectiveAnswer} className="result-modal-image" /> : null}
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
+              <a className="admin-btn-like" href="https://dailydabble.app">DailyDabble</a>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}

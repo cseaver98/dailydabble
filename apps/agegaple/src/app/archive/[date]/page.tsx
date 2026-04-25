@@ -44,6 +44,27 @@ const formatExactGap = (exactYears: number) => {
 };
 
 const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
+  if (!didWin) {
+    return "Better luck next time.";
+  }
+  if (attemptsUsed <= 1) {
+    return "Amazing!";
+  }
+  if (attemptsUsed === 2) {
+    return "Nice!";
+  }
+  if (attemptsUsed === 3) {
+    return "Great!";
+  }
+  if (attemptsUsed === 4) {
+    return "Good!";
+  }
+  if (maxGuesses >= 6 && attemptsUsed === 5) {
+    return "Not bad!";
+  }
+  return "Phew, close!";
+};
 
 function GapMeter({
   guessYears,
@@ -137,26 +158,11 @@ export default function ArchiveGamePage() {
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isImageOpen, setIsImageOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isMagnifierActive, setIsMagnifierActive] = useState(false);
-  const [isMagnifierDragging, setIsMagnifierDragging] = useState(false);
-  const [magnifierLens, setMagnifierLens] = useState({
-    xPx: 0,
-    yPx: 0,
-    bgPosX: 0,
-    bgPosY: 0,
-    bgWidthPx: 0,
-    bgHeightPx: 0,
-  });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isDarkMode = false;
-  const imageViewportRef = useRef<HTMLDivElement | null>(null);
-  const imageElementRef = useRef<HTMLImageElement | null>(null);
   const hasHydratedProgressRef = useRef(false);
-  const magnifierSize = 180;
-  const magnifierZoom = 2.8;
 
   useEffect(() => {
     let mounted = true;
@@ -273,14 +279,8 @@ export default function ArchiveGamePage() {
   }, [attempts, guess, puzzle, result, selectedImageIndex]);
 
   useEffect(() => {
-    setIsMagnifierActive(false);
-    setIsMagnifierDragging(false);
-  }, [isImageOpen, selectedImageIndex]);
-
-  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsImageOpen(false);
         setIsResultOpen(false);
       }
 
@@ -393,6 +393,8 @@ export default function ArchiveGamePage() {
   const primaryImage = galleryImages[0];
   const canNavigateGallery = visibleGalleryImages.length > 1;
   const hasFinishedAttempts = !!result || attempts.length >= maxGuesses;
+  const didWin = attempts[attempts.length - 1]?.direction === "exact";
+  const performanceLabel = getPerformanceLabel(Boolean(didWin), attempts.length, maxGuesses);
   const lastAttempt = attempts[attempts.length - 1];
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const earlierAttempts = attempts.slice(0, -1).reverse();
@@ -460,54 +462,6 @@ export default function ArchiveGamePage() {
     }
   }, [selectedImageIndex, visibleGalleryImages.length]);
 
-  const updateMagnifier = (clientX: number, clientY: number) => {
-    const viewport = imageViewportRef.current;
-    const imageElement = imageElementRef.current;
-    if (!viewport || !imageElement) {
-      return false;
-    }
-
-    const viewportRect = viewport.getBoundingClientRect();
-    const imageRect = imageElement.getBoundingClientRect();
-    if (viewportRect.width <= 0 || viewportRect.height <= 0 || imageRect.width <= 0 || imageRect.height <= 0) {
-      return false;
-    }
-
-    const halfLens = magnifierSize / 2;
-    const rawX = clientX - viewportRect.left;
-    const rawY = clientY - viewportRect.top;
-    const imageOffsetX = imageRect.left - viewportRect.left;
-    const imageOffsetY = imageRect.top - viewportRect.top;
-    const imageX = clientX - imageRect.left;
-    const imageY = clientY - imageRect.top;
-    const isInsideImage = imageX >= 0 && imageX <= imageRect.width && imageY >= 0 && imageY <= imageRect.height;
-
-    if (!isInsideImage && !isMagnifierDragging) {
-      setIsMagnifierActive(false);
-      return false;
-    }
-
-    const clampedImageX = Math.min(Math.max(imageX, 0), imageRect.width);
-    const clampedImageY = Math.min(Math.max(imageY, 0), imageRect.height);
-    const lensMinX = imageOffsetX + Math.min(halfLens, imageRect.width / 2);
-    const lensMaxX = imageOffsetX + Math.max(imageRect.width - halfLens, imageRect.width / 2);
-    const lensMinY = imageOffsetY + Math.min(halfLens, imageRect.height / 2);
-    const lensMaxY = imageOffsetY + Math.max(imageRect.height - halfLens, imageRect.height / 2);
-    const xPx = Math.min(Math.max(rawX, lensMinX), lensMaxX);
-    const yPx = Math.min(Math.max(rawY, lensMinY), lensMaxY);
-
-    setMagnifierLens({
-      xPx,
-      yPx,
-      bgPosX: -(clampedImageX * magnifierZoom - halfLens),
-      bgPosY: -(clampedImageY * magnifierZoom - halfLens),
-      bgWidthPx: imageRect.width * magnifierZoom,
-      bgHeightPx: imageRect.height * magnifierZoom,
-    });
-    setIsMagnifierActive(true);
-    return true;
-  };
-
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
   const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
@@ -563,10 +517,9 @@ export default function ArchiveGamePage() {
             <div className={`${imageFrameClass} flex h-[min(48vh,360px)] min-h-[170px] items-center justify-center p-2`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                className="cursor-zoom-in select-none"
+                className="select-none"
                 src={activeImage?.imageUrl}
                 alt={activeImage?.imageAlt}
-                onClick={() => setIsImageOpen(true)}
                 style={{
                   maxWidth: "100%",
                   maxHeight: "100%",
@@ -780,128 +733,6 @@ export default function ArchiveGamePage() {
         )}
       </div>
 
-      {isImageOpen && puzzle && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setIsImageOpen(false)}
-        >
-          <div
-            className="relative flex h-[calc(100vh-2rem)] w-full max-w-6xl flex-col"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {canNavigateGallery && (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedImageIndex((current) => (current - 1 + visibleGalleryImages.length) % visibleGalleryImages.length)
-                  }
-                  className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-zinc-500 bg-zinc-900/90 px-3 py-2 text-lg font-bold text-zinc-100 hover:bg-zinc-800"
-                  aria-label="Previous photo"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedImageIndex((current) => (current + 1) % visibleGalleryImages.length)}
-                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-zinc-500 bg-zinc-900/90 px-3 py-2 text-lg font-bold text-zinc-100 hover:bg-zinc-800"
-                  aria-label="Next photo"
-                >
-                  ›
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={() => setIsImageOpen(false)}
-              aria-label="Close image"
-              className="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-400/70 bg-zinc-900/92 text-xl font-bold leading-none text-zinc-100 shadow-lg transition hover:bg-zinc-800"
-            >
-              ×
-            </button>
-            <div
-              ref={imageViewportRef}
-              className={`relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-zinc-700 bg-zinc-950 ${
-                isMagnifierDragging ? "cursor-grabbing" : "cursor-zoom-in"
-              }`}
-              onPointerEnter={(event) => {
-                if (event.pointerType !== "mouse") {
-                  return;
-                }
-                updateMagnifier(event.clientX, event.clientY);
-              }}
-              onPointerMove={(event) => {
-                if (event.pointerType !== "mouse") {
-                  return;
-                }
-                updateMagnifier(event.clientX, event.clientY);
-              }}
-              onPointerDown={(event) => {
-                if (event.pointerType !== "mouse") {
-                  return;
-                }
-                const didUpdate = updateMagnifier(event.clientX, event.clientY);
-                if (!didUpdate) {
-                  return;
-                }
-                event.preventDefault();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                setIsMagnifierDragging(true);
-              }}
-              onPointerUp={(event) => {
-                if (event.pointerType !== "mouse") {
-                  return;
-                }
-                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                  event.currentTarget.releasePointerCapture(event.pointerId);
-                }
-                setIsMagnifierDragging(false);
-              }}
-              onPointerLeave={(event) => {
-                if (event.pointerType !== "mouse") {
-                  return;
-                }
-                if (!isMagnifierDragging) {
-                  setIsMagnifierActive(false);
-                }
-              }}
-              onPointerCancel={() => {
-                setIsMagnifierDragging(false);
-                setIsMagnifierActive(false);
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={imageElementRef}
-                className="max-h-full max-w-full select-none object-contain object-center"
-                src={activeImage?.imageUrl}
-                alt={activeImage?.imageAlt}
-                draggable={false}
-              />
-              {isMagnifierActive && activeImage?.imageUrl && (
-                <div
-                  className="pointer-events-none absolute rounded-full border-2 border-zinc-100/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]"
-                  style={{
-                    width: `${magnifierSize}px`,
-                    height: `${magnifierSize}px`,
-                    left: `${magnifierLens.xPx}px`,
-                    top: `${magnifierLens.yPx}px`,
-                    transform: "translate(-50%, -50%)",
-                    backgroundImage: `url("${activeImage.imageUrl}")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: `${magnifierLens.bgWidthPx}px ${magnifierLens.bgHeightPx}px`,
-                    backgroundPosition: `${magnifierLens.bgPosX}px ${magnifierLens.bgPosY}px`,
-                  }}
-                />
-              )}
-            </div>
-            <p className="mt-2 shrink-0 text-center text-sm text-zinc-300">
-              Photo {Math.min(selectedImageIndex + 1, visibleGalleryImages.length)} of {visibleGalleryImages.length}
-            </p>
-          </div>
-        </div>
-      )}
-
       {result && isResultOpen && (
         <div
           className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4"
@@ -945,6 +776,7 @@ export default function ArchiveGamePage() {
                   {attempts.length}/{maxGuesses}
                 </span>
               </p>
+              <p className={mutedTextClass}>{performanceLabel}</p>
               {primaryImage && (
                 <div className="mb-2 h-48 overflow-hidden rounded-lg border border-zinc-600/40 bg-zinc-950/30 sm:h-52">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -980,7 +812,7 @@ export default function ArchiveGamePage() {
                 </span>
               </p>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={handleShareResult}
@@ -1000,6 +832,16 @@ export default function ArchiveGamePage() {
                   </svg>
                 </span>
               </button>
+              <Link
+                href="https://dailydabble.app"
+                className={`inline-flex h-11 items-center justify-center rounded-full border px-5 font-bold transition ${
+                  isDarkMode
+                    ? "border-zinc-500 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
+                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
+                }`}
+              >
+                DailyDabble
+              </Link>
               <Link
                 href="/archive"
                 className={`inline-flex h-11 items-center justify-center rounded-full px-5 font-extrabold text-white transition ${

@@ -14,5 +14,9 @@
   "hot-air-balloon": {
     "status": "used",
     "updatedAt": "2026-04-20T23:05:29.828Z"
+  },
+  "volcano": {
+    "status": "approved",
+    "updatedAt": "2026-04-25T21:35:27.096Z"
   }
 }
