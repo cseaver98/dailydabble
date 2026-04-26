@@ -3,33 +3,80 @@ import { getMoviedleSupabaseAdmin } from "@/lib/supabase/moviedle";
 
 export const runtime = "nodejs";
 
-const validStatuses = ["pending_review", "approved"] as const;
+const validStatuses = ["pending", "approved"] as const;
 type CandidateStatus = (typeof validStatuses)[number];
-type CandidateFilter = CandidateStatus | "finished" | "all";
+type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
 const isStatus = (value: string): value is CandidateStatus =>
   validStatuses.includes(value as CandidateStatus);
 
+type OmdbDetail = {
+  Response?: string;
+  imdbID?: string;
+  Title?: string;
+  Year?: string;
+  Plot?: string;
+  Actors?: string;
+  imdbVotes?: string;
+};
+
+const normalizeTitle = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const parseVotes = (value: string | undefined): number => {
+  const raw = String(value || "").replace(/,/g, "").trim();
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseReleaseYear = (value: string | undefined): number | null => {
+  const match = String(value || "").match(/(\d{4})/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  if (!Number.isFinite(year) || year < 1888 || year > 2100) return null;
+  return year;
+};
+
+const fetchOmdbByTitle = async (apiKey: string, title: string): Promise<OmdbDetail | null> => {
+  const params = new URLSearchParams({
+    apikey: apiKey,
+    t: title,
+    type: "movie",
+    plot: "short",
+  });
+  const response = await fetch(`https://www.omdbapi.com/?${params.toString()}`, { cache: "no-store" });
+  const payload = (await response.json().catch(() => ({}))) as OmdbDetail;
+  if (payload.Response !== "True") {
+    return null;
+  }
+  return payload;
+};
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const statusParam = String(url.searchParams.get("status") || "pending_review");
+    const statusParam = String(url.searchParams.get("status") || "pending");
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
     const pageSize = Math.min(50, Math.max(5, Number(url.searchParams.get("pageSize") || "10")));
 
     const status = statusParam as CandidateFilter;
-    if (status !== "all" && status !== "finished" && !isStatus(status)) {
+    if (status !== "all" && status !== "finished" && status !== "today" && !isStatus(status)) {
       return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
     }
 
     const supabase = getMoviedleSupabaseAdmin();
     const offset = (page - 1) * pageSize;
-    const needsDerivedFilter = status === "finished" || status === "approved";
+    const needsDerivedFilter = status === "finished" || status === "approved" || status === "today";
     let totalCount = 0;
 
     if (!needsDerivedFilter) {
       let countQuery = supabase.from("movies").select("id", { count: "exact", head: true });
-      if (status === "pending_review") {
+      if (status === "pending") {
         countQuery = countQuery.eq("status", status);
       }
       const { count, error: countError } = await countQuery;
@@ -43,7 +90,7 @@ export async function GET(request: Request) {
       .from("movies")
       .select("id,title,release_year,summary,lead_actors,still_urls,status,source,review_notes,reviewed_at,created_at,imdb_votes")
       .order("created_at", { ascending: false });
-    if (status === "pending_review" || status === "approved") {
+    if (status === "pending" || status === "approved") {
       dataQuery = dataQuery.eq("status", status);
     }
     if (!needsDerivedFilter) {
@@ -98,9 +145,10 @@ export async function GET(request: Request) {
       });
 
     const filtered = hydrated.filter((row) => {
-      if (status === "pending_review") return row.status === "pending_review";
+      if (status === "pending") return row.status === "pending";
       if (status === "approved") return row.status === "approved" && !row.isFinished;
       if (status === "finished") return row.isFinished;
+      if (status === "today") return row.isScheduledToday;
       return true;
     });
     const items = needsDerivedFilter ? filtered.slice(offset, offset + pageSize) : filtered;
@@ -124,7 +172,7 @@ export async function GET(request: Request) {
     let approved = 0;
     let finished = 0;
     for (const row of ((allMovies as Array<{ id: string; status: string }> | null) ?? [])) {
-      if (row.status === "pending_review") pending += 1;
+      if (row.status === "pending") pending += 1;
       if (row.status === "approved") approved += 1;
       if (finishedIds.has(row.id)) finished += 1;
     }
@@ -149,6 +197,149 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load candidates";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const apiKey = process.env.OMDB_API_KEY || "";
+    if (!apiKey) {
+      return NextResponse.json({ error: "Missing OMDB_API_KEY in env." }, { status: 400 });
+    }
+
+    const payload = await request.json().catch(() => ({}));
+    const titleId = String(payload?.titleId || "").trim();
+    const providedTitle = String(payload?.title || "").trim();
+
+    const supabase = getMoviedleSupabaseAdmin();
+
+    let selectedTitle = providedTitle;
+    if (titleId) {
+      const { data: titleRow, error: titleError } = await supabase
+        .from("movie_titles")
+        .select("id,title")
+        .eq("id", titleId)
+        .maybeSingle();
+      if (titleError) {
+        throw new Error(`Failed loading selected title: ${titleError.message}`);
+      }
+      if (!titleRow?.title) {
+        return NextResponse.json({ error: "Selected title not found in title library." }, { status: 404 });
+      }
+      selectedTitle = titleRow.title;
+    }
+
+    if (!selectedTitle) {
+      return NextResponse.json({ error: "A movie title is required." }, { status: 400 });
+    }
+
+    const detail = await fetchOmdbByTitle(apiKey, selectedTitle);
+    if (!detail) {
+      return NextResponse.json({ error: `Could not find "${selectedTitle}" in OMDb.` }, { status: 404 });
+    }
+
+    const title = String(detail.Title || "").trim();
+    const titleNormalized = normalizeTitle(title || selectedTitle);
+    const releaseYear = parseReleaseYear(detail.Year);
+    const imdbVotes = parseVotes(detail.imdbVotes);
+    const summary = String(detail.Plot || "").trim();
+    const leadActors = String(detail.Actors || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (!title || !titleNormalized) {
+      return NextResponse.json({ error: "OMDb did not return a valid movie title." }, { status: 400 });
+    }
+
+    const moviePayload = {
+      imdb_id: detail.imdbID || null,
+      imdb_votes: imdbVotes,
+      title,
+      title_normalized: titleNormalized,
+      release_year: releaseYear,
+      summary: summary ? summary.slice(0, 4000) : null,
+      lead_actors: leadActors,
+      source: "title_library_omdb",
+      status: "pending",
+      reviewed_at: null,
+    };
+
+    if (detail.imdbID) {
+      const { error: titleLibraryUpdateError } = await supabase
+        .from("movie_titles")
+        .upsert(
+          {
+            id: titleId || undefined,
+            title,
+            title_normalized: titleNormalized,
+            imdb_id: detail.imdbID,
+            source: "omdb",
+          },
+          { onConflict: "title_normalized", ignoreDuplicates: false },
+        );
+      if (titleLibraryUpdateError) {
+        throw new Error(`Failed syncing title library entry: ${titleLibraryUpdateError.message}`);
+      }
+    }
+
+    let existingMovieId: string | null = null;
+    if (detail.imdbID) {
+      const { data: existingByImdb, error: existingByImdbError } = await supabase
+        .from("movies")
+        .select("id")
+        .eq("imdb_id", detail.imdbID)
+        .maybeSingle();
+      if (existingByImdbError) {
+        throw new Error(`Failed checking existing candidate by imdb_id: ${existingByImdbError.message}`);
+      }
+      existingMovieId = existingByImdb?.id || null;
+    }
+
+    if (!existingMovieId) {
+      const { data: existingByTitle, error: existingByTitleError } = await supabase
+        .from("movies")
+        .select("id")
+        .eq("title_normalized", titleNormalized)
+        .maybeSingle();
+      if (existingByTitleError) {
+        throw new Error(`Failed checking existing candidate by title: ${existingByTitleError.message}`);
+      }
+      existingMovieId = existingByTitle?.id || null;
+    }
+
+    if (existingMovieId) {
+      const { error: updateError } = await supabase.from("movies").update(moviePayload).eq("id", existingMovieId);
+      if (updateError) {
+        throw new Error(`Failed updating movie candidate: ${updateError.message}`);
+      }
+      return NextResponse.json({ ok: true, action: "updated", candidateId: existingMovieId, title });
+    }
+
+    const { data: insertData, error: insertError } = await supabase
+      .from("movies")
+      .insert({
+        ...moviePayload,
+        aliases: [],
+        aliases_normalized: [],
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (insertError) {
+      throw new Error(`Failed creating movie candidate: ${insertError.message}`);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: "created",
+      candidateId: insertData?.id || null,
+      title,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to create candidate from title";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -179,7 +370,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
+    const reviewedAt = status === "pending" ? null : new Date().toISOString();
     const { error: updateError } = await supabase
       .from("movies")
       .update({ status, reviewed_at: reviewedAt })

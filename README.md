@@ -34,3 +34,9 @@ npm run build
 
 - Hub details: `apps/hub/README.md`
 - Agegaple details: `apps/agegaple/README.md`
+
+## Daily Scheduling (ET)
+
+- Daily puzzle auto-assignment is triggered by Vercel cron in each game app.
+- Cron schedules run at `04:05` and `05:05` UTC so midnight in `America/New_York` is covered across DST changes.
+- Set `CRON_SECRET` in each Vercel project to protect `/api/internal/schedule-today`.

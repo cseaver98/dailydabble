@@ -1,7 +1,7 @@
 export type RelationshipType = "spouse" | "couple" | "former_spouse" | "former_couple";
 
 export type CandidateStatus = "pending_review" | "approved" | "rejected";
-export type CandidateFilter = "pending_review" | "approved" | "finished" | "all";
+export type CandidateFilter = "pending_review" | "approved" | "finished" | "used_today" | "all";
 
 export type EditorialContext = {
   relationshipNote: string;
@@ -101,6 +101,7 @@ export type ReviewCandidateDetailsUpdate = {
 };
 
 export type QueueHealth = {
+  totalCandidates: number;
   approvedTotal: number;
   approvedUnused: number;
   approvedUsed: number;

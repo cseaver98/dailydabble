@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-const batchSizeOptions = [1, 3, 5, 7, 10, 14];
 const statuses = ["pending_review", "approved", "finished"];
 const candidatePageSize = 10;
-const todayDateInputValue = () => new Date().toISOString().slice(0, 10);
 
 export default function YeardleAdminTab() {
-  const [batchSize, setBatchSize] = useState(5);
-  const [startDate, setStartDate] = useState(todayDateInputValue());
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualYear, setManualYear] = useState("");
+  const [manualCandidate, setManualCandidate] = useState(null);
+  const [isEditingManualCandidate, setIsEditingManualCandidate] = useState(false);
+  const [isLookingUpManualCandidate, setIsLookingUpManualCandidate] = useState(false);
+  const [isAddingManualCandidate, setIsAddingManualCandidate] = useState(false);
 
   const [items, setItems] = useState([]);
   const [queueHealth, setQueueHealth] = useState(null);
@@ -20,7 +21,6 @@ export default function YeardleAdminTab() {
   const [statusFilter, setStatusFilter] = useState("pending_review");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCandidates, setTotalCandidates] = useState(0);
-  const [scheduleById, setScheduleById] = useState({});
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -53,31 +53,129 @@ export default function YeardleAdminTab() {
 
   const totalPages = Math.max(1, Math.ceil(Math.max(totalCandidates, 0) / candidatePageSize));
 
-  const runSeed = async () => {
-    setIsSeeding(true);
+  const lookupManualCandidate = async () => {
+    setIsLookingUpManualCandidate(true);
+    setError("");
+    setMessage("");
+    setManualCandidate(null);
+
+    try {
+      const url = String(manualUrl || "").trim();
+      if (!url) {
+        throw new Error("Paste a Wikipedia URL.");
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 16000);
+      let response;
+      try {
+        response = await fetch(`/api/admin/yeardle/title-candidate?url=${encodeURIComponent(url)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to lookup event URL");
+      }
+
+      setManualCandidate(payload.candidate || null);
+      setManualYear(payload?.candidate?.eventYearGuess ? String(payload.candidate.eventYearGuess) : "");
+      setIsEditingManualCandidate(false);
+      setMessage("Candidate preview ready.");
+    } catch (lookupError) {
+      const message =
+        lookupError instanceof Error && lookupError.name === "AbortError"
+          ? "Lookup timed out. Try again with a direct Wikipedia article URL."
+          : lookupError instanceof Error
+            ? lookupError.message
+            : "Could not lookup event URL.";
+      setError(message);
+    } finally {
+      setIsLookingUpManualCandidate(false);
+    }
+  };
+
+  const addManualCandidate = async () => {
+    if (!manualCandidate) {
+      return;
+    }
+
+    setIsAddingManualCandidate(true);
     setError("");
     setMessage("");
 
     try {
-      const response = await fetch("/api/admin/yeardle/seed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchSize, startDate }),
-      });
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload.details || payload.error || "Yeardle seed failed");
+      const eventYear = Number(manualYear);
+      if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
+        throw new Error("Enter a valid event year.");
       }
 
-      const summary = payload?.summary;
-      setMessage(summary ? `Scheduled ${summary.scheduledCount} day(s), skipped ${summary.skippedCount}.` : "Seed finished.");
-      await load({ page: 1, status: statusFilter });
-    } catch (seedError) {
-      setError(seedError instanceof Error ? seedError.message : "Could not seed Yeardle content.");
+      const normalizedTitle = String(manualCandidate.title || "").trim();
+      const normalizedImageUrl = String(manualCandidate.imageUrl || "").trim();
+      const normalizedSummary = String(manualCandidate.hintDescription || "").trim();
+      if (!normalizedTitle) {
+        throw new Error("Title is required.");
+      }
+      if (!normalizedImageUrl) {
+        throw new Error("Image URL is required.");
+      }
+      if (!normalizedSummary) {
+        throw new Error("Summary is required.");
+      }
+
+      const payloadCandidate = {
+        ...manualCandidate,
+        title: normalizedTitle,
+        imageUrl: normalizedImageUrl,
+        imageAlt: `${normalizedTitle} historical image`,
+        hintDescription: normalizedSummary,
+      };
+
+      const response = await fetch("/api/admin/yeardle/title-candidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate: payloadCandidate,
+          eventYear,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to add manual candidate");
+      }
+
+      setMessage(`Added ${manualCandidate.title} as a pending candidate.`);
+      setManualCandidate(null);
+      setManualYear("");
+      setIsEditingManualCandidate(false);
+      await load({ page: currentPage, status: statusFilter });
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Could not add manual candidate.");
     } finally {
-      setIsSeeding(false);
+      setIsAddingManualCandidate(false);
     }
+  };
+
+  const rejectManualCandidate = () => {
+    setManualCandidate(null);
+    setManualYear("");
+    setIsEditingManualCandidate(false);
+    setMessage("Candidate dismissed.");
+  };
+
+  const updateManualCandidateField = (field, value) => {
+    setManualCandidate((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        [field]: value,
+      };
+    });
   };
 
   const patchStatus = async (id, status) => {
@@ -95,30 +193,6 @@ export default function YeardleAdminTab() {
       setError(payload.error || "Failed to update status");
       return;
     }
-    await load({ page: currentPage, status: statusFilter });
-  };
-
-  const assignDate = async (id) => {
-    const puzzleDate = String(scheduleById[id] || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
-      setError("Schedule date must be YYYY-MM-DD.");
-      return;
-    }
-
-    setError("");
-    setMessage("");
-    const response = await fetch("/api/admin/yeardle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: id, puzzleDate }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setError(payload.error || "Could not assign date");
-      return;
-    }
-
-    setMessage(`Assigned puzzle to ${puzzleDate}.`);
     await load({ page: currentPage, status: statusFilter });
   };
 
@@ -146,40 +220,150 @@ export default function YeardleAdminTab() {
   return (
     <section className="admin-card">
       <h1 className="admin-title">Yeardle Curation</h1>
-      <p className="admin-copy">Review event candidates, approve them, and schedule future dates.</p>
+      <p className="admin-copy">Review event candidates and keep the approved queue healthy for daily auto-assignment.</p>
 
       {queueHealth ? (
         <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
           <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
           <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
             Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
-            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
-            Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
+            Pending: <b>{queueHealth.pending || 0}</b> | Finished: <b>{queueHealth.finished || 0}</b> |
+            Total: <b>{queueHealth.total || 0}</b>
           </p>
         </div>
       ) : null}
 
       <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem" }}>
-        <p style={{ margin: 0, fontWeight: 900 }}>Seed from Wikipedia On This Day</p>
+        <p style={{ margin: 0, fontWeight: 900 }}>Add Event by Wikipedia URL</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: ".6rem", alignItems: "end", marginTop: ".55rem" }}>
-          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
-            Batch size
-            <select value={batchSize} onChange={(event) => setBatchSize(Number(event.target.value))} style={{ marginLeft: ".45rem" }}>
-              {batchSizeOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+          <label style={{ fontWeight: 700, fontSize: ".9rem", flex: "1 1 320px" }}>
+            Wikipedia URL
+            <input
+              type="text"
+              placeholder="https://en.wikipedia.org/wiki/United_States_Declaration_of_Independence"
+              value={manualUrl}
+              onChange={(event) => setManualUrl(event.target.value)}
+              style={{ marginLeft: ".45rem", minWidth: 260 }}
+            />
           </label>
 
-          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
-            Start date
-            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} style={{ marginLeft: ".45rem" }} />
-          </label>
-
-          <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={isSeeding}>
-            {isSeeding ? "Seeding..." : `Seed ${batchSize} Day(s)`}
+          <button
+            className="admin-btn primary"
+            type="button"
+            onClick={() => void lookupManualCandidate()}
+            disabled={isLookingUpManualCandidate}
+          >
+            {isLookingUpManualCandidate ? "Finding..." : "Preview candidate"}
           </button>
         </div>
+
+        {manualCandidate ? (
+          <article
+            style={{
+              marginTop: ".75rem",
+              border: "1px solid #d8dce2",
+              borderRadius: 12,
+              background: "#fff",
+              padding: ".65rem",
+              display: "grid",
+              gridTemplateColumns: "80px 1fr",
+              gap: ".6rem",
+              alignItems: "start",
+            }}
+          >
+            {manualCandidate.imageUrl ? (
+              <img
+                src={manualCandidate.imageUrl}
+                alt={manualCandidate.imageAlt || manualCandidate.title}
+                style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #d8dce2" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 8,
+                  border: "1px dashed #c4c9d0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6c727a",
+                  fontSize: ".72rem",
+                  textAlign: "center",
+                  padding: ".2rem",
+                  background: "#f8fafc",
+                }}
+              >
+                No image yet
+              </div>
+            )}
+            <div>
+              {isEditingManualCandidate ? (
+                <div style={{ display: "grid", gap: ".35rem" }}>
+                  <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                    Title
+                    <input
+                      type="text"
+                      value={manualCandidate.title || ""}
+                      onChange={(event) => updateManualCandidateField("title", event.target.value)}
+                      style={{ marginLeft: ".35rem", minWidth: 260 }}
+                    />
+                  </label>
+                  <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                    Summary
+                    <textarea
+                      value={manualCandidate.hintDescription || ""}
+                      onChange={(event) => updateManualCandidateField("hintDescription", event.target.value)}
+                      rows={4}
+                      style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 680 }}
+                    />
+                  </label>
+                  <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                    Image URL
+                    <input
+                      type="text"
+                      value={manualCandidate.imageUrl || ""}
+                      onChange={(event) => updateManualCandidateField("imageUrl", event.target.value)}
+                      style={{ marginLeft: ".35rem", minWidth: 320 }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontWeight: 900 }}>{manualCandidate.title}</p>
+                  <p style={{ margin: ".2rem 0", color: "#5b6168", fontSize: ".86rem" }}>
+                    {manualCandidate.hintDescription}
+                  </p>
+                </>
+              )}
+              <div style={{ marginTop: ".35rem", display: "flex", flexWrap: "wrap", gap: ".4rem", alignItems: "end" }}>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event year
+                  <input
+                    type="number"
+                    min="1000"
+                    max={new Date().getFullYear()}
+                    value={manualYear}
+                    onChange={(event) => setManualYear(event.target.value)}
+                    style={{ marginLeft: ".35rem", width: 110 }}
+                  />
+                </label>
+                {manualCandidate.wikipediaUrl ? (
+                  <a className="admin-btn" href={manualCandidate.wikipediaUrl} target="_blank" rel="noreferrer">Wikipedia</a>
+                ) : null}
+                <button className="admin-btn" type="button" onClick={() => setIsEditingManualCandidate((value) => !value)} disabled={isAddingManualCandidate}>
+                  {isEditingManualCandidate ? "Done editing" : "Edit candidate"}
+                </button>
+                <button className="admin-btn primary" type="button" onClick={() => void addManualCandidate()} disabled={isAddingManualCandidate}>
+                  {isAddingManualCandidate ? "Adding..." : "Add candidate"}
+                </button>
+                <button className="admin-btn" type="button" onClick={rejectManualCandidate} disabled={isAddingManualCandidate}>
+                  Reject
+                </button>
+              </div>
+            </div>
+          </article>
+        ) : null}
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
@@ -235,18 +419,6 @@ export default function YeardleAdminTab() {
                 );
               })}
               <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
-            </div>
-
-            <div style={{ marginTop: ".45rem", display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-              <input
-                type="date"
-                value={scheduleById[item.id] || ""}
-                onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
-                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
-              />
-              <button className="admin-btn primary" type="button" onClick={() => void assignDate(item.id)} disabled={item.status !== "approved"}>
-                Schedule candidate
-              </button>
             </div>
           </article>
         ))}

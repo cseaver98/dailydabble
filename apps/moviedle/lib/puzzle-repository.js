@@ -88,9 +88,69 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, movieRow);
 };
 
+const autoScheduleApprovedPuzzleForDate = async (date) => {
+  const supabase = getMoviedleSupabaseAdmin();
+
+  const { data: approvedRows, error: approvedError } = await supabase
+    .from("movies")
+    .select("id,title,still_urls,created_at")
+    .eq("status", "approved")
+    .order("created_at", { ascending: true })
+    .limit(5000);
+
+  if (approvedError) {
+    throw new Error(`Failed to load approved moviedle movies: ${approvedError.message}`);
+  }
+
+  const candidates = Array.isArray(approvedRows) ? approvedRows : [];
+  for (const candidate of candidates) {
+    const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
+      .from("daily_schedule")
+      .select("puzzle_date")
+      .eq("movie_id", candidate.id)
+      .maybeSingle();
+
+    if (scheduleLookupError) {
+      throw new Error(`Failed to check moviedle schedule usage: ${scheduleLookupError.message}`);
+    }
+
+    if (alreadyScheduled) {
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("daily_schedule").insert({
+      puzzle_date: date,
+      movie_id: candidate.id,
+    });
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        const existing = await getPuzzleByScheduleDate(date);
+        if (existing) {
+          return existing;
+        }
+        continue;
+      }
+      throw new Error(`Failed to auto-schedule moviedle puzzle: ${insertError.message}`);
+    }
+
+    return mapPuzzle(
+      { puzzle_date: date, movie_id: candidate.id },
+      candidate,
+    );
+  }
+
+  return null;
+};
+
 export const getTodayMoviedlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  return getPuzzleByScheduleDate(today);
+  const scheduled = await getPuzzleByScheduleDate(today);
+  if (scheduled) {
+    return scheduled;
+  }
+
+  return autoScheduleApprovedPuzzleForDate(today);
 };
 
 export const getMoviedlePuzzleByDate = async (date) => {
@@ -235,17 +295,29 @@ export const searchMoviedleTitles = async (query, limit = 8) => {
 
   const max = Number.isFinite(Number(limit)) ? Math.min(Math.max(1, Number(limit)), 12) : 8;
   const { data, error } = await supabase
-    .from("movies")
-    .select("id,title")
+    .from("movie_titles")
+    .select("id,title,title_normalized")
     .ilike("title_normalized", `%${normalized}%`)
     .order("title", { ascending: true })
-    .limit(max);
+    .limit(Math.min(60, max * 4));
 
   if (error) {
     throw new Error(`Failed to search movie titles: ${error.message}`);
   }
 
-  return (Array.isArray(data) ? data : []).map((row) => ({
+  const rows = Array.isArray(data) ? data : [];
+  rows.sort((a, b) => {
+    const aNorm = String(a.title_normalized || "");
+    const bNorm = String(b.title_normalized || "");
+    const aStarts = aNorm.startsWith(normalized);
+    const bStarts = bNorm.startsWith(normalized);
+    if (aStarts !== bStarts) {
+      return aStarts ? -1 : 1;
+    }
+    return String(a.title || "").localeCompare(String(b.title || ""));
+  });
+
+  return rows.slice(0, max).map((row) => ({
     id: row.id,
     title: row.title,
   }));

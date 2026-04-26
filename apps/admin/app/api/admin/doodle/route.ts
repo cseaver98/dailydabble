@@ -45,6 +45,23 @@ type ProcessedDoodleRecord = {
   stageParts?: ProcessedStageSegment[][];
 };
 
+const getDateInTimeZone = (timeZone: string): string => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  return `${year}-${month}-${day}`;
+};
+
 const DOODLE_STORAGE_BUCKET = process.env.DOODLE_STORAGE_BUCKET || "doodle-sources";
 const DOODLE_STORAGE_PREFIX = (process.env.DOODLE_STORAGE_PREFIX || "raw").replace(/^\/+|\/+$/g, "");
 
@@ -350,21 +367,72 @@ const writeLocalRaw = (slug: string, content: string): void => {
 };
 
 const buildOverview = async () => {
+  const supabase = getDoodleSupabaseAdmin();
   const reviewState = loadReviewState();
   const manifestSlugs = readManifestSlugs();
   const previewDir = getPreviewDir();
   const nowIso = new Date().toISOString();
   const storageFiles = await listStorageSvgs();
+  const today = getDateInTimeZone(process.env.PUZZLE_TIMEZONE || "America/New_York");
+
+  const { data: puzzleRows, error: puzzleRowsError } = await supabase
+    .from("puzzles")
+    .select("id,slug");
+
+  if (puzzleRowsError) {
+    throw new Error(`Could not load doodle puzzle rows: ${puzzleRowsError.message}`);
+  }
+
+  const puzzlesBySlug = new Map<string, string>();
+  const puzzleIds: string[] = [];
+  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string }> | null) ?? [])) {
+    if (typeof row.slug !== "string" || typeof row.id !== "string") {
+      continue;
+    }
+    puzzlesBySlug.set(row.slug, row.id);
+    puzzleIds.push(row.id);
+  }
+
+  const scheduleDatesByPuzzleId = new Map<string, string[]>();
+  if (puzzleIds.length > 0) {
+    const { data: scheduleRows, error: scheduleRowsError } = await supabase
+      .from("daily_schedule")
+      .select("puzzle_id,puzzle_date")
+      .in("puzzle_id", puzzleIds);
+
+    if (scheduleRowsError) {
+      throw new Error(`Could not load doodle schedule rows: ${scheduleRowsError.message}`);
+    }
+
+    for (const row of ((scheduleRows as Array<{ puzzle_id?: string; puzzle_date?: string }> | null) ?? [])) {
+      if (typeof row.puzzle_id !== "string" || typeof row.puzzle_date !== "string") {
+        continue;
+      }
+      const current = scheduleDatesByPuzzleId.get(row.puzzle_id) ?? [];
+      current.push(row.puzzle_date);
+      scheduleDatesByPuzzleId.set(row.puzzle_id, current);
+    }
+  }
 
   const items = storageFiles.map((file) => {
     const slug = file.slug;
     const processedSummary = readProcessedSummary(slug);
     const state = reviewState[slug] ?? { status: "pending" as DoodleStatus, updatedAt: nowIso };
+    const puzzleId = puzzlesBySlug.get(slug) ?? null;
+    const scheduleDates = puzzleId ? (scheduleDatesByPuzzleId.get(puzzleId) ?? []).sort((a, b) => a.localeCompare(b)) : [];
+    const hasUsedDate = scheduleDates.some((date) => date <= today);
+    const usedDates = scheduleDates.filter((date) => date <= today);
+    const futureDates = scheduleDates.filter((date) => date > today);
+    const latestUsedDate = usedDates.length > 0 ? usedDates[usedDates.length - 1] : null;
+    const nextScheduledDate = futureDates.length > 0 ? futureDates[0] : null;
+    const isUsedToday = scheduleDates.includes(today);
+    const scheduledPuzzleDate = latestUsedDate ?? nextScheduledDate;
+    const effectiveStatus: DoodleStatus = hasUsedDate ? "used" : state.status;
 
     return {
       slug,
       filename: file.filename,
-      status: state.status,
+      status: effectiveStatus,
       statusUpdatedAt: state.updatedAt,
       rawUpdatedAt: file.updatedAt,
       hasProcessed: Boolean(processedSummary),
@@ -374,6 +442,8 @@ const buildOverview = async () => {
       previewReady: existsSync(resolve(previewDir, `${slug}.html`)),
       inManifest: manifestSlugs.has(slug),
       storagePath: storagePathForSlug(slug),
+      scheduledPuzzleDate,
+      isUsedToday,
     };
   });
 

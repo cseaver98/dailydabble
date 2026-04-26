@@ -2,22 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const statuses = ["pending_review", "approved", "finished"];
+const candidateStatuses = ["pending", "approved", "finished"];
+const filterStatuses = ["pending", "approved", "today", "finished"];
 const candidatePageSize = 10;
 const PLACEHOLDER_IMAGE = "/favicon.svg";
+const statusLabel = {
+  pending: "pending",
+  approved: "approved",
+  today: "today",
+  finished: "finished",
+};
 
 export default function MoviedleAdminTab() {
-  const [titlesText, setTitlesText] = useState("");
-  const [minVotes, setMinVotes] = useState(1000);
-  const [importStatus, setImportStatus] = useState("");
-  const [importError, setImportError] = useState("");
-  const [importing, setImporting] = useState(false);
+  const [titleQuery, setTitleQuery] = useState("");
+  const [selectedTitle, setSelectedTitle] = useState(null);
+  const [titleSuggestions, setTitleSuggestions] = useState([]);
+  const [titleLibraryCount, setTitleLibraryCount] = useState(0);
+  const [titleLookupError, setTitleLookupError] = useState("");
+  const [createStatus, setCreateStatus] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [isCreatingCandidate, setIsCreatingCandidate] = useState(false);
 
   const [items, setItems] = useState([]);
   const [queueHealth, setQueueHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCandidates, setTotalCandidates] = useState(0);
 
@@ -30,10 +40,6 @@ export default function MoviedleAdminTab() {
   const [isAddingStill, setIsAddingStill] = useState(false);
   const [isRemovingStill, setIsRemovingStill] = useState(false);
 
-  const [scheduleById, setScheduleById] = useState({});
-  const [scheduleStatus, setScheduleStatus] = useState("");
-  const [scheduleError, setScheduleError] = useState("");
-  const [isScheduling, setIsScheduling] = useState(false);
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -82,45 +88,105 @@ export default function MoviedleAdminTab() {
     }
   }, [galleryUrls.length, galleryIndex]);
 
-  const runTitleImport = async () => {
-    setImportError("");
-    setImportStatus("");
+  useEffect(() => {
+    let isCancelled = false;
+    const loadTitleLibraryCount = async () => {
+      try {
+        const response = await fetch("/api/admin/moviedle/titles?limit=1", { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to load title library count");
+        }
+        if (!isCancelled) {
+          setTitleLibraryCount(Number(payload.totalTitles) || 0);
+        }
+      } catch {
+        if (!isCancelled) {
+          setTitleLibraryCount(0);
+        }
+      }
+    };
 
-    const lines = titlesText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+    void loadTitleLibraryCount();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
-    if (lines.length === 0) {
-      setImportError("Paste at least one movie title (one per line).");
+  useEffect(() => {
+    const trimmed = titleQuery.trim();
+    setTitleLookupError("");
+    setCreateError("");
+    setCreateStatus("");
+
+    if (!trimmed || trimmed.length < 2) {
+      setTitleSuggestions([]);
       return;
     }
 
-    setImporting(true);
+    let isCancelled = false;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/admin/moviedle/titles?q=${encodeURIComponent(trimmed)}&limit=8`, {
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to search title library");
+        }
+        if (!isCancelled) {
+          setTitleSuggestions(Array.isArray(payload.suggestions) ? payload.suggestions : []);
+          setTitleLibraryCount(Number(payload.totalTitles) || 0);
+        }
+      } catch (lookupError) {
+        if (!isCancelled) {
+          setTitleSuggestions([]);
+          setTitleLookupError(lookupError instanceof Error ? lookupError.message : "Could not search title library.");
+        }
+      }
+    }, 180);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [titleQuery]);
+
+  const createCandidateFromTitle = async () => {
+    const trimmed = titleQuery.trim();
+    if (!trimmed) {
+      setCreateError("Choose a movie title first.");
+      return;
+    }
+
+    setCreateError("");
+    setCreateStatus("");
+    setIsCreatingCandidate(true);
     try {
-      const response = await fetch("/api/admin/moviedle/import", {
+      const response = await fetch("/api/admin/moviedle/candidates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          titlesText,
-          minVotes,
+          titleId: selectedTitle?.id || null,
+          title: trimmed,
         }),
       });
-
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || "Failed to import title list");
+        throw new Error(payload.error || "Failed to create candidate from title");
       }
 
-      setImportStatus(`Imported title list. Inserted ${payload.inserted || 0}, updated ${payload.updated || 0}, skipped ${payload.skipped || 0}.`);
-      if (Array.isArray(payload.errors) && payload.errors.length > 0) {
-        setImportError(payload.errors.slice(0, 5).join("\n"));
-      }
+      setCreateStatus(
+        payload.action === "updated"
+          ? `Updated candidate for "${payload.title || trimmed}".`
+          : `Created candidate for "${payload.title || trimmed}".`,
+      );
+      setTitleSuggestions([]);
       await load({ page: 1, status: statusFilter });
-    } catch (runError) {
-      setImportError(runError instanceof Error ? runError.message : "Could not import titles.");
+    } catch (createCandidateError) {
+      setCreateError(createCandidateError instanceof Error ? createCandidateError.message : "Could not create candidate.");
     } finally {
-      setImporting(false);
+      setIsCreatingCandidate(false);
     }
   };
 
@@ -307,40 +373,11 @@ export default function MoviedleAdminTab() {
     }
   };
 
-  const scheduleCandidate = async (candidateId) => {
-    const puzzleDate = String(scheduleById[candidateId] || "").trim();
-    setScheduleError("");
-    setScheduleStatus("");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
-      setScheduleError("Schedule date must be YYYY-MM-DD.");
-      return;
-    }
-
-    setIsScheduling(true);
-    try {
-      const response = await fetch("/api/admin/moviedle/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateId, puzzleDate }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Failed to schedule candidate");
-      }
-      setScheduleStatus(`Scheduled for ${puzzleDate}.`);
-      await load({ page: currentPage, status: statusFilter });
-    } catch (scheduleErr) {
-      setScheduleError(scheduleErr instanceof Error ? scheduleErr.message : "Could not schedule candidate.");
-    } finally {
-      setIsScheduling(false);
-    }
-  };
-
   return (
     <>
       <section className="admin-card">
         <h1 className="admin-title">Moviedle Curation</h1>
-        <p className="admin-copy">Import movie title lists, curate still images, and move candidates through review.</p>
+        <p className="admin-copy">Create candidates from the title library, curate still images, and move candidates through review.</p>
 
         {queueHealth ? (
           <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
@@ -365,37 +402,56 @@ export default function MoviedleAdminTab() {
             maxWidth: 900,
           }}
         >
-          <p style={{ margin: 0, fontWeight: 900 }}>Import from title list (OMDb enrichment)</p>
-          <label style={{ display: "grid", gap: ".35rem", fontWeight: 700, fontSize: ".9rem" }}>
-            Movie titles (one per line)
-            <textarea
-              value={titlesText}
-              onChange={(event) => setTitlesText(event.target.value)}
-              rows={8}
-              placeholder={"The Matrix\\nInception\\nTrue Grit"}
-              style={{ borderRadius: 12, border: "1px solid #cfd4da", padding: ".55rem .85rem", resize: "vertical" }}
+          <p style={{ margin: 0, fontWeight: 900 }}>Create candidate from title library (OMDb enrichment)</p>
+          <p className="admin-copy" style={{ margin: 0 }}>
+            Library size: <b>{titleLibraryCount}</b> titles.
+          </p>
+
+          <label style={{ display: "grid", gap: ".35rem", fontWeight: 700, fontSize: ".9rem", position: "relative" }}>
+            Search title
+            <input
+              type="text"
+              value={titleQuery}
+              onChange={(event) => {
+                setTitleQuery(event.target.value);
+                setSelectedTitle(null);
+              }}
+              placeholder="Start typing a movie title..."
+              autoComplete="off"
+              style={{ borderRadius: 12, border: "1px solid #cfd4da", padding: ".55rem .85rem" }}
             />
           </label>
 
+          {titleSuggestions.length > 0 ? (
+            <div style={{ display: "grid", gap: ".35rem", marginTop: "-.2rem" }}>
+              {titleSuggestions.map((item) => (
+                <button
+                  key={item.id}
+                  className="admin-btn"
+                  type="button"
+                  onClick={() => {
+                    setSelectedTitle(item);
+                    setTitleQuery(item.title);
+                    setTitleSuggestions([]);
+                  }}
+                  style={{ justifyContent: "flex-start", textAlign: "left" }}
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div style={{ display: "flex", flexWrap: "wrap", gap: ".65rem", alignItems: "center" }}>
-            <label style={{ display: "grid", gap: ".2rem", fontWeight: 700, fontSize: ".86rem" }}>
-              Min IMDb votes
-              <input
-                type="number"
-                min={0}
-                max={2000000}
-                value={minVotes}
-                onChange={(event) => setMinVotes(Number(event.target.value || 0))}
-                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".45rem .75rem", width: 140 }}
-              />
-            </label>
-            <button className="admin-btn primary" type="button" onClick={() => void runTitleImport()} disabled={importing}>
-              {importing ? "Importing..." : "Import Title List"}
+            <button className="admin-btn primary" type="button" onClick={() => void createCandidateFromTitle()} disabled={isCreatingCandidate}>
+              {isCreatingCandidate ? "Creating..." : "Create Candidate"}
             </button>
+            {selectedTitle ? <p className="admin-copy" style={{ margin: 0 }}>Selected: <b>{selectedTitle.title}</b></p> : null}
           </div>
 
-          {importStatus ? <p className="admin-copy" style={{ color: "#2f672d", margin: 0 }}>{importStatus}</p> : null}
-          {importError ? <pre className="admin-copy" style={{ color: "#8b2d2d", margin: 0, whiteSpace: "pre-wrap" }}>{importError}</pre> : null}
+          {createStatus ? <p className="admin-copy" style={{ color: "#2f672d", margin: 0 }}>{createStatus}</p> : null}
+          {createError ? <p className="admin-copy" style={{ color: "#8b2d2d", margin: 0 }}>{createError}</p> : null}
+          {titleLookupError ? <p className="admin-copy" style={{ color: "#8b2d2d", margin: 0 }}>{titleLookupError}</p> : null}
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
@@ -403,21 +459,27 @@ export default function MoviedleAdminTab() {
             Status
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
               <option value="all">all</option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>{status}</option>
+              {filterStatuses.map((status) => (
+                <option key={status} value={status}>{statusLabel[status] || status}</option>
               ))}
             </select>
           </label>
         </div>
 
         {error ? <p style={{ marginTop: ".6rem", color: "#b42318", fontWeight: 700 }}>{error}</p> : null}
-        {scheduleError ? <p style={{ marginTop: ".6rem", color: "#b42318", fontWeight: 700 }}>{scheduleError}</p> : null}
-        {scheduleStatus ? <p style={{ marginTop: ".6rem", color: "#2f672d", fontWeight: 700 }}>{scheduleStatus}</p> : null}
         {loading ? <p className="admin-copy">Loading movie candidates...</p> : null}
 
         <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
           {items.map((item) => (
-            <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+            <article
+              key={item.id}
+              style={{
+                border: item.isScheduledToday ? "2px solid #c81e1e" : "1px solid #d8dce2",
+                borderRadius: 14,
+                background: "#fff",
+                padding: ".75rem",
+              }}
+            >
               <div style={{ display: "grid", gap: ".4rem" }}>
                 <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>
                   {item.title} {item.release_year ? `(${item.release_year})` : ""}
@@ -445,7 +507,7 @@ export default function MoviedleAdminTab() {
 
                 <div style={{ marginTop: ".35rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
                   <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage stills</button>
-                  {statuses.map((status) => (
+                  {candidateStatuses.map((status) => (
                     <button
                       key={status}
                       className="admin-btn"
@@ -458,7 +520,7 @@ export default function MoviedleAdminTab() {
                         opacity: status === "finished" ? 0.55 : 1,
                       }}
                     >
-                      {status}
+                      {statusLabel[status] || status}
                     </button>
                   ))}
                   <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>
@@ -466,22 +528,6 @@ export default function MoviedleAdminTab() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-                  <input
-                    type="date"
-                    value={scheduleById[item.id] || ""}
-                    onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
-                    style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
-                  />
-                  <button
-                    className="admin-btn primary"
-                    type="button"
-                    onClick={() => void scheduleCandidate(item.id)}
-                    disabled={isScheduling || item.status !== "approved"}
-                  >
-                    Schedule candidate
-                  </button>
-                </div>
               </div>
             </article>
           ))}

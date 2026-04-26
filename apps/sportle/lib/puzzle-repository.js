@@ -106,10 +106,73 @@ const fetchPuzzleByScheduleRow = async (scheduleRow) => {
   return mapPuzzle(scheduleRow, athleteRow);
 };
 
+const autoScheduleApprovedPuzzleForDate = async (date) => {
+  const supabase = getSportleSupabaseAdmin();
+
+  const { data: approvedRows, error: approvedError } = await supabase
+    .from("athletes")
+    .select(
+      "id,sport,full_name,team_name,team_logo_url,years_with_team,position,key_stat_1,key_stat_2,final_clue,created_at",
+    )
+    .eq("status", "approved")
+    .eq("is_active", true)
+    .order("created_at", { ascending: true })
+    .limit(5000);
+
+  if (approvedError) {
+    throw new Error(`Failed to load approved Sportle athletes: ${approvedError.message}`);
+  }
+
+  const candidates = Array.isArray(approvedRows) ? approvedRows : [];
+  for (const candidate of candidates) {
+    const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
+      .from("daily_schedule")
+      .select("puzzle_date")
+      .eq("athlete_id", candidate.id)
+      .maybeSingle();
+
+    if (scheduleLookupError) {
+      throw new Error(`Failed to check Sportle schedule usage: ${scheduleLookupError.message}`);
+    }
+
+    if (alreadyScheduled) {
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("daily_schedule").insert({
+      puzzle_date: date,
+      athlete_id: candidate.id,
+    });
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        const existing = await fetchPuzzleByScheduleRow(await fetchScheduleRow(date));
+        if (existing) {
+          return existing;
+        }
+        continue;
+      }
+      throw new Error(`Failed to auto-schedule Sportle puzzle: ${insertError.message}`);
+    }
+
+    return mapPuzzle(
+      { puzzle_date: date, athlete_id: candidate.id },
+      candidate,
+    );
+  }
+
+  return null;
+};
+
 export const getTodaySportlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
   const schedule = await fetchScheduleRow(today);
-  return fetchPuzzleByScheduleRow(schedule);
+  const scheduled = await fetchPuzzleByScheduleRow(schedule);
+  if (scheduled) {
+    return scheduled;
+  }
+
+  return autoScheduleApprovedPuzzleForDate(today);
 };
 
 export const getSportlePuzzleByDate = async (date) => {

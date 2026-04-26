@@ -115,7 +115,6 @@ export async function GET(request: Request) {
       queueHealth: {
         runwayDays: approvedUnused,
         approved,
-        approvedUnused,
         pending,
         finished,
         total: hydrated.length,

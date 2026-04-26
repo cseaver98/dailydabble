@@ -81,9 +81,71 @@ const getPuzzleByScheduleDate = async (date) => {
   return mapPuzzle(scheduleRow, eventRow);
 };
 
+const autoScheduleApprovedPuzzleForDate = async (date) => {
+  const supabase = getYeardleSupabaseAdmin();
+
+  const { data: approvedRows, error: approvedError } = await supabase
+    .from("events")
+    .select(
+      "id,title,event_year,image_url,image_alt,wikipedia_url,hint_category,hint_region,hint_era,hint_person,hint_description,created_at",
+    )
+    .eq("status", "approved")
+    .order("created_at", { ascending: true })
+    .limit(5000);
+
+  if (approvedError) {
+    throw new Error(`Failed to load approved yeardle events: ${approvedError.message}`);
+  }
+
+  const candidates = Array.isArray(approvedRows) ? approvedRows : [];
+  for (const candidate of candidates) {
+    const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
+      .from("daily_schedule")
+      .select("puzzle_date")
+      .eq("event_id", candidate.id)
+      .maybeSingle();
+
+    if (scheduleLookupError) {
+      throw new Error(`Failed to check yeardle schedule usage: ${scheduleLookupError.message}`);
+    }
+
+    if (alreadyScheduled) {
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("daily_schedule").insert({
+      puzzle_date: date,
+      event_id: candidate.id,
+    });
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        const existing = await getPuzzleByScheduleDate(date);
+        if (existing) {
+          return existing;
+        }
+        continue;
+      }
+      throw new Error(`Failed to auto-schedule yeardle puzzle: ${insertError.message}`);
+    }
+
+    return mapPuzzle(
+      { puzzle_date: date, event_id: candidate.id },
+      candidate,
+    );
+  }
+
+  return null;
+};
+
 export const getTodayYeardlePuzzle = async () => {
   const today = getDateInTimeZone(DEFAULT_TIMEZONE);
-  return getPuzzleByScheduleDate(today);
+  const scheduled = await getPuzzleByScheduleDate(today);
+  if (scheduled) {
+    return scheduled;
+  }
+
+  return autoScheduleApprovedPuzzleForDate(today);
 };
 
 export const getYeardlePuzzleByDate = async (date) => {

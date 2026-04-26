@@ -77,6 +77,7 @@ export default function MoviedleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [selectedStillIndex, setSelectedStillIndex] = useState(0);
   const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
   const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
 
@@ -115,6 +116,7 @@ export default function MoviedleGameClient({
         setIsResultOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
+        setSelectedStillIndex(0);
       } catch (loadError) {
         if (!active) {
           return;
@@ -273,9 +275,16 @@ export default function MoviedleGameClient({
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
   const stills = Array.isArray(puzzle?.stillImages) ? puzzle.stillImages : [];
   const revealedStillCount = Math.max(1, Math.min(stills.length || 1, 1 + attempts.length));
-  const visibleStill = stills[Math.max(0, revealedStillCount - 1)] || null;
+  const visibleStills = stills.slice(0, revealedStillCount);
+  const boundedStillIndex = Math.min(Math.max(selectedStillIndex, 0), Math.max(visibleStills.length - 1, 0));
+  const visibleStill = visibleStills[boundedStillIndex] || null;
+  const canNavigateStills = visibleStills.length > 1;
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const earlierAttempts = attempts.slice(0, -1).reverse();
+
+  useEffect(() => {
+    setSelectedStillIndex(Math.max(0, revealedStillCount - 1));
+  }, [revealedStillCount, puzzle?.puzzleId]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -452,7 +461,6 @@ export default function MoviedleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextDateLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Still: {revealedStillCount}/{Math.max(1, stills.length)}</span>
           </div>
 
           <figure className="still-figure">
@@ -461,6 +469,28 @@ export default function MoviedleGameClient({
             ) : (
               <p className="page-subtle">No still image available.</p>
             )}
+            {canNavigateStills ? (
+              <>
+                <button
+                  type="button"
+                  className="still-nav-btn still-nav-btn-prev"
+                  onClick={() => setSelectedStillIndex((current) => Math.max(0, current - 1))}
+                  aria-label="Previous still"
+                  disabled={boundedStillIndex <= 0}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  className="still-nav-btn still-nav-btn-next"
+                  onClick={() => setSelectedStillIndex((current) => Math.min(visibleStills.length - 1, current + 1))}
+                  aria-label="Next still"
+                  disabled={boundedStillIndex >= visibleStills.length - 1}
+                >
+                  →
+                </button>
+              </>
+            ) : null}
           </figure>
 
           <form className="guess-form" onSubmit={handleSubmit}>
@@ -586,7 +616,31 @@ export default function MoviedleGameClient({
             <p className="result-modal-copy">{performanceLabel}</p>
             <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {visibleStill ? (
-              <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="result-modal-image" />
+              <div className="result-modal-image-wrap">
+                <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="result-modal-image" />
+                {canNavigateStills ? (
+                  <>
+                    <button
+                      type="button"
+                      className="still-nav-btn still-nav-btn-prev"
+                      onClick={() => setSelectedStillIndex((current) => Math.max(0, current - 1))}
+                      aria-label="Previous still"
+                      disabled={boundedStillIndex <= 0}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      className="still-nav-btn still-nav-btn-next"
+                      onClick={() => setSelectedStillIndex((current) => Math.min(visibleStills.length - 1, current + 1))}
+                      aria-label="Next still"
+                      disabled={boundedStillIndex >= visibleStills.length - 1}
+                    >
+                      →
+                    </button>
+                  </>
+                ) : null}
+              </div>
             ) : null}
             {Number.isFinite(revealedDetails?.releaseYear) ? (
               <p className="result-modal-copy"><strong>Year:</strong> {revealedDetails.releaseYear}</p>

@@ -3,19 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STATUS_VALUES = ["pending", "approved", "used"];
-const FILTER_VALUES = ["pending_review", "approved", "finished"];
 const candidatePageSize = 10;
 
 const statusLabel = {
   pending: "Pending",
   approved: "Approved",
   used: "Used",
-};
-
-const statusDescription = {
-  pending: "Uploaded but not approved for game usage yet.",
-  approved: "Ready to be selected for upcoming puzzles.",
-  used: "Already published in-game.",
+  used_today: "Today's game",
 };
 
 export default function DoodleAdminTab() {
@@ -41,7 +35,7 @@ export default function DoodleAdminTab() {
   const [reorderMessage, setReorderMessage] = useState("");
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [deletingSlug, setDeletingSlug] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [currentPage, setCurrentPage] = useState(1);
 
   const hydrateOverview = (payload) => {
@@ -278,16 +272,25 @@ export default function DoodleAdminTab() {
   };
 
   const filteredItems = useMemo(() => {
-    if (statusFilter === "pending_review") {
-      return items.filter((item) => item.status === "pending");
+    const sorted = [...items].sort((left, right) => {
+      const leftDate = Date.parse(left.rawUpdatedAt || left.statusUpdatedAt || "");
+      const rightDate = Date.parse(right.rawUpdatedAt || right.statusUpdatedAt || "");
+      const leftTime = Number.isFinite(leftDate) ? leftDate : 0;
+      const rightTime = Number.isFinite(rightDate) ? rightDate : 0;
+      if (leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+      return String(right.slug || "").localeCompare(String(left.slug || ""));
+    });
+
+    if (statusFilter === "all") return sorted;
+    if (statusFilter === "used_today") {
+      return sorted.filter((item) => item.isUsedToday);
     }
-    if (statusFilter === "approved") {
-      return items.filter((item) => item.status === "approved");
+    if (STATUS_VALUES.includes(statusFilter)) {
+      return sorted.filter((item) => item.status === statusFilter);
     }
-    if (statusFilter === "finished") {
-      return items.filter((item) => item.status === "used");
-    }
-    return items;
+    return sorted;
   }, [items, statusFilter]);
 
   const totalCandidates = filteredItems.length;
@@ -296,15 +299,6 @@ export default function DoodleAdminTab() {
     const offset = (currentPage - 1) * candidatePageSize;
     return filteredItems.slice(offset, offset + candidatePageSize);
   }, [filteredItems, currentPage]);
-
-  const groupedItems = useMemo(
-    () => ({
-      pending: paginatedItems.filter((item) => item.status === "pending"),
-      approved: paginatedItems.filter((item) => item.status === "approved"),
-      used: paginatedItems.filter((item) => item.status === "used"),
-    }),
-    [paginatedItems],
-  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -444,20 +438,14 @@ export default function DoodleAdminTab() {
           </div>
         ) : null}
 
-        <div style={{ marginTop: ".95rem", border: "1px solid #d8dce2", borderRadius: 12, padding: ".7rem .8rem", background: "#f8fafc" }}>
-          <p style={{ margin: 0, fontWeight: 800 }}>Queue Summary</p>
-          <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-            Pending: <b>{queueCounts.pending || 0}</b> | Approved: <b>{queueCounts.approved || 0}</b> | Used: <b>{queueCounts.used || 0}</b>
-          </p>
-        </div>
-
         <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
           <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
             Status
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
               <option value="all">all</option>
-              {FILTER_VALUES.map((status) => (
-                <option key={status} value={status}>{status}</option>
+              <option value="used_today">{statusLabel.used_today}</option>
+              {STATUS_VALUES.map((status) => (
+                <option key={status} value={status}>{statusLabel[status]}</option>
               ))}
             </select>
           </label>
@@ -472,75 +460,73 @@ export default function DoodleAdminTab() {
 
         {!loadingFiles && !loadError && paginatedItems.length > 0 ? (
           <div style={{ marginTop: ".9rem", display: "grid", gap: ".8rem" }}>
-            {STATUS_VALUES.map((status) => (
-              <div key={status} style={{ border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem", background: "#fff" }}>
-                <p style={{ margin: 0, fontWeight: 900 }}>{statusLabel[status]} ({groupedItems[status].length})</p>
-                <p style={{ margin: ".25rem 0 .6rem", color: "#5b6168", fontSize: ".88rem" }}>{statusDescription[status]}</p>
-
-                {groupedItems[status].length === 0 ? (
-                  <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>No items in this queue.</p>
-                ) : (
-                  <div style={{ display: "grid", gap: ".55rem" }}>
-                    {groupedItems[status].map((item) => (
-                      <article key={item.slug} style={{ border: "1px solid #e4e8ee", borderRadius: 12, padding: ".65rem .7rem", background: "#fdfefe" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
-                          <div>
-                            <p style={{ margin: 0, fontWeight: 900 }}>{item.slug}</p>
-                            <p style={{ margin: ".22rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
-                              File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
-                            </p>
-                            <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
-                              In manifest: {item.inManifest ? "yes" : "no"} | Preview html: {item.previewReady ? "yes" : "no"}
-                            </p>
-                          </div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: ".35rem", alignItems: "start" }}>
-                            <button className="admin-btn" type="button" onClick={() => void openPreview(item.slug)}>
-                              Preview
-                            </button>
-                            {item.status === "pending" && item.hasProcessed ? (
-                              <button
-                                className="admin-btn"
-                                type="button"
-                                onClick={() => void runPipeline(item.slug)}
-                                disabled={runningPipeline || (Boolean(rerunningSlug) && rerunningSlug !== item.slug)}
-                              >
-                                {rerunningSlug === item.slug ? "Rerunning..." : "Rerun Stages"}
-                              </button>
-                            ) : null}
-                            <button
-                              className="admin-btn"
-                              type="button"
-                              onClick={() => void deleteItem(item.slug)}
-                              disabled={deletingSlug === item.slug}
-                              style={{
-                                borderColor: "#b42318",
-                                color: "#b42318",
-                                background: deletingSlug === item.slug ? "#fef2f2" : undefined,
-                              }}
-                            >
-                              {deletingSlug === item.slug ? "Deleting..." : "Delete"}
-                            </button>
-                            {STATUS_VALUES.map((nextStatus) => (
-                              <button
-                                key={nextStatus}
-                                className="admin-btn"
-                                type="button"
-                                onClick={() => void setItemStatus(item.slug, nextStatus)}
-                                style={{
-                                  borderColor: item.status === nextStatus ? "#2f672d" : undefined,
-                                  background: item.status === nextStatus ? "#d1ffc7" : undefined,
-                                }}
-                              >
-                                {statusLabel[nextStatus]}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </article>
+            {paginatedItems.map((item) => (
+              <article
+                key={item.slug}
+                style={{
+                  border: item.isUsedToday ? "2px solid #dc2626" : "1px solid #e4e8ee",
+                  borderRadius: 12,
+                  padding: ".65rem .7rem",
+                  background: "#fdfefe",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 900 }}>{item.slug}</p>
+                    <p style={{ margin: ".22rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
+                      Status: <b>{statusLabel[item.status] || item.status}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
+                    </p>
+                    <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
+                      In manifest: {item.inManifest ? "yes" : "no"} | Preview html: {item.previewReady ? "yes" : "no"}
+                    </p>
+                    <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
+                      Scheduled: <b>{item.scheduledPuzzleDate ? `${item.scheduledPuzzleDate}${item.isUsedToday ? " (Today)" : ""}` : "Not scheduled"}</b>
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: ".35rem", alignItems: "start" }}>
+                    <button className="admin-btn" type="button" onClick={() => void openPreview(item.slug)}>
+                      Preview
+                    </button>
+                    {item.status === "pending" && item.hasProcessed ? (
+                      <button
+                        className="admin-btn"
+                        type="button"
+                        onClick={() => void runPipeline(item.slug)}
+                        disabled={runningPipeline || (Boolean(rerunningSlug) && rerunningSlug !== item.slug)}
+                      >
+                        {rerunningSlug === item.slug ? "Rerunning..." : "Rerun Stages"}
+                      </button>
+                    ) : null}
+                    <button
+                      className="admin-btn"
+                      type="button"
+                      onClick={() => void deleteItem(item.slug)}
+                      disabled={deletingSlug === item.slug}
+                      style={{
+                        borderColor: "#b42318",
+                        color: "#b42318",
+                        background: deletingSlug === item.slug ? "#fef2f2" : undefined,
+                      }}
+                    >
+                      {deletingSlug === item.slug ? "Deleting..." : "Delete"}
+                    </button>
+                    {STATUS_VALUES.map((nextStatus) => (
+                      <button
+                        key={nextStatus}
+                        className="admin-btn"
+                        type="button"
+                        onClick={() => void setItemStatus(item.slug, nextStatus)}
+                        style={{
+                          borderColor: item.status === nextStatus ? "#2f672d" : undefined,
+                          background: item.status === nextStatus ? "#d1ffc7" : undefined,
+                        }}
+                      >
+                        {statusLabel[nextStatus]}
+                      </button>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              </article>
             ))}
           </div>
         ) : null}

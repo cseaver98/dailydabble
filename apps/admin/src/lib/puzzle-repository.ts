@@ -572,7 +572,7 @@ export const listReviewCandidates = async ({
   const safePageSize = Math.max(1, Math.min(100, Math.floor(Number(pageSize) || 25)));
   const rangeStart = (safePage - 1) * safePageSize;
   const rangeEnd = rangeStart + safePageSize - 1;
-  const needsDerivedFiltering = status === "finished" || status === "approved";
+  const needsDerivedFiltering = status === "finished" || status === "approved" || status === "used_today";
 
   let query = supabase
     .from("puzzle_candidates")
@@ -593,9 +593,8 @@ export const listReviewCandidates = async ({
     `,
       { count: "exact" },
     )
-    .order("quality_score", { ascending: false })
     .order("created_at", { ascending: false })
-    .order("id", { ascending: true });
+    .order("id", { ascending: false });
 
   if (status === "pending_review") {
     query = query.eq("status", status);
@@ -691,6 +690,9 @@ export const listReviewCandidates = async ({
   const filtered = hydrated.filter((item) => {
     if (status === "finished") {
       return item.isFinished;
+    }
+    if (status === "used_today") {
+      return item.isUsedToday;
     }
     if (status === "approved") {
       return item.status === "approved" && !item.isFinished;
@@ -1077,6 +1079,7 @@ export const getQueueHealth = async (): Promise<QueueHealth> => {
   const runwayDays = approvedUnused;
 
   return {
+    totalCandidates: rows.length,
     approvedTotal,
     approvedUnused,
     approvedUsed,

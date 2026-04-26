@@ -15,7 +15,7 @@ type PatchPayload = {
 };
 
 const validStatuses: CandidateStatus[] = ["pending_review", "approved"];
-const validFilters: CandidateFilter[] = ["all", "pending_review", "approved", "finished"];
+const validFilters: CandidateFilter[] = ["all", "pending_review", "approved", "finished", "used_today"];
 
 export async function GET(request: Request) {
   try {
