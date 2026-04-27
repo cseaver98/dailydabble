@@ -70,8 +70,9 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("puzzles")
-    .select("id,equation,equation_length,created_at")
+    .select("id,equation,equation_length,reviewed_at,created_at")
     .eq("status", "approved")
+    .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -127,6 +128,15 @@ export const getTodayEquadlePuzzle = async () => {
     return scheduled;
   }
 
+  return autoScheduleApprovedPuzzleForDate(today);
+};
+
+export const assignTodayEquadlePuzzleFromQueue = async () => {
+  const today = getDateInTimeZone(DEFAULT_TIMEZONE);
+  const existing = await getPuzzleByScheduleDate(today);
+  if (existing) {
+    return existing;
+  }
   return autoScheduleApprovedPuzzleForDate(today);
 };
 

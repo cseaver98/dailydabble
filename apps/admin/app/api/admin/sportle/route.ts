@@ -8,8 +8,7 @@ export const runtime = "nodejs";
 const supportedSports = new Set(["nba", "nfl", "mlb", "soccer", "nhl"]);
 const validStatuses = ["pending_review", "approved"] as const;
 type CandidateStatus = (typeof validStatuses)[number];
-type CandidateFilter = CandidateStatus | "finished" | "all";
-const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
 const normalizeName = (value: string): string =>
   String(value || "")
@@ -47,7 +46,7 @@ export async function GET(request: Request) {
     const page = Math.max(1, Number(requestUrl.searchParams.get("page") || "1"));
     const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || "10")));
 
-    if (!["all", "pending_review", "approved", "finished"].includes(status)) {
+    if (!["all", "pending_review", "approved", "finished", "today"].includes(status)) {
       return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
     }
 
@@ -114,6 +113,7 @@ export async function GET(request: Request) {
         scheduleCount: dates.length,
         lastScheduledDate: dates[0] || null,
         nextScheduledDate,
+        isScheduledToday: dates.includes(today),
         isFinished,
       };
     });
@@ -122,6 +122,7 @@ export async function GET(request: Request) {
       if (status === "pending_review") return row.status === "pending_review";
       if (status === "approved") return row.status === "approved" && !row.isFinished;
       if (status === "finished") return row.isFinished;
+      if (status === "today") return row.isScheduledToday;
       return true;
     });
 
@@ -161,8 +162,6 @@ export async function POST(request: Request) {
       sport?: string;
       fullName?: string;
       sourceKey?: string;
-      puzzleDate?: string;
-      athleteId?: string;
     };
 
     const action = payload.action ?? "add-athlete";
@@ -202,39 +201,6 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ ok: true, item: data });
-    }
-
-    if (action === "assign-date") {
-      const athleteId = String(payload.athleteId || "");
-      const puzzleDate = String(payload.puzzleDate || "");
-      if (!athleteId || !isDateString(puzzleDate)) {
-        return NextResponse.json({ error: "Missing athleteId or invalid puzzleDate" }, { status: 400 });
-      }
-
-      const { data: athlete, error: athleteError } = await supabase
-        .from("athletes")
-        .select("id,status")
-        .eq("id", athleteId)
-        .maybeSingle();
-      if (athleteError) {
-        throw new Error(`Failed to validate athlete before scheduling: ${athleteError.message}`);
-      }
-      if (!athlete) {
-        return NextResponse.json({ error: "Athlete not found" }, { status: 404 });
-      }
-      if (athlete.status !== "approved") {
-        return NextResponse.json({ error: "Only approved candidates can be scheduled." }, { status: 400 });
-      }
-
-      const { error } = await supabase
-        .from("daily_schedule")
-        .upsert({ puzzle_date: puzzleDate, athlete_id: athleteId }, { onConflict: "puzzle_date" });
-
-      if (error) {
-        throw new Error(`Failed to assign date: ${error.message}`);
-      }
-
-      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });

@@ -12,8 +12,8 @@ const sportOptions = [
 
 const batchSizeOptions = [1, 3, 5, 7, 10, 14];
 const statuses = ["pending_review", "approved", "finished"];
+const filterStatuses = ["pending_review", "approved", "today", "finished"];
 const candidatePageSize = 10;
-const today = () => new Date().toISOString().slice(0, 10);
 
 const parseAliases = (value) =>
   String(value || "")
@@ -38,8 +38,6 @@ export default function SportleAdminTab() {
   const [newFullName, setNewFullName] = useState("");
   const [seedSport, setSeedSport] = useState("nba");
   const [seedBatchSize, setSeedBatchSize] = useState(5);
-  const [seedStartDate, setSeedStartDate] = useState(today());
-  const [scheduleById, setScheduleById] = useState({});
 
   const [detailsAthleteId, setDetailsAthleteId] = useState(null);
   const [detailsForm, setDetailsForm] = useState(null);
@@ -114,7 +112,6 @@ export default function SportleAdminTab() {
         body: JSON.stringify({
           sport: seedSport,
           batchSize: seedBatchSize,
-          startDate: seedStartDate,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -122,7 +119,7 @@ export default function SportleAdminTab() {
         throw new Error(payload.details || payload.error || "Seed failed");
       }
       const summary = payload?.summary;
-      setMessage(summary ? `Seeded ${summary.insertedCount} candidates, scheduled ${summary.scheduledCount}.` : "Seed completed.");
+      setMessage(summary ? `Seeded ${summary.insertedCount} candidates.` : "Seed completed.");
       await load({ page: 1, status: statusFilter });
     } catch (seedError) {
       setError(seedError instanceof Error ? seedError.message : "Could not run seed.");
@@ -147,35 +144,6 @@ export default function SportleAdminTab() {
       return;
     }
     await load({ page: currentPage, status: statusFilter });
-  };
-
-  const assignDate = async (id) => {
-    const puzzleDate = String(scheduleById[id] || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
-      setError("Schedule date must be YYYY-MM-DD.");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/admin/sportle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "assign-date", athleteId: id, puzzleDate }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not assign date");
-      }
-      setMessage(`Assigned puzzle to ${puzzleDate}.`);
-      await load({ page: currentPage, status: statusFilter });
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not assign date");
-    } finally {
-      setBusy(false);
-    }
   };
 
   const deleteCandidate = async (id) => {
@@ -261,7 +229,7 @@ export default function SportleAdminTab() {
   return (
     <section className="admin-card">
       <h1 className="admin-title">Sportle Curation</h1>
-      <p className="admin-copy">Review athlete candidates, approve them, and schedule future dates.</p>
+      <p className="admin-copy">Review athlete candidates and approve them for the daily runway queue.</p>
 
       {queueHealth ? (
         <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
@@ -288,7 +256,6 @@ export default function SportleAdminTab() {
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
-            <input type="date" value={seedStartDate} onChange={(event) => setSeedStartDate(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }} />
             <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={seedBusy}>
               {seedBusy ? "Seeding..." : "Seed from Wikipedia"}
             </button>
@@ -314,7 +281,7 @@ export default function SportleAdminTab() {
           Status
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
             <option value="all">all</option>
-            {statuses.map((status) => (
+            {filterStatuses.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
@@ -327,7 +294,15 @@ export default function SportleAdminTab() {
 
       <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
         {items.map((item) => (
-          <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+          <article
+            key={item.id}
+            style={{
+              border: item.isScheduledToday ? "2px solid #d24a43" : "1px solid #d8dce2",
+              borderRadius: 14,
+              background: "#fff",
+              padding: ".75rem",
+            }}
+          >
             <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.full_name}</p>
             <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
               Sport: {String(item.sport || "").toUpperCase()} | Status: {item.status} | Position: {item.position || "unknown"}
@@ -363,18 +338,6 @@ export default function SportleAdminTab() {
                 );
               })}
               <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
-            </div>
-
-            <div style={{ marginTop: ".45rem", display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-              <input
-                type="date"
-                value={scheduleById[item.id] || ""}
-                onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
-                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
-              />
-              <button className="admin-btn primary" type="button" onClick={() => void assignDate(item.id)} disabled={busy || item.status !== "approved"}>
-                Schedule candidate
-              </button>
             </div>
           </article>
         ))}

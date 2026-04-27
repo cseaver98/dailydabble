@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
+import EditorialDrawer from "./EditorialDrawer";
 
 const isValidYear = (value) => /^\d{4}$/.test(value.trim());
 const getNextGameCountdown = () => {
@@ -79,8 +80,7 @@ export default function YeardleGameClient({
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
-  const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-  const contextDateLabel = `${isArchiveView ? "Archive game" : "Today's game"}: ${puzzle?.puzzleDate || fallbackDate}`;
+  const contextChipLabel = isArchiveView ? "Archive game" : "Today's game";
 
   useEffect(() => {
     let active = true;
@@ -229,9 +229,6 @@ export default function YeardleGameClient({
   }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
-  const hints = Array.isArray(puzzle?.hints) ? puzzle.hints : [];
-  const revealedHintCount = Math.min(maxGuesses, attempts.length);
-  const visibleHints = hints.slice(0, revealedHintCount);
   const galleryImages = Array.isArray(puzzle?.galleryImages) && puzzle.galleryImages.length
     ? puzzle.galleryImages
     : [{ imageUrl: puzzle?.imageUrl, imageAlt: puzzle?.imageAlt }];
@@ -316,7 +313,7 @@ export default function YeardleGameClient({
         return;
       }
 
-      setMessage(`Try ${payload.direction}. Hint unlocked.`);
+      setMessage(`Try ${payload.direction}.`);
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess.");
     }
@@ -398,10 +395,11 @@ export default function YeardleGameClient({
       <main className="container">
         <section className="card yeardle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextDateLabel}</span>
+            <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Date: {puzzle.puzzleDate}</span>
           </div>
+
+          {puzzle?.eventTitle ? <h2 className="puzzle-title">{puzzle.eventTitle}</h2> : null}
 
           <figure className="event-figure">
             <img
@@ -411,6 +409,8 @@ export default function YeardleGameClient({
               onError={() => setImageFailed(true)}
             />
           </figure>
+
+          <EditorialDrawer editorialContext={puzzle?.editorialContext} />
 
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
@@ -436,7 +436,7 @@ export default function YeardleGameClient({
           </form>
 
           <p className="message" data-kind={gameState}>
-            {message || "Guess the year to unlock earlier/later feedback and new hints."}
+            {message || "Guess the year to get earlier/later feedback."}
           </p>
 
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
@@ -456,18 +456,6 @@ export default function YeardleGameClient({
               </ul>
             </div>
           ) : null}
-
-          <div className="hints-wrap">
-            <p className="guess-history-title">Hints</p>
-            <ul className="hints-list">
-              {visibleHints.map((hint, index) => (
-                <li className="hint-item" key={`${hint.label}-${index}`}>
-                  <span className="hint-label">{hint.label}</span>
-                  <span>{hint.value}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
 
         </section>
       </main>

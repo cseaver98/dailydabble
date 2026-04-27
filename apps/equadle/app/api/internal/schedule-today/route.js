@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTodayEquadlePuzzle } from "../../../../lib/puzzle-repository";
+import { assignTodayEquadlePuzzleFromQueue } from "../../../../lib/puzzle-repository";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ export async function GET(request) {
   }
 
   try {
-    const puzzle = await getTodayEquadlePuzzle();
+    const puzzle = await assignTodayEquadlePuzzleFromQueue();
     return NextResponse.json({ ok: true, scheduled: Boolean(puzzle) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to schedule today puzzle";

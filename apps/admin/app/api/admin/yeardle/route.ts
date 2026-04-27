@@ -7,8 +7,7 @@ export const runtime = "nodejs";
 
 const validStatuses = ["pending_review", "approved"] as const;
 type CandidateStatus = (typeof validStatuses)[number];
-type CandidateFilter = CandidateStatus | "finished" | "all";
-const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
 const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
@@ -30,14 +29,14 @@ export async function GET(request: Request) {
     const page = Math.max(1, Number(requestUrl.searchParams.get("page") || "1"));
     const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || "10")));
 
-    if (!["all", "pending_review", "approved", "finished"].includes(status)) {
+    if (!["all", "pending_review", "approved", "finished", "today"].includes(status)) {
       return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
     }
 
     const supabase = getSupabaseYeardleAdmin();
     const { data: eventRows, error: eventsError } = await supabase
       .from("events")
-      .select("id,title,event_year,image_url,hint_category,hint_region,hint_era,hint_person,status,created_at")
+      .select("id,title,event_year,image_url,hint_person,hint_description,wikipedia_url,status,created_at")
       .order("created_at", { ascending: false })
       .limit(5000);
     if (eventsError) {
@@ -50,10 +49,9 @@ export async function GET(request: Request) {
         title: string;
         event_year: number;
         image_url: string;
-        hint_category: string | null;
-        hint_region: string | null;
-        hint_era: string | null;
         hint_person: string | null;
+        hint_description: string | null;
+        wikipedia_url: string | null;
         status: CandidateStatus;
         created_at: string;
       }> | null) ?? [];
@@ -88,6 +86,7 @@ export async function GET(request: Request) {
         scheduleCount: dates.length,
         lastScheduledDate: dates[0] || null,
         nextScheduledDate,
+        isScheduledToday: dates.includes(today),
         isFinished,
       };
     });
@@ -96,6 +95,7 @@ export async function GET(request: Request) {
       if (status === "pending_review") return row.status === "pending_review";
       if (status === "approved") return row.status === "approved" && !row.isFinished;
       if (status === "finished") return row.isFinished;
+      if (status === "today") return row.isScheduledToday;
       return true;
     });
     const offset = (page - 1) * pageSize;
@@ -126,62 +126,99 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const payload = (await request.json().catch(() => ({}))) as { eventId?: string; puzzleDate?: string };
-    const eventId = String(payload.eventId || "");
-    const puzzleDate = String(payload.puzzleDate || "");
-    if (!eventId || !isDateString(puzzleDate)) {
-      return NextResponse.json({ error: "eventId and puzzleDate (YYYY-MM-DD) are required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseYeardleAdmin();
-    const { data: eventRow, error: eventError } = await supabase
-      .from("events")
-      .select("id,status")
-      .eq("id", eventId)
-      .maybeSingle();
-    if (eventError) {
-      throw new Error(`Failed validating event before scheduling: ${eventError.message}`);
-    }
-    if (!eventRow) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-    if (eventRow.status !== "approved") {
-      return NextResponse.json({ error: "Only approved events can be scheduled." }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from("daily_schedule")
-      .upsert({ puzzle_date: puzzleDate, event_id: eventId }, { onConflict: "puzzle_date" });
-    if (error) {
-      throw new Error(`Failed scheduling event: ${error.message}`);
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to schedule event";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
 export async function PATCH(request: Request) {
   try {
-    const payload = (await request.json().catch(() => ({}))) as { eventId?: string; status?: CandidateStatus };
+    const payload = (await request.json().catch(() => ({}))) as {
+      eventId?: string;
+      status?: CandidateStatus;
+      imageUrl?: string;
+      candidate?: {
+        title?: string;
+        eventYear?: number;
+        keyFigures?: string;
+        description?: string;
+        wikipediaUrl?: string;
+      };
+    };
     const eventId = String(payload.eventId || "");
-    const status = String(payload.status || "") as CandidateStatus;
-    if (!eventId || !validStatuses.includes(status)) {
+    const status = String(payload.status || "").trim() as CandidateStatus;
+    const imageUrl = String(payload.imageUrl || "").trim();
+    const candidate = payload.candidate && typeof payload.candidate === "object" ? payload.candidate : null;
+    const hasStatus = Boolean(status);
+    const hasImageUrl = Boolean(imageUrl);
+    const hasCandidate = Boolean(candidate);
+
+    if (!eventId || (!hasStatus && !hasImageUrl && !hasCandidate)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
+    if (hasStatus && !validStatuses.includes(status)) {
+      return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+    }
+    if (hasImageUrl) {
+      let parsedImageUrl: URL;
+      try {
+        parsedImageUrl = new URL(imageUrl);
+      } catch {
+        return NextResponse.json({ error: "Image URL must be a valid URL" }, { status: 400 });
+      }
+      if (parsedImageUrl.protocol !== "http:" && parsedImageUrl.protocol !== "https:") {
+        return NextResponse.json({ error: "Image URL must use http or https" }, { status: 400 });
+      }
+    }
+    if (hasCandidate) {
+      const title = String(candidate?.title || "").trim();
+      const eventYear = Number(candidate?.eventYear);
+      const description = String(candidate?.description || "").trim();
+      if (!title) {
+        return NextResponse.json({ error: "Candidate title is required." }, { status: 400 });
+      }
+      if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
+        return NextResponse.json({ error: "Event year must be between 1000 and current year." }, { status: 400 });
+      }
+      if (!description) {
+        return NextResponse.json({ error: "Description is required." }, { status: 400 });
+      }
+      const wikipediaUrl = String(candidate?.wikipediaUrl || "").trim();
+      if (wikipediaUrl) {
+        let parsedWikipediaUrl: URL;
+        try {
+          parsedWikipediaUrl = new URL(wikipediaUrl);
+        } catch {
+          return NextResponse.json({ error: "Wikipedia URL must be a valid URL." }, { status: 400 });
+        }
+        if (parsedWikipediaUrl.protocol !== "http:" && parsedWikipediaUrl.protocol !== "https:") {
+          return NextResponse.json({ error: "Wikipedia URL must use http or https." }, { status: 400 });
+        }
+      }
+    }
 
-    const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
+    const reviewedAt = hasStatus ? (status === "pending_review" ? null : new Date().toISOString()) : undefined;
     const supabase = getSupabaseYeardleAdmin();
+    const updatePayload: Record<string, string | number | null> = {};
+    if (hasStatus) {
+      updatePayload.status = status;
+      updatePayload.reviewed_at = reviewedAt ?? null;
+    }
+    if (hasImageUrl) {
+      updatePayload.image_url = imageUrl;
+    }
+    if (hasCandidate) {
+      updatePayload.title = String(candidate?.title || "").trim();
+      updatePayload.event_year = Math.floor(Number(candidate?.eventYear));
+      updatePayload.hint_category = null;
+      updatePayload.hint_region = null;
+      updatePayload.hint_era = null;
+      updatePayload.hint_person = String(candidate?.keyFigures || "").trim() || null;
+      updatePayload.hint_description = String(candidate?.description || "").trim();
+      updatePayload.wikipedia_url = String(candidate?.wikipediaUrl || "").trim() || null;
+    }
+
     const { error } = await supabase
       .from("events")
-      .update({ status, reviewed_at: reviewedAt })
+      .update(updatePayload)
       .eq("id", eventId);
     if (error) {
-      throw new Error(`Failed updating event status: ${error.message}`);
+      throw new Error(`Failed updating event: ${error.message}`);
     }
 
     return NextResponse.json({ ok: true });

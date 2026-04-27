@@ -93,8 +93,9 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("movies")
-    .select("id,title,still_urls,created_at")
+    .select("id,title,still_urls,reviewed_at,created_at")
     .eq("status", "approved")
+    .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -150,6 +151,15 @@ export const getTodayMoviedlePuzzle = async () => {
     return scheduled;
   }
 
+  return autoScheduleApprovedPuzzleForDate(today);
+};
+
+export const assignTodayMoviedlePuzzleFromQueue = async () => {
+  const today = getDateInTimeZone(DEFAULT_TIMEZONE);
+  const existing = await getPuzzleByScheduleDate(today);
+  if (existing) {
+    return existing;
+  }
   return autoScheduleApprovedPuzzleForDate(today);
 };
 

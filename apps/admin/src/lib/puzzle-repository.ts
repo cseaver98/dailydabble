@@ -10,7 +10,6 @@ import type {
   ReviewCandidateDetailsUpdate,
 } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { getWikipediaSummary } from "@/lib/wikipedia";
 
 const getDateInTimeZone = (timeZone: string): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -389,31 +388,15 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
     former_couple: "no longer a couple",
   };
   const relationshipLabel = relationshipLabelByType[row.puzzle_candidates.couples.relationship_type];
-  const [personASummary, personBSummary, coupleSummary] = await Promise.all([
-    getWikipediaSummary(
-      row.puzzle_candidates.couples.person_a.wikipedia_title,
-      row.puzzle_candidates.couples.person_a.name,
-    ),
-    getWikipediaSummary(
-      row.puzzle_candidates.couples.person_b.wikipedia_title,
-      row.puzzle_candidates.couples.person_b.name,
-    ),
-    getWikipediaSummary(
-      `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name}`,
-      `${row.puzzle_candidates.couples.person_a.name} ${row.puzzle_candidates.couples.person_b.name}`,
-    ),
-  ]);
-
   const editorialRelationshipNote =
     row.puzzle_candidates.editorial_relationship_note?.trim() ||
     `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
-  const editorialPersonABio = row.puzzle_candidates.editorial_person_a_bio?.trim() || personASummary.summary;
-  const editorialPersonABioUrl = row.puzzle_candidates.editorial_person_a_bio_url?.trim() || personASummary.pageUrl;
-  const editorialPersonBBio = row.puzzle_candidates.editorial_person_b_bio?.trim() || personBSummary.summary;
-  const editorialPersonBBioUrl = row.puzzle_candidates.editorial_person_b_bio_url?.trim() || personBSummary.pageUrl;
-  const editorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || coupleSummary.summary;
-  const editorialCoupleContextUrl =
-    row.puzzle_candidates.editorial_couple_context_url?.trim() || coupleSummary.pageUrl;
+  const editorialPersonABio = row.puzzle_candidates.editorial_person_a_bio?.trim() || null;
+  const editorialPersonABioUrl = row.puzzle_candidates.editorial_person_a_bio_url?.trim() || null;
+  const editorialPersonBBio = row.puzzle_candidates.editorial_person_b_bio?.trim() || null;
+  const editorialPersonBBioUrl = row.puzzle_candidates.editorial_person_b_bio_url?.trim() || null;
+  const editorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || null;
+  const editorialCoupleContextUrl = row.puzzle_candidates.editorial_couple_context_url?.trim() || null;
 
   return buildPublicPuzzle(row, (galleryData as CoupleGalleryImageRow[]) ?? [], {
     relationshipNote: editorialRelationshipNote,
@@ -827,15 +810,10 @@ export const getReviewCandidateDetails = async (candidateId: string): Promise<Re
   }
 
   const row = data as unknown as CandidateDetailsRow;
-  const [personASummary, personBSummary] = await Promise.all([
-    getWikipediaSummary(row.couples.person_a.wikipedia_title, row.couples.person_a.name),
-    getWikipediaSummary(row.couples.person_b.wikipedia_title, row.couples.person_b.name),
-  ]);
-
-  const editorialPersonABio = row.editorial_person_a_bio?.trim() || personASummary.summary;
-  const editorialPersonABioUrl = row.editorial_person_a_bio_url?.trim() || personASummary.pageUrl;
-  const editorialPersonBBio = row.editorial_person_b_bio?.trim() || personBSummary.summary;
-  const editorialPersonBBioUrl = row.editorial_person_b_bio_url?.trim() || personBSummary.pageUrl;
+  const editorialPersonABio = row.editorial_person_a_bio?.trim() || null;
+  const editorialPersonABioUrl = row.editorial_person_a_bio_url?.trim() || null;
+  const editorialPersonBBio = row.editorial_person_b_bio?.trim() || null;
+  const editorialPersonBBioUrl = row.editorial_person_b_bio_url?.trim() || null;
 
   return {
     candidateId: row.id,

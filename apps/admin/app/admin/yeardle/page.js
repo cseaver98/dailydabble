@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const statuses = ["pending_review", "approved", "finished"];
+const filterStatuses = ["pending_review", "approved", "today", "finished"];
 const candidatePageSize = 10;
 
 export default function YeardleAdminTab() {
@@ -12,6 +13,7 @@ export default function YeardleAdminTab() {
   const [isEditingManualCandidate, setIsEditingManualCandidate] = useState(false);
   const [isLookingUpManualCandidate, setIsLookingUpManualCandidate] = useState(false);
   const [isAddingManualCandidate, setIsAddingManualCandidate] = useState(false);
+  const [isUploadingManualCandidateImage, setIsUploadingManualCandidateImage] = useState(false);
 
   const [items, setItems] = useState([]);
   const [queueHealth, setQueueHealth] = useState(null);
@@ -21,6 +23,13 @@ export default function YeardleAdminTab() {
   const [statusFilter, setStatusFilter] = useState("pending_review");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCandidates, setTotalCandidates] = useState(0);
+  const [editingImageCandidateId, setEditingImageCandidateId] = useState(null);
+  const [editingImageUrl, setEditingImageUrl] = useState("");
+  const [savingImageCandidateId, setSavingImageCandidateId] = useState("");
+  const [uploadingImageCandidateId, setUploadingImageCandidateId] = useState("");
+  const [editingCandidateId, setEditingCandidateId] = useState(null);
+  const [editingCandidateDraft, setEditingCandidateDraft] = useState(null);
+  const [savingCandidateId, setSavingCandidateId] = useState("");
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -115,15 +124,15 @@ export default function YeardleAdminTab() {
 
       const normalizedTitle = String(manualCandidate.title || "").trim();
       const normalizedImageUrl = String(manualCandidate.imageUrl || "").trim();
-      const normalizedSummary = String(manualCandidate.hintDescription || "").trim();
+      const normalizedDescription = String(manualCandidate.description || "").trim();
       if (!normalizedTitle) {
         throw new Error("Title is required.");
       }
       if (!normalizedImageUrl) {
         throw new Error("Image URL is required.");
       }
-      if (!normalizedSummary) {
-        throw new Error("Summary is required.");
+      if (!normalizedDescription) {
+        throw new Error("Description is required.");
       }
 
       const payloadCandidate = {
@@ -131,7 +140,8 @@ export default function YeardleAdminTab() {
         title: normalizedTitle,
         imageUrl: normalizedImageUrl,
         imageAlt: `${normalizedTitle} historical image`,
-        hintDescription: normalizedSummary,
+        description: normalizedDescription,
+        keyFigures: String(manualCandidate.keyFigures || "").trim(),
       };
 
       const response = await fetch("/api/admin/yeardle/title-candidate", {
@@ -178,6 +188,38 @@ export default function YeardleAdminTab() {
     });
   };
 
+  const uploadManualCandidateImage = async (file) => {
+    if (!(file instanceof File)) {
+      return;
+    }
+    if (!manualCandidate) {
+      return;
+    }
+
+    setIsUploadingManualCandidateImage(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+
+      const response = await fetch("/api/admin/yeardle/upload-image", {
+        method: "POST",
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload.error || "Failed to upload image");
+      }
+
+      updateManualCandidateField("imageUrl", payload.url);
+      setMessage("Image uploaded and ready for this candidate.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
+    } finally {
+      setIsUploadingManualCandidateImage(false);
+    }
+  };
+
   const patchStatus = async (id, status) => {
     if (status === "finished") {
       return;
@@ -215,6 +257,137 @@ export default function YeardleAdminTab() {
     }
 
     await load({ page: currentPage, status: statusFilter });
+  };
+
+  const beginEditCandidateImage = (item) => {
+    setEditingCandidateId(null);
+    setEditingCandidateDraft(null);
+    setEditingImageCandidateId(item.id);
+    setEditingImageUrl(String(item.image_url || ""));
+  };
+
+  const cancelEditCandidateImage = () => {
+    setEditingImageCandidateId(null);
+    setEditingImageUrl("");
+  };
+
+  const saveCandidateImage = async (candidateId) => {
+    const normalizedImageUrl = String(editingImageUrl || "").trim();
+    if (!normalizedImageUrl) {
+      setError("Image URL is required.");
+      return;
+    }
+
+    setSavingImageCandidateId(candidateId);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/yeardle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: candidateId, imageUrl: normalizedImageUrl }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to update image");
+      }
+
+      setMessage("Candidate image updated.");
+      cancelEditCandidateImage();
+      await load({ page: currentPage, status: statusFilter });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not update image.");
+    } finally {
+      setSavingImageCandidateId("");
+    }
+  };
+
+  const uploadCandidateImage = async (candidateId, file) => {
+    if (!(file instanceof File)) {
+      return;
+    }
+
+    setUploadingImageCandidateId(candidateId);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/admin/yeardle/upload-image", {
+        method: "POST",
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload.error || "Failed to upload image");
+      }
+
+      setEditingImageUrl(payload.url);
+      setMessage("Image uploaded. Click save image to apply.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
+    } finally {
+      setUploadingImageCandidateId("");
+    }
+  };
+
+  const beginEditCandidate = (item) => {
+    setEditingImageCandidateId(null);
+    setEditingImageUrl("");
+    setEditingCandidateId(item.id);
+    setEditingCandidateDraft({
+      title: String(item.title || ""),
+      eventYear: String(item.event_year || ""),
+      keyFigures: String(item.hint_person || ""),
+      description: String(item.hint_description || ""),
+      wikipediaUrl: String(item.wikipedia_url || ""),
+    });
+  };
+
+  const cancelEditCandidate = () => {
+    setEditingCandidateId(null);
+    setEditingCandidateDraft(null);
+  };
+
+  const updateEditingCandidateField = (field, value) => {
+    setEditingCandidateDraft((current) => {
+      if (!current) return current;
+      return { ...current, [field]: value };
+    });
+  };
+
+  const saveCandidateDetails = async (candidateId) => {
+    if (!editingCandidateDraft) {
+      return;
+    }
+    setSavingCandidateId(candidateId);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/yeardle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: candidateId,
+          candidate: {
+            title: editingCandidateDraft.title,
+            eventYear: Number(editingCandidateDraft.eventYear),
+            keyFigures: editingCandidateDraft.keyFigures,
+            description: editingCandidateDraft.description,
+            wikipediaUrl: editingCandidateDraft.wikipediaUrl,
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to update candidate");
+      }
+
+      setMessage("Candidate details updated.");
+      cancelEditCandidate();
+      await load({ page: currentPage, status: statusFilter });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not update candidate.");
+    } finally {
+      setSavingCandidateId("");
+    }
   };
 
   return (
@@ -310,12 +483,21 @@ export default function YeardleAdminTab() {
                     />
                   </label>
                   <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
-                    Summary
+                    Description
                     <textarea
-                      value={manualCandidate.hintDescription || ""}
-                      onChange={(event) => updateManualCandidateField("hintDescription", event.target.value)}
+                      value={manualCandidate.description || ""}
+                      onChange={(event) => updateManualCandidateField("description", event.target.value)}
                       rows={4}
                       style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 680 }}
+                    />
+                  </label>
+                  <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                    Key figures (comma-separated)
+                    <input
+                      type="text"
+                      value={manualCandidate.keyFigures || ""}
+                      onChange={(event) => updateManualCandidateField("keyFigures", event.target.value)}
+                      style={{ marginLeft: ".35rem", minWidth: 320 }}
                     />
                   </label>
                   <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
@@ -327,13 +509,36 @@ export default function YeardleAdminTab() {
                       style={{ marginLeft: ".35rem", minWidth: 320 }}
                     />
                   </label>
+                  <div style={{ display: "flex", gap: ".4rem", alignItems: "center", flexWrap: "wrap" }}>
+                    <label className="admin-btn" style={{ cursor: "pointer" }}>
+                      {isUploadingManualCandidateImage ? "Uploading..." : "Upload JPG/PNG"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        style={{ display: "none" }}
+                        disabled={isUploadingManualCandidateImage || isAddingManualCandidate}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            void uploadManualCandidateImage(file);
+                          }
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               ) : (
                 <>
                   <p style={{ margin: 0, fontWeight: 900 }}>{manualCandidate.title}</p>
                   <p style={{ margin: ".2rem 0", color: "#5b6168", fontSize: ".86rem" }}>
-                    {manualCandidate.hintDescription}
+                    {manualCandidate.description}
                   </p>
+                  {manualCandidate.keyFigures ? (
+                    <p style={{ margin: 0, color: "#5b6168", fontSize: ".82rem" }}>
+                      Key figures: {manualCandidate.keyFigures}
+                    </p>
+                  ) : null}
                 </>
               )}
               <div style={{ marginTop: ".35rem", display: "flex", flexWrap: "wrap", gap: ".4rem", alignItems: "end" }}>
@@ -371,7 +576,7 @@ export default function YeardleAdminTab() {
           Status
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
             <option value="all">all</option>
-            {statuses.map((status) => (
+            {filterStatuses.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
@@ -384,11 +589,52 @@ export default function YeardleAdminTab() {
 
       <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
         {items.map((item) => (
-          <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+          <article
+            key={item.id}
+            style={{
+              border: item.isScheduledToday ? "2px solid #d24a43" : "1px solid #d8dce2",
+              borderRadius: 14,
+              background: "#fff",
+              padding: ".75rem",
+            }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: ".65rem", alignItems: "start" }}>
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={`${item.title} historical image`}
+                  style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #d8dce2" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 8,
+                    border: "1px dashed #c4c9d0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6c727a",
+                    fontSize: ".72rem",
+                    textAlign: "center",
+                    padding: ".2rem",
+                    background: "#f8fafc",
+                  }}
+                >
+                  No image
+                </div>
+              )}
+              <div>
             <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.title}</p>
             <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
-              Year: {item.event_year} | Status: {item.status} | Category: {item.hint_category || "unknown"}
+              Year: {item.event_year} | Status: {item.status}
             </p>
+            {item.hint_person ? (
+              <p style={{ margin: "0 0 .18rem", color: "#5b6168", fontSize: ".86rem" }}>
+                Key figures: {item.hint_person}
+              </p>
+            ) : null}
             <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
               Usage: {item.scheduleCount === 0 ? "Not used yet" : `${item.scheduleCount}x (last ${item.lastScheduledDate})`}
             </p>
@@ -396,6 +642,114 @@ export default function YeardleAdminTab() {
               <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
                 Scheduled: <b>{item.nextScheduledDate}</b>
               </p>
+            ) : null}
+
+            {editingCandidateId === item.id && editingCandidateDraft ? (
+              <div style={{ marginTop: ".5rem", display: "grid", gap: ".4rem", maxWidth: 760 }}>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Title
+                  <input
+                    type="text"
+                    value={editingCandidateDraft.title}
+                    onChange={(event) => updateEditingCandidateField("title", event.target.value)}
+                    style={{ marginLeft: ".35rem", minWidth: 280 }}
+                  />
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event year
+                  <input
+                    type="number"
+                    min="1000"
+                    max={new Date().getFullYear()}
+                    value={editingCandidateDraft.eventYear}
+                    onChange={(event) => updateEditingCandidateField("eventYear", event.target.value)}
+                    style={{ marginLeft: ".35rem", width: 120 }}
+                  />
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Key figures (comma-separated)
+                  <input
+                    type="text"
+                    value={editingCandidateDraft.keyFigures}
+                    onChange={(event) => updateEditingCandidateField("keyFigures", event.target.value)}
+                    style={{ marginLeft: ".35rem", minWidth: 280 }}
+                  />
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Wikipedia URL
+                  <input
+                    type="text"
+                    value={editingCandidateDraft.wikipediaUrl}
+                    onChange={(event) => updateEditingCandidateField("wikipediaUrl", event.target.value)}
+                    style={{ marginLeft: ".35rem", minWidth: 320 }}
+                  />
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Description
+                  <textarea
+                    rows={4}
+                    value={editingCandidateDraft.description}
+                    onChange={(event) => updateEditingCandidateField("description", event.target.value)}
+                    style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 720 }}
+                  />
+                </label>
+                <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
+                  <button
+                    className="admin-btn primary"
+                    type="button"
+                    onClick={() => void saveCandidateDetails(item.id)}
+                    disabled={savingCandidateId === item.id}
+                  >
+                    {savingCandidateId === item.id ? "Saving..." : "Save candidate"}
+                  </button>
+                  <button className="admin-btn" type="button" onClick={cancelEditCandidate}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {editingImageCandidateId === item.id ? (
+              <div style={{ marginTop: ".5rem", display: "grid", gap: ".4rem", maxWidth: 720 }}>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Image URL
+                  <input
+                    type="text"
+                    value={editingImageUrl}
+                    onChange={(event) => setEditingImageUrl(event.target.value)}
+                    style={{ marginLeft: ".35rem", minWidth: 320 }}
+                  />
+                </label>
+                <div style={{ display: "flex", gap: ".4rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <label className="admin-btn" style={{ cursor: "pointer" }}>
+                    {uploadingImageCandidateId === item.id ? "Uploading..." : "Upload JPG/PNG"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      style={{ display: "none" }}
+                      disabled={uploadingImageCandidateId === item.id}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          void uploadCandidateImage(item.id, file);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <button
+                    className="admin-btn primary"
+                    type="button"
+                    onClick={() => void saveCandidateImage(item.id)}
+                    disabled={savingImageCandidateId === item.id}
+                  >
+                    {savingImageCandidateId === item.id ? "Saving..." : "Save image"}
+                  </button>
+                  <button className="admin-btn" type="button" onClick={cancelEditCandidateImage}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             ) : null}
 
             <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
@@ -418,7 +772,15 @@ export default function YeardleAdminTab() {
                   </button>
                 );
               })}
+              <button className="admin-btn" type="button" onClick={() => beginEditCandidate(item)}>
+                Edit candidate
+              </button>
+              <button className="admin-btn" type="button" onClick={() => beginEditCandidateImage(item)}>
+                Edit image
+              </button>
               <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
+            </div>
+              </div>
             </div>
           </article>
         ))}

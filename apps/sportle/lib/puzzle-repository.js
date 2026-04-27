@@ -112,10 +112,11 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
   const { data: approvedRows, error: approvedError } = await supabase
     .from("athletes")
     .select(
-      "id,sport,full_name,team_name,team_logo_url,years_with_team,position,key_stat_1,key_stat_2,final_clue,created_at",
+      "id,sport,full_name,team_name,team_logo_url,years_with_team,position,key_stat_1,key_stat_2,final_clue,reviewed_at,created_at",
     )
     .eq("status", "approved")
     .eq("is_active", true)
+    .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -172,6 +173,16 @@ export const getTodaySportlePuzzle = async () => {
     return scheduled;
   }
 
+  return autoScheduleApprovedPuzzleForDate(today);
+};
+
+export const assignTodaySportlePuzzleFromQueue = async () => {
+  const today = getDateInTimeZone(DEFAULT_TIMEZONE);
+  const schedule = await fetchScheduleRow(today);
+  const existing = await fetchPuzzleByScheduleRow(schedule);
+  if (existing) {
+    return existing;
+  }
   return autoScheduleApprovedPuzzleForDate(today);
 };
 

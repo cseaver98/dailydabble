@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const statuses = ["pending_review", "approved", "finished"];
+const filterStatuses = ["pending_review", "approved", "today", "finished"];
 const candidatePageSize = 10;
 
 export default function EquadleAdminTab() {
@@ -18,7 +19,6 @@ export default function EquadleAdminTab() {
   const [totalCandidates, setTotalCandidates] = useState(0);
 
   const [newEquation, setNewEquation] = useState("");
-  const [scheduleById, setScheduleById] = useState({});
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -96,39 +96,6 @@ export default function EquadleAdminTab() {
     await load({ page: currentPage, status: statusFilter });
   };
 
-  const assignDate = async (id) => {
-    const puzzleDate = String(scheduleById[id] || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzleDate)) {
-      setError("Schedule date must be YYYY-MM-DD.");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const response = await fetch("/api/admin/equadle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "assign-date",
-          puzzleId: id,
-          puzzleDate,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Could not assign date");
-      }
-      setMessage(`Assigned puzzle to ${puzzleDate}.`);
-      await load({ page: currentPage, status: statusFilter });
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not assign date");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const deleteCandidate = async (id) => {
     const shouldDelete = window.confirm("Delete this Equadle candidate and its stored data?");
     if (!shouldDelete) {
@@ -153,7 +120,7 @@ export default function EquadleAdminTab() {
   return (
     <section className="admin-card">
       <h1 className="admin-title">Equadle Curation</h1>
-      <p className="admin-copy">Review candidate equations, approve them, and schedule future dates.</p>
+      <p className="admin-copy">Review candidate equations and approve them for the daily runway queue.</p>
 
       {queueHealth ? (
         <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
@@ -186,7 +153,7 @@ export default function EquadleAdminTab() {
           Status
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
             <option value="all">all</option>
-            {statuses.map((status) => (
+            {filterStatuses.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
@@ -199,7 +166,15 @@ export default function EquadleAdminTab() {
 
       <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>
         {items.map((item) => (
-          <article key={item.id} style={{ border: "1px solid #d8dce2", borderRadius: 14, background: "#fff", padding: ".75rem" }}>
+          <article
+            key={item.id}
+            style={{
+              border: item.isScheduledToday ? "2px solid #d24a43" : "1px solid #d8dce2",
+              borderRadius: 14,
+              background: "#fff",
+              padding: ".75rem",
+            }}
+          >
             <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.equation}</p>
             <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
               Length: {item.equation_length} | Status: {item.status}
@@ -234,23 +209,6 @@ export default function EquadleAdminTab() {
                 );
               })}
               <button className="admin-btn" type="button" onClick={() => void deleteCandidate(item.id)}>Delete</button>
-            </div>
-
-            <div style={{ marginTop: ".45rem", display: "flex", gap: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-              <input
-                type="date"
-                value={scheduleById[item.id] || ""}
-                onChange={(event) => setScheduleById((current) => ({ ...current, [item.id]: event.target.value }))}
-                style={{ borderRadius: 999, border: "1px solid #cfd4da", padding: ".42rem .7rem" }}
-              />
-              <button
-                className="admin-btn primary"
-                type="button"
-                onClick={() => void assignDate(item.id)}
-                disabled={busy || item.status !== "approved"}
-              >
-                Schedule candidate
-              </button>
             </div>
           </article>
         ))}

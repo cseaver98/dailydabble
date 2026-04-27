@@ -37,11 +37,8 @@ type ManualCandidate = {
   imageUrl: string;
   imageAlt: string;
   wikipediaUrl: string | null;
-  hintCategory: string;
-  hintRegion: string;
-  hintEra: string;
-  hintPerson: string;
-  hintDescription: string;
+  keyFigures: string;
+  description: string;
   eventYearGuess: number | null;
 };
 
@@ -108,66 +105,23 @@ const slugify = (value: string): string =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const inferEra = (year: number): string => {
-  if (year < 500) return "Ancient era";
-  if (year < 1500) return "Medieval era";
-  if (year < 1800) return `${Math.floor((year - 1) / 100) + 1}th century`;
-  if (year < 1900) return "19th century";
-  if (year < 2000) return "20th century";
-  return "21st century";
-};
-
-const inferCategory = (text: string): string => {
-  const value = text.toLowerCase();
-  if (value.includes("war") || value.includes("battle")) return "War / conflict";
-  if (value.includes("revolution") || value.includes("uprising")) return "Revolution";
-  if (value.includes("election") || value.includes("president")) return "Politics";
-  if (value.includes("founded") || value.includes("founds")) return "Founding event";
-  if (value.includes("first") || value.includes("launch") || value.includes("moon")) return "Science / exploration";
-  if (value.includes("film") || value.includes("movie") || value.includes("song") || value.includes("album")) return "Pop culture";
-  return "Historical event";
-};
-
-const inferRegion = (text: string): string => {
-  const lookup = [
-    "United States",
-    "France",
-    "England",
-    "Germany",
-    "Italy",
-    "China",
-    "Japan",
-    "India",
-    "Russia",
-    "Mexico",
-    "Brazil",
-    "Spain",
-    "Canada",
-    "Greece",
-    "Egypt",
-  ];
-
-  for (const value of lookup) {
-    if (text.toLowerCase().includes(value.toLowerCase())) {
-      return value;
-    }
-  }
-
-  return "Global";
-};
-
-const inferKeyPerson = (title: string, text: string): string => {
+const inferKeyFigures = (title: string, text: string): string => {
   const pageName = title.replace(/\s*\(.+\)\s*/g, "").trim();
-  if (pageName.split(" ").length >= 2) {
-    return pageName;
+  const matches = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) ?? [];
+  const deduped = Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)));
+  const chosen = [];
+
+  for (const name of deduped) {
+    if (name.length < 4) continue;
+    chosen.push(name);
+    if (chosen.length >= 4) break;
   }
 
-  const match = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/);
-  if (match?.[1]) {
-    return match[1];
+  if (pageName.split(" ").length >= 2 && !chosen.includes(pageName)) {
+    chosen.unshift(pageName);
   }
 
-  return pageName || "Notable figure";
+  return chosen.length ? chosen.slice(0, 4).join(", ") : (pageName || "Notable figures");
 };
 
 const extractYearGuess = (title: string, extract: string): number | null => {
@@ -289,19 +243,16 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
   const imageUrl = String(summary?.thumbnail?.source || summary?.originalimage?.source || "").trim();
 
   const fallbackSummary = `Review and edit this candidate for ${title}.`;
-  const hintDescription = (description || fallbackSummary).slice(0, 280);
-  const yearGuess = extractYearGuess(title, hintDescription);
+  const normalizedDescription = (description || fallbackSummary).slice(0, 600);
+  const yearGuess = extractYearGuess(title, normalizedDescription);
 
   return {
     title,
     imageUrl,
     imageAlt: `${title} historical image`,
     wikipediaUrl: summary?.content_urls?.desktop?.page ?? page.canonicalUrl,
-    hintCategory: inferCategory(hintDescription),
-    hintRegion: inferRegion(hintDescription),
-    hintEra: inferEra(yearGuess ?? new Date().getFullYear()),
-    hintPerson: inferKeyPerson(title, hintDescription),
-    hintDescription,
+    keyFigures: inferKeyFigures(title, normalizedDescription),
+    description: normalizedDescription,
     eventYearGuess: yearGuess,
   };
 };
@@ -366,11 +317,11 @@ export async function POST(request: Request) {
           image_url: candidate.imageUrl,
           image_alt: candidate.imageAlt,
           wikipedia_url: candidate.wikipediaUrl,
-          hint_category: candidate.hintCategory,
-          hint_region: candidate.hintRegion,
-          hint_era: inferEra(eventYear),
-          hint_person: candidate.hintPerson,
-          hint_description: candidate.hintDescription,
+          hint_category: null,
+          hint_region: null,
+          hint_era: null,
+          hint_person: candidate.keyFigures,
+          hint_description: candidate.description,
           status: "pending_review",
           reviewed_at: null,
         },

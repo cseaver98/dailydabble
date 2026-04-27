@@ -513,7 +513,9 @@ export default function ArchiveGamePage() {
                 </span>
               </div>
             </div>
-            <h2 className="px-1 text-xl font-bold tracking-tight text-[color:var(--foreground)]">{title}</h2>
+            <h2 className="px-1 font-headline text-[1.28rem] font-extrabold tracking-tight text-[color:var(--foreground)]">
+              {title}
+            </h2>
             <div className={`${imageFrameClass} flex h-[min(48vh,360px)] min-h-[170px] items-center justify-center p-2`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

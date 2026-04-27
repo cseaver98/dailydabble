@@ -5,11 +5,10 @@ import { getSupabaseServerKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 export const runtime = "nodejs";
 
-const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 const allowedEquation = /^[0-9+\-*/=]+$/;
 const validStatuses = ["pending_review", "approved"] as const;
 type CandidateStatus = (typeof validStatuses)[number];
-type CandidateFilter = CandidateStatus | "finished" | "all";
+type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
 const precedence: Record<string, number> = {
   "+": 1,
@@ -145,7 +144,7 @@ export async function GET(request: Request) {
     const page = Math.max(1, Number(requestUrl.searchParams.get("page") || "1"));
     const pageSize = Math.min(50, Math.max(5, Number(requestUrl.searchParams.get("pageSize") || "10")));
 
-    if (!["all", "pending_review", "approved", "finished"].includes(status)) {
+    if (!["all", "pending_review", "approved", "finished", "today"].includes(status)) {
       return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
     }
 
@@ -192,6 +191,7 @@ export async function GET(request: Request) {
         scheduleCount: dates.length,
         lastScheduledDate: dates[0] || null,
         nextScheduledDate,
+        isScheduledToday: dates.includes(today),
         isFinished,
       };
     });
@@ -200,6 +200,7 @@ export async function GET(request: Request) {
       if (status === "pending_review") return row.status === "pending_review";
       if (status === "approved") return row.status === "approved" && !row.isFinished;
       if (status === "finished") return row.isFinished;
+      if (status === "today") return row.isScheduledToday;
       return true;
     });
 
@@ -237,8 +238,6 @@ export async function POST(request: Request) {
     const payload = (await request.json().catch(() => ({}))) as {
       action?: string;
       equation?: string;
-      puzzleId?: string;
-      puzzleDate?: string;
     };
 
     const action = payload.action ?? "add-puzzle";
@@ -261,39 +260,6 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ ok: true, item: data });
-    }
-
-    if (action === "assign-date") {
-      const puzzleId = payload.puzzleId ?? "";
-      const puzzleDate = payload.puzzleDate ?? "";
-      if (!puzzleId || !isDateString(puzzleDate)) {
-        return NextResponse.json({ error: "Missing puzzleId or invalid puzzleDate" }, { status: 400 });
-      }
-
-      const { data: puzzle, error: puzzleError } = await supabase
-        .from("puzzles")
-        .select("id,status")
-        .eq("id", puzzleId)
-        .maybeSingle();
-      if (puzzleError) {
-        throw new Error(`Failed to validate puzzle before scheduling: ${puzzleError.message}`);
-      }
-      if (!puzzle) {
-        return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
-      }
-      if (puzzle.status !== "approved") {
-        return NextResponse.json({ error: "Only approved puzzles can be scheduled." }, { status: 400 });
-      }
-
-      const { error } = await supabase
-        .from("daily_schedule")
-        .upsert({ puzzle_date: puzzleDate, puzzle_id: puzzleId }, { onConflict: "puzzle_date" });
-
-      if (error) {
-        throw new Error(`Failed to assign date: ${error.message}`);
-      }
-
-      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });

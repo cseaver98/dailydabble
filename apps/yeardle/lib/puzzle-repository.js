@@ -24,15 +24,13 @@ const getDateInTimeZone = (timeZone) => {
   return `${year}-${month}-${day}`;
 };
 
-const mapPuzzle = (scheduleRow, eventRow) => {
-  const hints = [
-    { label: "Category", value: eventRow.hint_category || "Unknown" },
-    { label: "Region", value: eventRow.hint_region || "Unknown" },
-    { label: "Era", value: eventRow.hint_era || "Unknown" },
-    { label: "Key person", value: eventRow.hint_person || "Unknown" },
-    { label: "Description", value: eventRow.hint_description || "No description provided." },
-  ];
+const splitKeyFigures = (value) =>
+  String(value || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
+const mapPuzzle = (scheduleRow, eventRow) => {
   return {
     puzzleId: eventRow.id,
     puzzleDate: scheduleRow.puzzle_date,
@@ -40,7 +38,11 @@ const mapPuzzle = (scheduleRow, eventRow) => {
     imageUrl: eventRow.image_url,
     imageAlt: eventRow.image_alt || `Historical event image for ${eventRow.title}`,
     wikipediaUrl: eventRow.wikipedia_url,
-    hints,
+    editorialContext: {
+      title: eventRow.title,
+      description: eventRow.hint_description || "No description provided.",
+      keyFigures: splitKeyFigures(eventRow.hint_person),
+    },
     maxGuesses: 5,
   };
 };
@@ -64,9 +66,7 @@ const getPuzzleByScheduleDate = async (date) => {
 
   const { data: eventRow, error: eventError } = await supabase
     .from("events")
-    .select(
-      "id,title,event_year,image_url,image_alt,wikipedia_url,hint_category,hint_region,hint_era,hint_person,hint_description",
-    )
+    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_person,hint_description")
     .eq("id", scheduleRow.event_id)
     .maybeSingle();
 
@@ -86,10 +86,9 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("events")
-    .select(
-      "id,title,event_year,image_url,image_alt,wikipedia_url,hint_category,hint_region,hint_era,hint_person,hint_description,created_at",
-    )
+    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_person,hint_description,created_at")
     .eq("status", "approved")
+    .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -136,6 +135,15 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
   }
 
   return null;
+};
+
+export const assignTodayYeardlePuzzleFromQueue = async () => {
+  const today = getDateInTimeZone(DEFAULT_TIMEZONE);
+  const existing = await getPuzzleByScheduleDate(today);
+  if (existing) {
+    return existing;
+  }
+  return autoScheduleApprovedPuzzleForDate(today);
 };
 
 export const getTodayYeardlePuzzle = async () => {

@@ -69,7 +69,7 @@ main.container {
 .game-meta-row {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .chip {
@@ -89,6 +89,17 @@ main.container {
   padding: 0.45rem 0.62rem;
   min-height: 2rem;
   white-space: nowrap;
+}
+
+.puzzle-title {
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--foreground);
 }
 
 .event-figure {
@@ -285,8 +296,7 @@ main.container {
   color: var(--brand-strong);
 }
 
-.guess-history-wrap,
-.hints-wrap {
+.guess-history-wrap {
   border-top: 1px solid var(--outline-soft);
   padding-top: 0.75rem;
 }
@@ -300,8 +310,7 @@ main.container {
   color: var(--muted);
 }
 
-.guess-history-list,
-.hints-list {
+.guess-history-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -309,8 +318,7 @@ main.container {
   gap: 0.35rem;
 }
 
-.guess-history-item,
-.hint-item {
+.guess-history-item {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
@@ -321,19 +329,101 @@ main.container {
   font-size: 0.9rem;
 }
 
-.hint-item {
-  align-items: flex-start;
-  justify-content: flex-start;
-  flex-direction: column;
-  gap: 0.2rem;
+.editorial-drawer {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
-.hint-label {
-  font-size: 0.74rem;
+.editorial-drawer-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.72rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.editorial-drawer-label {
+  margin: 0;
+  font-weight: 400;
+}
+
+.editorial-drawer-arrow {
+  display: inline-flex;
+  color: var(--primary);
+  transition: transform 200ms ease;
+}
+
+.editorial-drawer-arrow.open {
+  transform: rotate(180deg);
+}
+
+.editorial-drawer-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 80;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 18px 38px rgba(44, 47, 49, 0.16);
+}
+
+.editorial-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  border-bottom: 1px solid var(--outline-soft);
+  padding: 0.7rem 0.9rem;
+}
+
+.editorial-drawer-headline {
+  margin: 0;
+  font-weight: 400;
+}
+
+.editorial-drawer-close {
+  border: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.editorial-drawer-close:hover {
   color: var(--brand-strong);
-  font-weight: 800;
+}
+
+.editorial-drawer-content {
+  max-height: 45vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.7rem 0.9rem 0.9rem;
+}
+
+.editorial-drawer-content p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.editorial-field-label {
+  font-weight: 400;
+  margin-right: 0.3rem;
 }
 
 .post-actions {

@@ -72,65 +72,23 @@ const addDays = (date: string, delta: number): string => {
 
 const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-const inferEra = (year: number): string => {
-  if (year < 500) return "Ancient era";
-  if (year < 1500) return "Medieval era";
-  if (year < 1800) return `${Math.floor((year - 1) / 100) + 1}th century`;
-  if (year < 1900) return "19th century";
-  if (year < 2000) return "20th century";
-  return "21st century";
-};
-
-const inferCategory = (text: string): string => {
-  const value = text.toLowerCase();
-  if (value.includes("war") || value.includes("battle")) return "War / conflict";
-  if (value.includes("revolution") || value.includes("uprising")) return "Revolution";
-  if (value.includes("election") || value.includes("president")) return "Politics";
-  if (value.includes("founded") || value.includes("founds") || value.includes("founded")) return "Founding event";
-  if (value.includes("first") || value.includes("launch") || value.includes("moon")) return "Science / exploration";
-  return "Historical event";
-};
-
-const inferRegion = (text: string): string => {
-  const lookup = [
-    "United States",
-    "France",
-    "England",
-    "Germany",
-    "Italy",
-    "China",
-    "Japan",
-    "India",
-    "Russia",
-    "Mexico",
-    "Brazil",
-    "Spain",
-    "Canada",
-    "Greece",
-    "Egypt",
-  ];
-
-  for (const value of lookup) {
-    if (text.toLowerCase().includes(value.toLowerCase())) {
-      return value;
-    }
-  }
-
-  return "Global";
-};
-
-const inferKeyPerson = (title: string, text: string): string => {
+const inferKeyFigures = (title: string, text: string): string => {
   const pageName = title.replace(/\s*\(.+\)\s*/g, "").trim();
-  if (pageName.split(" ").length >= 2) {
-    return pageName;
+  const matches = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) ?? [];
+  const deduped = Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)));
+  const chosen = [];
+
+  for (const name of deduped) {
+    if (name.length < 4) continue;
+    chosen.push(name);
+    if (chosen.length >= 4) break;
   }
 
-  const match = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/);
-  if (match?.[1]) {
-    return match[1];
+  if (pageName.split(" ").length >= 2 && !chosen.includes(pageName)) {
+    chosen.unshift(pageName);
   }
 
-  return pageName || "Notable figure";
+  return chosen.length ? chosen.slice(0, 4).join(", ") : (pageName || "Notable figures");
 };
 
 const slugify = (value: string): string =>
@@ -233,21 +191,6 @@ export async function POST(request: Request) {
 
     for (let offset = 0; offset < batchSize; offset += 1) {
       const targetDate = addDays(initialDate, offset);
-      const { data: existingSchedule, error: scheduleCheckError } = await supabase
-        .from("daily_schedule")
-        .select("puzzle_date")
-        .eq("puzzle_date", targetDate)
-        .maybeSingle();
-
-      if (scheduleCheckError) {
-        throw new Error(`Failed to check schedule for ${targetDate}: ${scheduleCheckError.message}`);
-      }
-
-      if (existingSchedule) {
-        skippedCount += 1;
-        continue;
-      }
-
       const parsed = new Date(`${targetDate}T00:00:00`);
       const month = parsed.getUTCMonth() + 1;
       const day = parsed.getUTCDate();
@@ -272,10 +215,10 @@ export async function POST(request: Request) {
             image_url: chosen.imageUrl,
             image_alt: `${chosen.pageTitle} historical image`,
             wikipedia_url: chosen.wikiUrl,
-            hint_category: inferCategory(chosen.text),
-            hint_region: inferRegion(chosen.text),
-            hint_era: inferEra(chosen.year),
-            hint_person: inferKeyPerson(chosen.pageTitle, chosen.text),
+            hint_category: null,
+            hint_region: null,
+            hint_era: null,
+            hint_person: inferKeyFigures(chosen.pageTitle, chosen.text),
             hint_description: hintDescription,
             status: "approved",
             reviewed_at: new Date().toISOString(),
@@ -287,17 +230,6 @@ export async function POST(request: Request) {
 
       if (upsertError || !upsertedEvent) {
         throw new Error(`Failed to upsert Yeardle event for ${targetDate}: ${upsertError?.message ?? "unknown error"}`);
-      }
-
-      const { error: scheduleInsertError } = await supabase
-        .from("daily_schedule")
-        .insert({
-          puzzle_date: targetDate,
-          event_id: upsertedEvent.id,
-        });
-
-      if (scheduleInsertError) {
-        throw new Error(`Failed to assign Yeardle schedule for ${targetDate}: ${scheduleInsertError.message}`);
       }
 
       items.push({
@@ -312,7 +244,7 @@ export async function POST(request: Request) {
       ok: true,
       output: "Yeardle seed complete.",
       summary: {
-        scheduledCount: items.length,
+        insertedCount: items.length,
         skippedCount,
         items,
       },

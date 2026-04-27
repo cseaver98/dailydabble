@@ -195,6 +195,106 @@ const fetchJsonWithRetry = async (
   throw new Error(`Failed after ${attempts} attempts: ${lastError instanceof Error ? lastError.message : "unknown error"}`);
 };
 
+const normalizeWikipediaTitle = (value) =>
+  String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const fetchWikipediaSummary = async (title) => {
+  const normalizedTitle = normalizeWikipediaTitle(title);
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  const summarySettings = {
+    attempts: 2,
+    baseDelayMs: 250,
+    maxDelayMs: 900,
+    requestTimeoutMs: 9000,
+  };
+
+  const encoded = encodeURIComponent(normalizedTitle);
+  try {
+    const summaryPayload = await fetchJsonWithRetry(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Api-User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+          "User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+        },
+      },
+      summarySettings,
+    );
+
+    const summary = String(summaryPayload?.extract ?? "").trim();
+    const pageUrl = String(summaryPayload?.content_urls?.desktop?.page ?? "").trim() || null;
+    if (summary) {
+      return { summary, pageUrl };
+    }
+  } catch {
+    // Fallback to the query API when REST summary is unavailable.
+  }
+
+  try {
+    const queryPayload = await fetchJsonWithRetry(
+      `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|info&inprop=url&explaintext=1&exintro=1&redirects=1&titles=${encoded}&format=json`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Api-User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+          "User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+        },
+      },
+      summarySettings,
+    );
+
+    const pages = queryPayload?.query?.pages ?? {};
+    const firstPage = Object.values(pages).find((entry) => entry && typeof entry === "object");
+    if (!firstPage || typeof firstPage !== "object") {
+      return null;
+    }
+
+    const summary = String(firstPage.extract ?? "").trim();
+    const pageUrl = String(firstPage.fullurl ?? "").trim() || null;
+    if (!summary) {
+      return null;
+    }
+
+    return { summary, pageUrl };
+  } catch {
+    return null;
+  }
+};
+
+const relationshipLabelByType = {
+  spouse: "married",
+  couple: "a couple",
+  former_spouse: "no longer married",
+  former_couple: "no longer a couple",
+};
+
+const buildCandidateEditorialMetadata = async ({ personA, personB, relationshipType }) => {
+  const relationshipLabel = relationshipLabelByType[relationshipType] ?? "connected";
+  const [personASummary, personBSummary, coupleSummary] = await Promise.all([
+    fetchWikipediaSummary(personA.wikipedia_title || personA.name),
+    fetchWikipediaSummary(personB.wikipedia_title || personB.name),
+    fetchWikipediaSummary(`${personA.name} and ${personB.name}`),
+  ]);
+
+  return {
+    editorialRelationshipNote: `${personA.name} and ${personB.name} are ${relationshipLabel}.`,
+    editorialPersonABio: personASummary?.summary ?? `${personA.name} is a notable public figure.`,
+    editorialPersonABioUrl: personASummary?.pageUrl ?? null,
+    editorialPersonBBio: personBSummary?.summary ?? `${personB.name} is a notable public figure.`,
+    editorialPersonBBioUrl: personBSummary?.pageUrl ?? null,
+    editorialCoupleContext:
+      coupleSummary?.summary ?? `${personA.name} and ${personB.name} are ${relationshipLabel}.`,
+    editorialCoupleContextUrl: coupleSummary?.pageUrl ?? null,
+  };
+};
+
 const upsertPerson = async ({ wikidata_qid, name, birth_date, wikipedia_title }) => {
   const { data, error } = await supabase
     .from("people")
@@ -287,7 +387,7 @@ const upsertImage = async ({
   return data.id;
 };
 
-const findOrCreateCandidate = async ({ coupleId, imageId, ageGap, qualityScore }) => {
+const findOrCreateCandidate = async ({ coupleId, imageId, ageGap, qualityScore, editorialMetadata }) => {
   const { data: existing, error: findError } = await supabase
     .from("puzzle_candidates")
     .select("id")
@@ -305,6 +405,13 @@ const findOrCreateCandidate = async ({ coupleId, imageId, ageGap, qualityScore }
       image_id: imageId,
       computed_age_gap_years: ageGap,
       quality_score: qualityScore,
+      editorial_relationship_note: editorialMetadata.editorialRelationshipNote,
+      editorial_person_a_bio: editorialMetadata.editorialPersonABio,
+      editorial_person_a_bio_url: editorialMetadata.editorialPersonABioUrl,
+      editorial_person_b_bio: editorialMetadata.editorialPersonBBio,
+      editorial_person_b_bio_url: editorialMetadata.editorialPersonBBioUrl,
+      editorial_couple_context: editorialMetadata.editorialCoupleContext,
+      editorial_couple_context_url: editorialMetadata.editorialCoupleContextUrl,
       status: "pending_review",
       reviewed_at: null,
     })
@@ -681,11 +788,17 @@ const run = async () => {
     });
 
     const ageGap = computeAgeGapYears(item.personA.birth_date, item.personB.birth_date);
+    const editorialMetadata = await buildCandidateEditorialMetadata({
+      personA: item.personA,
+      personB: item.personB,
+      relationshipType: item.relationshipType,
+    });
     const candidateId = await findOrCreateCandidate({
       coupleId,
       imageId: placeholderImageId,
       ageGap,
       qualityScore: item.qualityScore,
+      editorialMetadata,
     });
 
     createdCount += 1;

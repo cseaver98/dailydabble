@@ -7,7 +7,6 @@ export const runtime = "nodejs";
 
 const supportedSports = new Set(["nba", "nfl", "mlb", "soccer", "nhl"]);
 const validBatchSizes = new Set([1, 3, 5, 7, 10, 14]);
-const DEFAULT_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
 
 const categoryBySport: Record<string, string> = {
   nba: "Category:NBA_players",
@@ -39,34 +38,6 @@ type WikipediaSummary = {
     };
   };
 };
-
-const getDateInTimeZone = (timeZone: string): string => {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(new Date());
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  const day = parts.find((part) => part.type === "day")?.value;
-
-  if (!year || !month || !day) {
-    throw new Error("Failed to compute date in timezone");
-  }
-
-  return `${year}-${month}-${day}`;
-};
-
-const addDays = (date: string, delta: number): string => {
-  const base = new Date(`${date}T00:00:00Z`);
-  base.setUTCDate(base.getUTCDate() + delta);
-  return base.toISOString().slice(0, 10);
-};
-
-const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const normalizeName = (value: string): string =>
   String(value || "")
@@ -179,15 +150,10 @@ export async function POST(request: Request) {
     const payload = (await request.json().catch(() => ({}))) as {
       sport?: string;
       batchSize?: number;
-      startDate?: string;
     };
 
     const sport = String(payload.sport || "nba").toLowerCase();
     const batchSize = Number(payload.batchSize ?? 5);
-    const initialDate =
-      payload.startDate && isDateString(payload.startDate)
-        ? payload.startDate
-        : getDateInTimeZone(DEFAULT_TIMEZONE);
 
     if (!supportedSports.has(sport)) {
       return NextResponse.json({ error: "Unsupported sport" }, { status: 400 });
@@ -201,8 +167,6 @@ export async function POST(request: Request) {
     const shuffled = randomShuffle(memberTitles);
 
     const inserted: Array<{ id: string; full_name: string; sport: string }> = [];
-    const scheduled: Array<{ date: string; athleteId: string; athleteName: string }> = [];
-
     for (const title of shuffled) {
       if (inserted.length >= batchSize) {
         break;
@@ -250,50 +214,15 @@ export async function POST(request: Request) {
       inserted.push(data);
     }
 
-    let dayOffset = 0;
-    for (const athlete of inserted) {
-      while (dayOffset < 366) {
-        const date = addDays(initialDate, dayOffset);
-        dayOffset += 1;
-
-        const { data: existing, error: existingError } = await supabase
-          .from("daily_schedule")
-          .select("puzzle_date")
-          .eq("puzzle_date", date)
-          .maybeSingle();
-
-        if (existingError) {
-          throw new Error(`Failed checking schedule for ${date}: ${existingError.message}`);
-        }
-
-        if (existing) {
-          continue;
-        }
-
-        const { error: scheduleError } = await supabase
-          .from("daily_schedule")
-          .insert({ puzzle_date: date, athlete_id: athlete.id });
-
-        if (scheduleError) {
-          throw new Error(`Failed scheduling ${athlete.full_name}: ${scheduleError.message}`);
-        }
-
-        scheduled.push({ date, athleteId: athlete.id, athleteName: athlete.full_name });
-        break;
-      }
-    }
-
     return NextResponse.json({
       ok: true,
       summary: {
         sport,
         requestedCount: batchSize,
         insertedCount: inserted.length,
-        scheduledCount: scheduled.length,
-        scheduled,
       },
       output:
-        "Seeded athlete candidates from Wikipedia categories. Review and refine clues in the Sportle admin tab before publishing widely.",
+        "Seeded athlete candidates from Wikipedia categories. Review, refine clues, and approve candidates for the runway queue.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sportle seed failed";
