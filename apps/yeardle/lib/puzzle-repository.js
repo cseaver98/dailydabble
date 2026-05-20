@@ -24,12 +24,6 @@ const getDateInTimeZone = (timeZone) => {
   return `${year}-${month}-${day}`;
 };
 
-const splitKeyFigures = (value) =>
-  String(value || "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
 const mapPuzzle = (scheduleRow, eventRow) => {
   return {
     puzzleId: eventRow.id,
@@ -39,9 +33,7 @@ const mapPuzzle = (scheduleRow, eventRow) => {
     imageAlt: eventRow.image_alt || `Historical event image for ${eventRow.title}`,
     wikipediaUrl: eventRow.wikipedia_url,
     editorialContext: {
-      title: eventRow.title,
       description: eventRow.hint_description || "No description provided.",
-      keyFigures: splitKeyFigures(eventRow.hint_person),
     },
     maxGuesses: 5,
   };
@@ -66,7 +58,7 @@ const getPuzzleByScheduleDate = async (date) => {
 
   const { data: eventRow, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_person,hint_description")
+    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_description")
     .eq("id", scheduleRow.event_id)
     .maybeSingle();
 
@@ -86,7 +78,7 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("events")
-    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_person,hint_description,created_at")
+    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_description,created_at")
     .eq("status", "approved")
     .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
@@ -170,7 +162,7 @@ export const listYeardleArchive = async (limit = 120) => {
   const { data, error } = await supabase
     .from("daily_schedule")
     .select("puzzle_date")
-    .lte("puzzle_date", today)
+    .lt("puzzle_date", today)
     .order("puzzle_date", { ascending: false })
     .limit(limit);
 

@@ -99,7 +99,7 @@ export const evaluateExpression = (expr) => {
   return evalRpn(toRpn(tokens));
 };
 
-export const validateEquation = (equation, expectedLength = 9) => {
+export const validateEquation = (equation, expectedLength = 8) => {
   const value = String(equation || "").trim();
 
   if (value.length !== expectedLength) {

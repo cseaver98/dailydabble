@@ -289,6 +289,26 @@ main.container {
 
 .message[data-kind="won"] { color: #0a7a37; }
 .message[data-kind="lost"] { color: #b02500; }
+
+.temperature-hint-wrap {
+  margin-top: -0.1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.temperature-hint-heat {
+  margin: 0;
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.temperature-hint-trend {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .next-game-copy {
   margin: -0.15rem 0 0;
   font-size: 0.85rem;
@@ -299,15 +319,64 @@ main.container {
 .guess-history-wrap {
   border-top: 1px solid var(--outline-soft);
   padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
 }
 
 .guess-history-title {
-  margin: 0 0 0.45rem;
+  margin: 0;
   font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.guess-history-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.guess-history-toggle-icon {
+  display: inline-flex;
+  color: var(--brand-strong);
+  transition: transform 200ms ease;
+}
+
+.guess-history-toggle[aria-expanded="true"] .guess-history-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.guess-history-latest {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--brand-soft) 56%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.guess-history-guess {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.guess-history-status-correct {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.guess-history-status-wrong {
+  color: #b02500;
+  font-weight: 800;
 }
 
 .guess-history-list {
@@ -422,7 +491,7 @@ main.container {
 }
 
 .editorial-field-label {
-  font-weight: 400;
+  font-weight: 800;
   margin-right: 0.3rem;
 }
 
@@ -555,7 +624,8 @@ main.container {
 
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 88px));
+  justify-content: start;
   gap: 0.55rem;
 }
 
@@ -563,20 +633,28 @@ main.container {
   border: 1px solid var(--outline-soft);
   background: var(--surface-low);
   border-radius: 0.9rem;
-  padding: 0.75rem 0.8rem;
+  padding: 0.45rem;
   display: grid;
-  gap: 0.18rem;
+  aspect-ratio: 1 / 1;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
   text-decoration: none;
   color: var(--text);
 }
 
 .archive-tile-title {
   font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .archive-tile-date {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .archive-pagination {
@@ -602,7 +680,7 @@ main.container {
     grid-template-columns: 1fr;
   }
   .archive-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 88px));
   }
   .result-modal-actions {
     grid-template-columns: 1fr;

@@ -21,7 +21,7 @@ export async function POST(request) {
 
     let guess;
     try {
-      guess = validateEquation(rawGuess, Number(puzzle.equation_length) || 9);
+      guess = validateEquation(rawGuess, Number(puzzle.equation_length) || 8);
     } catch (validationError) {
       const message = validationError instanceof Error ? validationError.message : "Guess must be a valid equation";
       return NextResponse.json({ error: message }, { status: 400 });

@@ -27,7 +27,8 @@ const getDateInTimeZone = (timeZone) => {
 const mapPuzzle = (scheduleRow, puzzleRow) => ({
   puzzleId: puzzleRow.id,
   puzzleDate: scheduleRow.puzzle_date,
-  equationLength: Number(puzzleRow.equation_length) || 9,
+  equationLength: Number(puzzleRow.equation_length) || 8,
+  equalsIndex: Math.max(0, String(puzzleRow.equation || "").indexOf("=")),
   maxGuesses: 6,
 });
 
@@ -154,7 +155,7 @@ export const listEquadleArchive = async (limit = 120) => {
   const { data, error } = await supabase
     .from("daily_schedule")
     .select("puzzle_date")
-    .lte("puzzle_date", today)
+    .lt("puzzle_date", today)
     .order("puzzle_date", { ascending: false })
     .limit(limit);
 

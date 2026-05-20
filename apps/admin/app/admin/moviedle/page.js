@@ -499,6 +499,11 @@ export default function MoviedleAdminTab() {
                 {item.summary ? (
                   <p style={{ margin: ".2rem 0 0", color: "#353b42", fontSize: ".9rem" }}>{item.summary}</p>
                 ) : null}
+                {item.director ? (
+                  <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
+                    Director: {item.director}
+                  </p>
+                ) : null}
                 {Array.isArray(item.lead_actors) && item.lead_actors.length > 0 ? (
                   <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
                     Lead actors: {item.lead_actors.join(", ")}

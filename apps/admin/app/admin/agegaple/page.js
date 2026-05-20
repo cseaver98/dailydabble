@@ -36,6 +36,7 @@ export default function AgegapleAdminTab() {
   const [newImageTitle, setNewImageTitle] = useState("");
   const [newImageAttribution, setNewImageAttribution] = useState("");
   const [isAddingImage, setIsAddingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [addImageError, setAddImageError] = useState("");
   const [detailsCandidateId, setDetailsCandidateId] = useState(null);
   const [detailsForm, setDetailsForm] = useState(null);
@@ -301,7 +302,7 @@ export default function AgegapleAdminTab() {
 
   const addImageToGallery = async () => {
     if (!galleryCandidate || !newImageUrl.trim()) {
-      setAddImageError("Image URL is required.");
+      setAddImageError("Image URL is required (or upload a JPG/PNG).");
       return;
     }
 
@@ -335,6 +336,54 @@ export default function AgegapleAdminTab() {
       setAddImageError("Could not add image.");
     } finally {
       setIsAddingImage(false);
+    }
+  };
+
+  const uploadImageToGallery = async (file) => {
+    if (!(file instanceof File) || !galleryCandidate) {
+      return;
+    }
+
+    setAddImageError("");
+    setIsUploadingImage(true);
+
+    try {
+      const body = new FormData();
+      body.append("file", file);
+
+      const uploadResponse = await fetch("/api/admin/images/upload", {
+        method: "POST",
+        body,
+      });
+      const uploadPayload = await uploadResponse.json().catch(() => ({}));
+      if (!uploadResponse.ok || !uploadPayload?.url) {
+        throw new Error(uploadPayload.error || "Failed to upload image");
+      }
+
+      const response = await fetch("/api/admin/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coupleId: galleryCandidate.coupleId,
+          imageUrl: String(uploadPayload.url),
+          fileTitle: newImageTitle.trim() || undefined,
+          attributionText: newImageAttribution.trim() || undefined,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to add uploaded image");
+      }
+
+      setNewImageUrl("");
+      setNewImageTitle("");
+      setNewImageAttribution("");
+      await Promise.all([load({ page: currentPage, status: statusFilter }), loadGallery(galleryCandidateId)]);
+      setGalleryIndex(0);
+    } catch (uploadError) {
+      setAddImageError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -695,8 +744,29 @@ export default function AgegapleAdminTab() {
 
               <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: ".6rem", display: "grid", gap: ".5rem" }}>
                 <p style={{ margin: 0, fontWeight: 800 }}>Add image to gallery</p>
+                <div style={{ display: "flex", gap: ".45rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <label className="admin-btn" style={{ cursor: isUploadingImage ? "default" : "pointer", opacity: isUploadingImage ? 0.65 : 1 }}>
+                    {isUploadingImage ? "Uploading..." : "Upload JPG/PNG"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      style={{ display: "none" }}
+                      disabled={isUploadingImage}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          void uploadImageToGallery(file);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <span style={{ color: "#5b6168", fontSize: ".82rem" }}>
+                    Uploads to Supabase storage and adds to this couple.
+                  </span>
+                </div>
                 <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                  Image URL
+                  Image URL (optional fallback)
                   <input
                     value={newImageUrl}
                     onChange={(event) => setNewImageUrl(event.target.value)}
@@ -723,7 +793,12 @@ export default function AgegapleAdminTab() {
                   />
                 </label>
                 <div>
-                  <button className="admin-btn primary" type="button" onClick={() => void addImageToGallery()} disabled={isAddingImage}>
+                  <button
+                    className="admin-btn primary"
+                    type="button"
+                    onClick={() => void addImageToGallery()}
+                    disabled={isAddingImage || isUploadingImage}
+                  >
                     {isAddingImage ? "Adding..." : "Add image"}
                   </button>
                 </div>

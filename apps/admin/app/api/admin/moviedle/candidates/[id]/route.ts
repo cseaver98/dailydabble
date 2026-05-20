@@ -18,7 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const supabase = getMoviedleSupabaseAdmin();
     const { data, error } = await supabase
       .from("movies")
-      .select("id,title,release_year,summary,lead_actors,still_urls,status,source,review_notes,reviewed_at,created_at,imdb_votes,imdb_id")
+      .select("id,title,release_year,director,summary,lead_actors,still_urls,status,source,review_notes,reviewed_at,created_at,imdb_votes,imdb_id")
       .eq("id", id)
       .maybeSingle();
     if (error) {
@@ -46,6 +46,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const payload = await request.json().catch(() => ({}));
     const title = String(payload?.title || "").trim();
     const releaseYear = Number(payload?.releaseYear);
+    const director = String(payload?.director || "").trim();
     const summary = String(payload?.summary || "").trim();
     const reviewNotes = String(payload?.reviewNotes || "").trim();
     const leadActors = Array.isArray(payload?.leadActors)
@@ -73,6 +74,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         title,
         title_normalized: normalizedTitle,
         release_year: safeReleaseYear,
+        director: director ? director.slice(0, 200) : null,
         summary: summary ? summary.slice(0, 4000) : null,
         lead_actors: leadActors,
         review_notes: reviewNotes || null,

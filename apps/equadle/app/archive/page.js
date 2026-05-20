@@ -65,7 +65,7 @@ export default function ArchivePage() {
     return items.map((item) => ({
       ...item,
       dateLabel: formatDateLabel(item.puzzleDate),
-      tileLabel: `Equadle #${sequenceByDate.get(item.puzzleDate) ?? 1}`,
+      tileLabel: `#${sequenceByDate.get(item.puzzleDate) ?? 1}`,
     }));
   }, [items]);
   const totalPages = Math.max(1, Math.ceil(rows.length / archivePageSize));

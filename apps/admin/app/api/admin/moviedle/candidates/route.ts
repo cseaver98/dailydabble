@@ -17,6 +17,7 @@ type OmdbDetail = {
   Year?: string;
   Plot?: string;
   Actors?: string;
+  Director?: string;
   imdbVotes?: string;
 };
 
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
 
     let dataQuery = supabase
       .from("movies")
-      .select("id,title,release_year,summary,lead_actors,still_urls,status,source,review_notes,reviewed_at,created_at,imdb_votes")
+      .select("id,title,release_year,director,summary,lead_actors,still_urls,status,source,review_notes,reviewed_at,created_at,imdb_votes")
       .order("created_at", { ascending: false });
     if (status === "pending" || status === "approved") {
       dataQuery = dataQuery.eq("status", status);
@@ -244,6 +245,7 @@ export async function POST(request: Request) {
     const releaseYear = parseReleaseYear(detail.Year);
     const imdbVotes = parseVotes(detail.imdbVotes);
     const summary = String(detail.Plot || "").trim();
+    const director = String(detail.Director || "").trim();
     const leadActors = String(detail.Actors || "")
       .split(",")
       .map((value) => value.trim())
@@ -260,6 +262,7 @@ export async function POST(request: Request) {
       title,
       title_normalized: titleNormalized,
       release_year: releaseYear,
+      director: director ? director.slice(0, 200) : null,
       summary: summary ? summary.slice(0, 4000) : null,
       lead_actors: leadActors,
       source: "title_library_omdb",

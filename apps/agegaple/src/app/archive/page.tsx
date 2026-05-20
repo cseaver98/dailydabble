@@ -15,7 +15,7 @@ const formatDateLabel = (date: string) => {
   const parsed = new Date(`${date}T00:00:00`);
   return Number.isNaN(parsed.getTime())
     ? date
-    : parsed.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    : parsed.toLocaleDateString("en-US", { year: "2-digit", month: "numeric", day: "numeric" });
 };
 const archivePageSize = 30;
 
@@ -58,7 +58,7 @@ export default function ArchivePage() {
     return items.map((item) => ({
       ...item,
       dateLabel: formatDateLabel(item.puzzleDate),
-      tileLabel: `Agegaple #${sequenceByDate.get(item.puzzleDate) ?? 1}`,
+      tileLabel: `#${sequenceByDate.get(item.puzzleDate) ?? 1}`,
     }));
   }, [items]);
   const totalPages = Math.max(1, Math.ceil(rows.length / archivePageSize));
@@ -107,7 +107,7 @@ export default function ArchivePage() {
             </p>
           )}
           {!loading && !error && (
-            <div className="grid gap-[0.55rem] sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid justify-start gap-[0.55rem] [grid-template-columns:repeat(auto-fill,minmax(88px,88px))]">
               {rows.length === 0 ? (
                 <p className={mutedTextClass}>No archived games yet.</p>
               ) : null}
@@ -115,10 +115,10 @@ export default function ArchivePage() {
                 <Link
                   key={item.puzzleDate}
                   href={`/archive/${item.puzzleDate}`}
-                  className="grid gap-[0.18rem] rounded-[0.9rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] px-[0.8rem] py-[0.75rem] hover:bg-[color:var(--surface-container-high)]"
+                  className="grid aspect-square place-content-center justify-items-center gap-[0.5rem] rounded-[0.9rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] px-[0.45rem] py-[0.45rem] text-center hover:bg-[color:var(--surface-container-high)]"
                 >
-                  <span className="font-extrabold">{item.tileLabel}</span>
-                  <span className="text-[0.84rem] text-[#595c5e]">{item.dateLabel}</span>
+                  <span className="text-[1.45rem] font-extrabold leading-none">{item.tileLabel}</span>
+                  <span className="whitespace-nowrap text-[0.68rem] leading-none text-[#595c5e]">{item.dateLabel}</span>
                 </Link>
               ))}
             </div>

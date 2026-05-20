@@ -112,7 +112,7 @@ const evalRpn = (tokens: string[]): number => {
   return stack[0];
 };
 
-const validateEquation = (raw: string, expectedLength = 9): string => {
+const validateEquation = (raw: string, expectedLength = 8): string => {
   const equation = String(raw || "").trim();
   if (equation.length !== expectedLength) {
     throw new Error(`Guess must be ${expectedLength} characters`);
@@ -133,6 +133,47 @@ const validateEquation = (raw: string, expectedLength = 9): string => {
   }
 
   return equation;
+};
+
+const randomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const randomOperator = (): "+" | "-" | "*" | "/" => {
+  const operators: Array<"+" | "-" | "*" | "/"> = ["+", "-", "*", "/"];
+  return operators[randomInt(0, operators.length - 1)];
+};
+
+const generateRandomEquation = (expectedLength = 8): string => {
+  for (let attempt = 0; attempt < 3000; attempt += 1) {
+    const a = randomInt(1, 99);
+    const b = randomInt(1, 99);
+    const c = randomInt(1, 99);
+    const op1 = randomOperator();
+    const op2 = randomOperator();
+    const left = `${a}${op1}${b}${op2}${c}`;
+
+    let leftValue = 0;
+    try {
+      leftValue = evalRpn(toRpn(tokenizeExpression(left)));
+    } catch {
+      continue;
+    }
+    if (!Number.isInteger(leftValue) || leftValue < 0) {
+      continue;
+    }
+
+    const equation = `${left}=${leftValue}`;
+    if (equation.length !== expectedLength) {
+      continue;
+    }
+
+    try {
+      return validateEquation(equation, expectedLength);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Could not generate a valid random equation");
 };
 
 const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -244,12 +285,12 @@ export async function POST(request: Request) {
     const supabase = getSupabaseEquadleAdmin();
 
     if (action === "add-puzzle") {
-      const equation = validateEquation(payload.equation ?? "", 9);
+      const equation = validateEquation(payload.equation ?? "", 8);
       const { data, error } = await supabase
         .from("puzzles")
         .insert({
           equation,
-          equation_length: 9,
+          equation_length: 8,
           status: "pending_review",
         })
         .select("id,equation,equation_length,created_at,status")
@@ -260,6 +301,39 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ ok: true, item: data });
+    }
+
+    if (action === "generate-random") {
+      let lastInsertError: Error | null = null;
+
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const equation = generateRandomEquation(8);
+        const { data, error } = await supabase
+          .from("puzzles")
+          .insert({
+            equation,
+            equation_length: 8,
+            status: "pending_review",
+          })
+          .select("id,equation,equation_length,created_at,status")
+          .single();
+
+        if (!error) {
+          return NextResponse.json({ ok: true, item: data });
+        }
+
+        if (error.code === "23505") {
+          continue;
+        }
+
+        lastInsertError = new Error(`Failed to add generated puzzle: ${error.message}`);
+        break;
+      }
+
+      if (lastInsertError) {
+        throw lastInsertError;
+      }
+      throw new Error("Could not save a unique generated equation");
     }
 
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });

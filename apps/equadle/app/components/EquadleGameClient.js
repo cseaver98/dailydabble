@@ -4,7 +4,40 @@ import { useEffect, useMemo, useState } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 
-const EMPTY_ROW = Array.from({ length: 9 }, () => ({ char: "", state: "empty" }));
+const FLIP_DURATION_MS = 260;
+const FLIP_STAGGER_MS = 208;
+const KEY_ROWS = [
+  ["7", "8", "9", "/"],
+  ["4", "5", "6", "*"],
+  ["1", "2", "3", "-"],
+  ["Enter", "0", "Backspace", "+"],
+];
+const KEY_STRENGTH = {
+  empty: 0,
+  absent: 1,
+  present: 2,
+  correct: 3,
+};
+const sanitizeEquationInput = (value, maxLength) =>
+  String(value || "")
+    .replace(/\s+/g, "")
+    .replace(/[^0-9+\-*/]/g, "")
+    .slice(0, maxLength);
+
+const buildFullGuess = (inputValue, equationLength, equalsIndex) => {
+  const chars = [];
+  let inputIndex = 0;
+  const safeValue = String(inputValue || "");
+  for (let index = 0; index < equationLength; index += 1) {
+    if (index === equalsIndex) {
+      chars.push("=");
+      continue;
+    }
+    chars.push(safeValue[inputIndex] || "");
+    inputIndex += 1;
+  }
+  return chars.join("");
+};
 const getNextGameCountdown = () => {
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -66,6 +99,7 @@ export default function EquadleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [revealingRowIndex, setRevealingRowIndex] = useState(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const fallbackDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -103,6 +137,7 @@ export default function EquadleGameClient({
         setMessage("");
         setResolvedAnswer("");
         setIsResultOpen(false);
+        setRevealingRowIndex(null);
         setCopyStatus("");
       } catch (loadError) {
         if (!active) {
@@ -205,8 +240,17 @@ export default function EquadleGameClient({
       setIsResultOpen(false);
       return;
     }
-    setIsResultOpen(true);
-  }, [gameState]);
+
+    if (revealingRowIndex === null) {
+      setIsResultOpen(true);
+      return;
+    }
+
+    const revealLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle.equationLength) : 8;
+    const revealTotalMs = Math.max(0, (revealLength - 1) * FLIP_STAGGER_MS + FLIP_DURATION_MS);
+    const timeoutId = window.setTimeout(() => setIsResultOpen(true), revealTotalMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [gameState, puzzle?.equationLength, revealingRowIndex]);
 
   useEffect(() => {
     if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
@@ -219,7 +263,11 @@ export default function EquadleGameClient({
   }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 6;
-  const equationLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle.equationLength) : 9;
+  const equationLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle.equationLength) : 8;
+  const equalsIndex = Number.isFinite(puzzle?.equalsIndex)
+    ? Number(puzzle.equalsIndex)
+    : 4;
+  const guessInputLength = Math.max(1, equationLength - 1);
 
   const boardRows = useMemo(() => {
     const rows = attempts.map((attempt) =>
@@ -230,24 +278,65 @@ export default function EquadleGameClient({
     );
 
     if (gameState === "playing") {
-      const draft = guess
-        .slice(0, equationLength)
-        .split("")
-        .map((char) => ({ char, state: "draft" }));
-
-      while (draft.length < equationLength) {
-        draft.push({ char: "", state: "empty" });
+      const draft = [];
+      let guessCursor = 0;
+      for (let index = 0; index < equationLength; index += 1) {
+        if (index === equalsIndex) {
+          draft.push({ char: "=", state: "locked" });
+          continue;
+        }
+        const nextChar = guess[guessCursor] || "";
+        draft.push({ char: nextChar, state: nextChar ? "draft" : "empty" });
+        guessCursor += 1;
       }
 
       rows.push(draft);
     }
 
     while (rows.length < maxGuesses) {
-      rows.push([...EMPTY_ROW]);
+      const emptyRow = [];
+      for (let index = 0; index < equationLength; index += 1) {
+        emptyRow.push(index === equalsIndex ? { char: "=", state: "locked" } : { char: "", state: "empty" });
+      }
+      rows.push(emptyRow);
     }
 
     return rows;
-  }, [attempts, equationLength, gameState, guess, maxGuesses]);
+  }, [attempts, equationLength, equalsIndex, gameState, guess, maxGuesses]);
+
+  const keyStates = useMemo(() => {
+    const states = new Map();
+    for (const attempt of attempts) {
+      const chars = String(attempt?.guess || "").split("");
+      const feedback = Array.isArray(attempt?.feedback) ? attempt.feedback : [];
+      for (let index = 0; index < chars.length; index += 1) {
+        const key = chars[index];
+        const nextState = feedback[index] || "absent";
+        const currentState = states.get(key) || "empty";
+        if ((KEY_STRENGTH[nextState] || 0) > (KEY_STRENGTH[currentState] || 0)) {
+          states.set(key, nextState);
+        }
+      }
+    }
+    return states;
+  }, [attempts]);
+
+  const canSubmitGuess = gameState === "playing" && guess.length === guessInputLength;
+  const canDeleteGuess = gameState === "playing" && guess.length > 0;
+
+  const appendGuessChar = (char) => {
+    if (gameState !== "playing") {
+      return;
+    }
+    setGuess((current) => sanitizeEquationInput(`${current}${char}`, guessInputLength));
+  };
+
+  const removeGuessChar = () => {
+    if (gameState !== "playing") {
+      return;
+    }
+    setGuess((current) => current.slice(0, -1));
+  };
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -256,7 +345,7 @@ export default function EquadleGameClient({
       return;
     }
 
-    const guessEquation = guess.trim();
+    const guessEquation = buildFullGuess(guess.trim(), equationLength, equalsIndex);
     try {
       const response = await fetch("/api/puzzle/submit", {
         method: "POST",
@@ -278,12 +367,12 @@ export default function EquadleGameClient({
       ];
 
       setAttempts(nextAttempts);
+      setRevealingRowIndex(nextAttempts.length - 1);
       setGuess("");
 
       if (payload.isCorrect) {
-        const finalMessage = `Correct. Equation: ${payload.answer}`;
         setGameState("won");
-        setMessage(finalMessage);
+        setMessage("");
         setResolvedAnswer(payload.answer || "");
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
@@ -292,7 +381,7 @@ export default function EquadleGameClient({
               puzzleId: puzzle.puzzleId,
               attempts: nextAttempts,
               gameState: "won",
-              message: finalMessage,
+              message: "",
               resolvedAnswer: payload.answer || "",
             }),
           );
@@ -301,9 +390,8 @@ export default function EquadleGameClient({
       }
 
       if (nextAttempts.length >= maxGuesses) {
-        const finalMessage = `Out of guesses. Answer: ${payload.answer}`;
         setGameState("lost");
-        setMessage(finalMessage);
+        setMessage("");
         setResolvedAnswer(payload.answer || "");
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
@@ -312,7 +400,7 @@ export default function EquadleGameClient({
               puzzleId: puzzle.puzzleId,
               attempts: nextAttempts,
               gameState: "lost",
-              message: finalMessage,
+              message: "",
               resolvedAnswer: payload.answer || "",
             }),
           );
@@ -320,11 +408,39 @@ export default function EquadleGameClient({
         return;
       }
 
-      setMessage("Nice try. Keep going.");
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Guess must be a valid equation");
     }
   };
+
+  useEffect(() => {
+    if (gameState !== "playing") {
+      return;
+    }
+
+    const onKeyDown = (event) => {
+      const key = event.key;
+      if (key === "Enter") {
+        event.preventDefault();
+        if (canSubmitGuess) {
+          void onSubmit(event);
+        }
+        return;
+      }
+      if (key === "Backspace" || key === "Delete") {
+        event.preventDefault();
+        removeGuessChar();
+        return;
+      }
+      if (/^[0-9+\-*/]$/.test(key)) {
+        event.preventDefault();
+        appendGuessChar(key);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [canSubmitGuess, gameState, onSubmit]);
 
   const resetArchivePuzzle = () => {
     if (!lockDailyCompletion) {
@@ -334,11 +450,12 @@ export default function EquadleGameClient({
       setMessage("");
       setResolvedAnswer("");
       setIsResultOpen(false);
+      setRevealingRowIndex(null);
       setCopyStatus("");
       return;
     }
 
-    setMessage("Today’s puzzle is locked after completion. Try archive games.");
+    setMessage("");
   };
 
   const effectiveAnswer = resolvedAnswer || puzzle?.answer || "Unavailable";
@@ -404,16 +521,36 @@ export default function EquadleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextDateLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
-            <span className="chip">Length: {equationLength}</span>
           </div>
 
-          <p className="rule-copy">Use digits and + - * / =. Guess must be a true 9-character equation.</p>
+          <p className="rule-copy">
+            Use digits and + - * /. Guess must be a true {equationLength}-character equation. PEMDAS rules apply.
+          </p>
 
           <div className="board">
             {boardRows.map((row, rowIndex) => (
-              <div key={`row-${rowIndex}`} className="board-row">
+              <div
+                key={`row-${rowIndex}`}
+                className="board-row"
+                style={{ gridTemplateColumns: `repeat(${equationLength}, minmax(0, 1fr))` }}
+              >
                 {row.map((cell, colIndex) => (
-                  <div key={`cell-${rowIndex}-${colIndex}`} className={`board-cell ${cell.state}`}>
+                  <div
+                    key={`cell-${rowIndex}-${colIndex}`}
+                    className={`board-cell ${cell.state} ${
+                      revealingRowIndex === rowIndex && (cell.state === "correct" || cell.state === "present" || cell.state === "absent")
+                        ? "reveal"
+                        : ""
+                    }`}
+                    style={
+                      revealingRowIndex === rowIndex
+                        ? {
+                            "--flip-delay": `${colIndex * FLIP_STAGGER_MS}ms`,
+                            "--flip-duration": `${FLIP_DURATION_MS}ms`,
+                          }
+                        : undefined
+                    }
+                  >
                     {cell.char || " "}
                   </div>
                 ))}
@@ -421,32 +558,70 @@ export default function EquadleGameClient({
             ))}
           </div>
 
-          <form className="guess-form" onSubmit={onSubmit}>
-            <input
-              value={guess}
-              onChange={(event) => setGuess(event.target.value.replace(/\s+/g, "").slice(0, equationLength))}
-              className="guess-input"
-              type="text"
-              autoCapitalize="off"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="e.g. 3*10-4=26"
-              aria-label="Guess equation"
-              disabled={gameState !== "playing"}
-            />
-            {gameState === "playing" ? (
-              <button className="guess-submit-btn" type="submit" disabled={gameState !== "playing"}>
-                Guess
-              </button>
-            ) : (
-              <button className="guess-submit-btn" type="button" onClick={() => setIsResultOpen(true)}>
-                Review result
-              </button>
-            )}
-          </form>
+          <div className="equadle-keyboard" aria-label="Equation keyboard">
+            {KEY_ROWS.map((row, rowIndex) => (
+              <div key={`kb-row-${rowIndex}`} className="equadle-keyboard-row">
+                {row.map((keyLabel) => (
+                  keyLabel === "Enter" ? (
+                    <button
+                      key={keyLabel}
+                      type="button"
+                      className="equadle-key wide enter-key"
+                      onClick={(event) => {
+                        if (!canSubmitGuess) return;
+                        void onSubmit(event);
+                      }}
+                      disabled={!canSubmitGuess}
+                    >
+                      Enter
+                    </button>
+                  ) : keyLabel === "Backspace" ? (
+                    <button
+                      key={keyLabel}
+                      type="button"
+                      className="equadle-key"
+                      onClick={() => removeGuessChar()}
+                      disabled={!canDeleteGuess}
+                      aria-label="Backspace"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="equadle-backspace-icon">
+                        <path
+                          d="M20 5H9L3 12l6 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="m10 9 6 6m0-6-6 6"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button
+                      key={keyLabel}
+                      type="button"
+                      className="equadle-key"
+                      data-state={keyStates.get(keyLabel) || "empty"}
+                      onClick={() => appendGuessChar(keyLabel)}
+                      disabled={gameState !== "playing"}
+                      aria-label={`Type ${keyLabel}`}
+                    >
+                      {keyLabel}
+                    </button>
+                  )
+                ))}
+              </div>
+            ))}
+          </div>
 
-          <p className="message" data-kind={gameState}>{message || "Green = exact, Yellow = present, Gray = absent."}</p>
+          {gameState === "playing" && message ? <p className="message" data-kind={gameState}>{message}</p> : null}
 
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
             <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>

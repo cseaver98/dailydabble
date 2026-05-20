@@ -26,16 +26,6 @@ const getNextGameCountdown = () => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
-const buildDirectionCopy = (direction) => {
-  if (direction === "earlier") {
-    return "Earlier";
-  }
-  if (direction === "later") {
-    return "Later";
-  }
-  return "Correct";
-};
-
 const getPerformanceLabel = (didWin, attemptsUsed, maxGuesses) => {
   if (!didWin) {
     return "Better luck next time.";
@@ -58,6 +48,13 @@ const getPerformanceLabel = (didWin, attemptsUsed, maxGuesses) => {
   return "Phew, close!";
 };
 
+const getHeatLabel = (distanceYears) => {
+  if (distanceYears <= 5) return "Very warm 🔥";
+  if (distanceYears <= 15) return "Warm ☀️";
+  if (distanceYears <= 40) return "Cold 🧊";
+  return "Very cold 🥶";
+};
+
 export default function YeardleGameClient({
   apiUrl,
   navLabel = "Yeardle",
@@ -78,6 +75,7 @@ export default function YeardleGameClient({
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const contextChipLabel = isArchiveView ? "Archive game" : "Today's game";
@@ -267,6 +265,7 @@ export default function YeardleGameClient({
       const attempt = {
         guessYear: numericGuess,
         direction: payload.direction,
+        distanceYears: Math.abs(Number(payload.answerYear) - numericGuess),
       };
 
       const nextAttempts = [...attempts, attempt];
@@ -313,7 +312,7 @@ export default function YeardleGameClient({
         return;
       }
 
-      setMessage(`Try ${payload.direction}.`);
+      setMessage("");
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess.");
     }
@@ -336,6 +335,19 @@ export default function YeardleGameClient({
 
   const effectiveAnswer = resolvedAnswer || "Unavailable";
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
+  const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
+  const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
+  const earlierAttempts = attempts.length > 1 ? attempts.slice(0, -1).reverse() : [];
+  const hintHeat = latestAttempt && latestAttempt.direction !== "exact"
+    ? getHeatLabel(Number(latestAttempt.distanceYears || 0))
+    : null;
+  const hintTemperature = latestAttempt && previousAttempt && latestAttempt.direction !== "exact"
+    ? Number(latestAttempt.distanceYears || 0) < Number(previousAttempt.distanceYears || 0)
+      ? "Warmer than your previous guess."
+      : Number(latestAttempt.distanceYears || 0) > Number(previousAttempt.distanceYears || 0)
+        ? "Colder than your previous guess."
+        : "Same distance as your previous guess."
+    : null;
   const shareText = [
     `Yeardle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
     `${attempts.length}/${maxGuesses} tries`,
@@ -439,21 +451,63 @@ export default function YeardleGameClient({
             {message || "Guess the year to get earlier/later feedback."}
           </p>
 
+          {gameState === "playing" && hintHeat ? (
+            <div className="temperature-hint-wrap">
+              <p className="temperature-hint-heat">{hintHeat}</p>
+              {hintTemperature ? <p className="temperature-hint-trend">{hintTemperature}</p> : null}
+            </div>
+          ) : null}
+
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
             <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
           ) : null}
 
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
-              <p className="guess-history-title">Guess History</p>
-              <ul className="guess-history-list">
-                {attempts.map((attempt, index) => (
-                  <li key={`${attempt.guessYear}-${index}`} className="guess-history-item">
-                    <span>{attempt.guessYear}</span>
-                    <strong>{buildDirectionCopy(attempt.direction)}</strong>
-                  </li>
-                ))}
-              </ul>
+              <button
+                type="button"
+                className="guess-history-toggle"
+                aria-expanded={isHistoryOpen}
+                aria-controls="yeardle-guess-history-panel"
+                onClick={() => setIsHistoryOpen((value) => !value)}
+              >
+                <span className="guess-history-title">Guess History</span>
+                <span className="guess-history-toggle-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M6 14 12 8l6 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+              {latestAttempt ? (
+                <div className="guess-history-latest">
+                  <span className="guess-history-guess">{latestAttempt.guessYear}</span>
+                  {latestAttempt.direction === "exact" ? (
+                    <strong className="guess-history-status-correct">Correct</strong>
+                  ) : (
+                    <strong className="guess-history-status-wrong">Wrong</strong>
+                  )}
+                </div>
+              ) : null}
+              {isHistoryOpen && earlierAttempts.length > 0 ? (
+                <ul id="yeardle-guess-history-panel" className="guess-history-list">
+                  {earlierAttempts.map((attempt, index) => (
+                    <li key={`${attempt.guessYear}-${index}`} className="guess-history-item">
+                      <span className="guess-history-guess">{attempt.guessYear}</span>
+                      {attempt.direction === "exact" ? (
+                        <strong className="guess-history-status-correct">Correct</strong>
+                      ) : (
+                        <strong className="guess-history-status-wrong">Wrong</strong>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 

@@ -78,6 +78,32 @@ export default function EquadleAdminTab() {
     }
   };
 
+  const generateRandomPuzzle = async () => {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/equadle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "generate-random",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Could not generate puzzle");
+      }
+      const created = payload?.item?.equation;
+      setMessage(created ? `Generated puzzle: ${created}` : "Generated puzzle added as pending review.");
+      await load({ page: 1, status: statusFilter });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Could not generate puzzle");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const patchStatus = async (id, status) => {
     if (status === "finished") {
       return;
@@ -139,11 +165,14 @@ export default function EquadleAdminTab() {
           <input
             value={newEquation}
             onChange={(event) => setNewEquation(event.target.value)}
-            placeholder="3*10-4=26"
+            placeholder="9+8*7=65"
             style={{ minWidth: 220, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
           />
           <button className="admin-btn primary" type="button" onClick={() => void addPuzzle()} disabled={busy}>
             Add Equation
+          </button>
+          <button className="admin-btn" type="button" onClick={() => void generateRandomPuzzle()} disabled={busy}>
+            Generate Random Equation
           </button>
         </div>
       </div>

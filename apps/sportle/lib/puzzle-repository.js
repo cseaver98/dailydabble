@@ -202,7 +202,7 @@ export const listSportleArchive = async (limit = 120) => {
   const { data, error } = await supabase
     .from("daily_schedule")
     .select("puzzle_date")
-    .lte("puzzle_date", today)
+    .lt("puzzle_date", today)
     .order("puzzle_date", { ascending: false })
     .limit(limit);
 

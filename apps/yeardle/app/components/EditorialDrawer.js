@@ -35,11 +35,7 @@ export default function EditorialDrawer({ editorialContext }) {
     };
   }, [isOpen]);
 
-  const eventTitle = String(editorialContext?.title || "").trim();
   const description = String(editorialContext?.description || "").trim();
-  const keyFigures = Array.isArray(editorialContext?.keyFigures)
-    ? editorialContext.keyFigures.map((value) => String(value || "").trim()).filter(Boolean)
-    : [];
 
   return (
     <div ref={containerRef} className="editorial-drawer">
@@ -72,13 +68,7 @@ export default function EditorialDrawer({ editorialContext }) {
             </button>
           </div>
           <div className="editorial-drawer-content">
-            {eventTitle ? <p><span className="editorial-field-label">Event</span> {eventTitle}</p> : null}
-            {description ? <p><span className="editorial-field-label">Description</span> {description}</p> : null}
-            {keyFigures.length ? (
-              <p>
-                <span className="editorial-field-label">Key figures</span> {keyFigures.join(", ")}
-              </p>
-            ) : null}
+            {description ? <p><span className="editorial-field-label">Description:</span> {description}</p> : null}
           </div>
         </div>
       ) : null}

@@ -42,6 +42,11 @@ const mapPuzzle = (scheduleRow, movieRow) => {
   return {
     puzzleId: movieRow.id,
     puzzleDate: scheduleRow.puzzle_date,
+    editorialContext: {
+      summary: movieRow.summary || null,
+      director: movieRow.director || null,
+      leadActors: Array.isArray(movieRow.lead_actors) ? movieRow.lead_actors.filter(Boolean).slice(0, 8) : [],
+    },
     maxGuesses: 5,
     stillImages,
   };
@@ -50,6 +55,7 @@ const mapPuzzle = (scheduleRow, movieRow) => {
 const mapAnswerDetails = (movieRow) => ({
   title: movieRow.title || null,
   releaseYear: Number.isFinite(movieRow.release_year) ? Number(movieRow.release_year) : null,
+  director: movieRow.director || null,
   summary: movieRow.summary || null,
   leadActors: Array.isArray(movieRow.lead_actors) ? movieRow.lead_actors.filter(Boolean).slice(0, 8) : [],
 });
@@ -73,7 +79,7 @@ const getPuzzleByScheduleDate = async (date) => {
 
   const { data: movieRow, error: movieError } = await supabase
     .from("movies")
-    .select("id,title,still_urls")
+    .select("id,title,still_urls,director,summary,lead_actors")
     .eq("id", scheduleRow.movie_id)
     .maybeSingle();
 
@@ -93,7 +99,7 @@ const autoScheduleApprovedPuzzleForDate = async (date) => {
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("movies")
-    .select("id,title,still_urls,reviewed_at,created_at")
+    .select("id,title,still_urls,director,summary,lead_actors,reviewed_at,created_at")
     .eq("status", "approved")
     .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
@@ -177,7 +183,7 @@ export const listMoviedleArchive = async (limit = 120) => {
   const { data, error } = await supabase
     .from("daily_schedule")
     .select("puzzle_date")
-    .lte("puzzle_date", today)
+    .lt("puzzle_date", today)
     .order("puzzle_date", { ascending: false })
     .limit(limit);
 
@@ -194,7 +200,7 @@ export const submitMovieGuess = async (puzzleId, guessTitle, guessCount) => {
 
   const { data: movieRow, error } = await supabase
     .from("movies")
-    .select("id,title,title_normalized,aliases_normalized,release_year,summary,lead_actors")
+    .select("id,title,title_normalized,aliases_normalized,release_year,director,summary,lead_actors")
     .eq("id", puzzleId)
     .maybeSingle();
 

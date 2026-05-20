@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
+import EditorialDrawer from "./EditorialDrawer";
 
 const normalizeGuess = (value) =>
   value
@@ -274,7 +275,9 @@ export default function MoviedleGameClient({
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle.maxGuesses) : 5;
   const stills = Array.isArray(puzzle?.stillImages) ? puzzle.stillImages : [];
-  const revealedStillCount = Math.max(1, Math.min(stills.length || 1, 1 + attempts.length));
+  const revealedStillCount = gameState === "playing"
+    ? Math.max(1, Math.min(stills.length || 1, 1 + attempts.length))
+    : Math.max(1, stills.length || 1);
   const visibleStills = stills.slice(0, revealedStillCount);
   const boundedStillIndex = Math.min(Math.max(selectedStillIndex, 0), Math.max(visibleStills.length - 1, 0));
   const visibleStill = visibleStills[boundedStillIndex] || null;
@@ -283,8 +286,12 @@ export default function MoviedleGameClient({
   const earlierAttempts = attempts.slice(0, -1).reverse();
 
   useEffect(() => {
-    setSelectedStillIndex(Math.max(0, revealedStillCount - 1));
-  }, [revealedStillCount, puzzle?.puzzleId]);
+    if (gameState === "playing") {
+      setSelectedStillIndex(Math.max(0, revealedStillCount - 1));
+      return;
+    }
+    setSelectedStillIndex(0);
+  }, [gameState, revealedStillCount, puzzle?.puzzleId]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -493,6 +500,8 @@ export default function MoviedleGameClient({
             ) : null}
           </figure>
 
+          <EditorialDrawer editorialContext={puzzle?.editorialContext} />
+
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
               value={guess}
@@ -645,13 +654,16 @@ export default function MoviedleGameClient({
             {Number.isFinite(revealedDetails?.releaseYear) ? (
               <p className="result-modal-copy"><strong>Year:</strong> {revealedDetails.releaseYear}</p>
             ) : null}
+            {revealedDetails?.director ? (
+              <p className="result-modal-copy"><strong>Director:</strong> {revealedDetails.director}</p>
+            ) : null}
             {Array.isArray(revealedDetails?.leadActors) && revealedDetails.leadActors.length > 0 ? (
               <p className="result-modal-copy">
                 <strong>Lead actors:</strong> {revealedDetails.leadActors.join(", ")}
               </p>
             ) : null}
             {revealedDetails?.summary ? (
-              <p className="result-modal-copy">{revealedDetails.summary}</p>
+              <p className="result-modal-copy"><strong>Summary:</strong> {revealedDetails.summary}</p>
             ) : null}
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>

@@ -339,7 +339,8 @@ main.container {
 
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 88px));
+  justify-content: start;
   gap: 0.55rem;
 }
 
@@ -349,9 +350,13 @@ main.container {
   border-radius: 0.9rem;
   background: var(--surface-low);
   border: 1px solid var(--outline-soft);
-  padding: 0.75rem 0.8rem;
+  padding: 0.45rem;
   display: grid;
-  gap: 0.18rem;
+  aspect-ratio: 1 / 1;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
 }
 
 .archive-tile:hover {
@@ -360,11 +365,15 @@ main.container {
 
 .archive-tile-title {
   font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .archive-tile-date {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .archive-pagination {
@@ -385,6 +394,6 @@ main.container {
     grid-template-columns: 1fr;
   }
   .archive-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 88px));
   }
 }
