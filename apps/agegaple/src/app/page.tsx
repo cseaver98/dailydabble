@@ -29,7 +29,6 @@ type StoredProgress = {
   puzzleId: string;
   guess: string;
   attempts: GuessAttempt[];
-  selectedImageIndex: number;
 };
 
 const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
@@ -148,7 +147,6 @@ export default function Home() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isDarkMode = false;
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const hasHydratedProgressRef = useRef(false);
@@ -182,14 +180,6 @@ export default function Home() {
       return;
     }
 
-    setSelectedImageIndex(0);
-  }, [puzzle]);
-
-  useEffect(() => {
-    if (!puzzle) {
-      return;
-    }
-
     hasHydratedProgressRef.current = false;
     const storageKey = `${completionStoragePrefix}${puzzle.puzzleId}`;
     const raw = window.localStorage.getItem(storageKey);
@@ -201,9 +191,6 @@ export default function Home() {
           if (parsedProgress.puzzleId === puzzle.puzzleId) {
             setGuess(parsedProgress.guess || "10");
             setAttempts(Array.isArray(parsedProgress.attempts) ? parsedProgress.attempts : []);
-            setSelectedImageIndex(
-              Number.isFinite(parsedProgress.selectedImageIndex) ? parsedProgress.selectedImageIndex : 0,
-            );
           }
         } catch {
           window.localStorage.removeItem(`${progressStoragePrefix}${puzzle.puzzleId}`);
@@ -211,7 +198,6 @@ export default function Home() {
       } else {
         setGuess("10");
         setAttempts([]);
-        setSelectedImageIndex(0);
       }
       setIsCompleted(false);
       setResult(null);
@@ -281,10 +267,9 @@ export default function Home() {
       puzzleId: puzzle.puzzleId,
       guess,
       attempts,
-      selectedImageIndex,
     };
     window.localStorage.setItem(progressKey, JSON.stringify(payload));
-  }, [attempts, guess, isCompleted, puzzle, selectedImageIndex]);
+  }, [attempts, guess, isCompleted, puzzle]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -295,15 +280,6 @@ export default function Home() {
       if (!puzzle) {
         return;
       }
-      const allImages = puzzle.galleryImages.length
-        ? puzzle.galleryImages
-        : [{ imageUrl: puzzle.imageUrl, imageAlt: puzzle.imageAlt }];
-      const wrongCount = attempts.filter((attempt) => attempt.direction !== "exact").length;
-      const revealedCount = isCompleted ? allImages.length : Math.min(allImages.length, Math.max(1, 1 + wrongCount));
-      if (revealedCount < 2) {
-        return;
-      }
-
       const target = event.target as HTMLElement | null;
       const isTypingTarget =
         target?.tagName === "INPUT" ||
@@ -314,16 +290,6 @@ export default function Home() {
         return;
       }
 
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        setSelectedImageIndex((current) => (current + 1) % revealedCount);
-      }
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        setSelectedImageIndex((current) =>
-          (current - 1 + revealedCount) % revealedCount,
-        );
-      }
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -438,9 +404,6 @@ export default function Home() {
       const didWin = attempt.direction === "exact";
       const isFinalAttempt = nextAttempts.length >= maxGuesses;
       if (!didWin && !isFinalAttempt) {
-        const nextWrongCount = nextAttempts.filter((entry) => entry.direction !== "exact").length;
-        const nextRevealedCount = Math.min(galleryImages.length, Math.max(1, 1 + nextWrongCount));
-        setSelectedImageIndex(Math.max(0, nextRevealedCount - 1));
         return;
       }
 
@@ -462,20 +425,7 @@ export default function Home() {
     }
   };
 
-  const galleryImages = puzzle?.galleryImages.length
-    ? puzzle.galleryImages
-    : puzzle
-      ? [{ imageUrl: puzzle.imageUrl, imageAlt: puzzle.imageAlt }]
-      : [];
-  const wrongAttemptCount = attempts.filter((attempt) => attempt.direction !== "exact").length;
-  const revealedPhotoCount = isCompleted
-    ? galleryImages.length
-    : Math.min(galleryImages.length, Math.max(1, 1 + wrongAttemptCount));
-  const visibleGalleryImages = galleryImages.slice(0, revealedPhotoCount);
-  const activeImage = visibleGalleryImages[selectedImageIndex] ?? visibleGalleryImages[0];
-  const primaryImage = galleryImages[0];
-  const canNavigateGallery = visibleGalleryImages.length > 1;
-  const todayDateLabel = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const activeImage = puzzle ? { imageUrl: puzzle.imageUrl, imageAlt: puzzle.imageAlt } : null;
   const lastAttempt = attempts[attempts.length - 1];
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const earlierAttempts = attempts.slice(0, -1).reverse();
@@ -537,19 +487,9 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    if (!visibleGalleryImages.length) {
-      return;
-    }
-    if (selectedImageIndex >= visibleGalleryImages.length) {
-      setSelectedImageIndex(visibleGalleryImages.length - 1);
-    }
-  }, [selectedImageIndex, visibleGalleryImages.length]);
-
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
   const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
-  const imageFrameClass = "relative overflow-hidden rounded-[2rem] border border-[color:var(--surface-container)] bg-[color:var(--surface-container-high)]";
 
   return (
     <main className={`${mainClass} flex flex-col`}>
@@ -588,124 +528,27 @@ export default function Home() {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
-              <div className="stat-chip">
-                <span>Today's game</span>
-                <span className="stat-chip-value">{puzzle.puzzleDate || todayDateLabel}</span>
-              </div>
-              <div className="stat-chip">
-                <span>Attempts</span>
-                <span className="stat-chip-value">
-                  {attempts.length}
-                  <span className="stat-chip-separator"> / {maxGuesses}</span>
-                </span>
-              </div>
+            <div className="agegaple-meta-row">
+              <span className="chip">TODAY&apos;S GAME</span>
+              <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
             </div>
-            <h2 className="px-1 font-headline text-[1.28rem] font-extrabold tracking-tight text-[color:var(--foreground)]">
+            <h2 className="puzzle-title">
               {title}
             </h2>
-            <div className={`${imageFrameClass} flex h-[min(48vh,360px)] min-h-[170px] items-center justify-center p-2`}>
+            <div className="agegaple-image-frame h-[min(48vh,360px)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                className="select-none"
+                className="agegaple-image select-none"
                 src={activeImage?.imageUrl}
                 alt={activeImage?.imageAlt}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  width: "auto",
-                  height: "auto",
-                  objectFit: "contain",
-                  objectPosition: "center",
-                }}
               />
-              {canNavigateGallery && (
-                <>
-                  <button
-                    type="button"
-                    className="absolute left-3 top-1/2 z-10 flex h-[2.2rem] w-[2.2rem] -translate-y-1/2 items-center justify-center rounded-full border-0 bg-white/92 text-[1.08rem] leading-none text-[color:var(--foreground)] shadow-[0_10px_18px_rgba(44,47,49,0.16)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-                    onClick={() => setSelectedImageIndex((current) => Math.max(0, current - 1))}
-                    aria-label="Previous photo"
-                    disabled={selectedImageIndex <= 0}
-                  >
-                    ←
-                  </button>
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 z-10 flex h-[2.2rem] w-[2.2rem] -translate-y-1/2 items-center justify-center rounded-full border-0 bg-white/92 text-[1.08rem] leading-none text-[color:var(--foreground)] shadow-[0_10px_18px_rgba(44,47,49,0.16)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-                    onClick={() =>
-                      setSelectedImageIndex((current) => Math.min(visibleGalleryImages.length - 1, current + 1))
-                    }
-                    aria-label="Next photo"
-                    disabled={selectedImageIndex >= visibleGalleryImages.length - 1}
-                  >
-                    →
-                  </button>
-                </>
-              )}
             </div>
-            {galleryImages.length > 1 ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
-                <div className="rounded-2xl border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] px-2 py-2 sm:px-3">
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    {galleryImages.map((image, index) => {
-                      const isLocked = index >= revealedPhotoCount;
-                      return (
-                        <button
-                          key={`${image.imageUrl}-${index}`}
-                          type="button"
-                          className={`relative h-10 w-10 overflow-hidden rounded-full border bg-[color:var(--surface-container-low)] sm:h-11 sm:w-11 ${
-                            !isLocked && index === selectedImageIndex
-                              ? "border-[color:var(--primary)] ring-2 ring-[color:var(--primary-container)]"
-                              : isDarkMode
-                                ? "border-zinc-700 bg-zinc-800"
-                                : "border-[color:var(--surface-container)]"
-                          }`}
-                          onClick={() => {
-                            if (isLocked) return;
-                            setSelectedImageIndex(index);
-                          }}
-                          aria-label={isLocked ? `Photo ${index + 1} locked` : `View photo ${index + 1}`}
-                          disabled={isLocked}
-                        >
-                          {isLocked ? (
-                            <div className={`flex h-full w-full items-center justify-center ${
-                              isDarkMode ? "bg-zinc-800 text-zinc-300" : "bg-[color:var(--surface-container)] text-[color:var(--outline)]"
-                            }`}>
-                              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-                                <path d="M7.75 10V7.6a4.25 4.25 0 118.5 0V10h.6A2.15 2.15 0 0119 12.15v7.1A2.15 2.15 0 0116.85 21h-9.7A2.15 2.15 0 015 19.25v-7.1A2.15 2.15 0 017.15 10h.6zm1.7 0h5.1V7.6a2.55 2.55 0 10-5.1 0V10z" />
-                              </svg>
-                            </div>
-                          ) : (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={image.imageUrl}
-                                alt={image.imageAlt}
-                                className="h-full w-full object-cover object-top"
-                              />
-                            </>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <EditorialDrawer
-                  context={puzzle.editorialContext}
-                  personAName={puzzle.personAName}
-                  personBName={puzzle.personBName}
-                  isDarkMode={false}
-                />
-              </div>
-            ) : (
-              <EditorialDrawer
-                context={puzzle.editorialContext}
-                personAName={puzzle.personAName}
-                personBName={puzzle.personBName}
-                isDarkMode={false}
-              />
-            )}
+            <EditorialDrawer
+              context={puzzle.editorialContext}
+              personAName={puzzle.personAName}
+              personBName={puzzle.personBName}
+              isDarkMode={false}
+            />
             <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={onSubmit}>
               <label className={`flex-1 text-sm font-semibold ${isDarkMode ? "text-zinc-300" : "text-[color:var(--foreground)]"}`}>
                 Your guess (years)
@@ -781,17 +624,17 @@ export default function Home() {
               </div>
             )}
             {attempts.length > 0 && latestAttempt && (
-              <div className="agegaple-guess-history-wrap">
+              <div className="guess-history-wrap">
                 <button
                   type="button"
-                  className="agegaple-guess-history-toggle"
+                  className="guess-history-toggle"
                   aria-expanded={isHistoryOpen}
                   aria-controls="agegaple-guess-history-panel"
                   onClick={() => setIsHistoryOpen((current) => !current)}
                 >
-                  <span className="agegaple-guess-history-title">Guess history</span>
+                  <span className="guess-history-title">Guess history</span>
                   <span
-                    className={`agegaple-guess-history-toggle-icon ${isHistoryOpen ? "rotate-180" : ""}`}
+                    className={`guess-history-toggle-icon ${isHistoryOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -799,23 +642,23 @@ export default function Home() {
                     </svg>
                   </span>
                 </button>
-                <div className="agegaple-guess-history-latest">
-                  <span className="agegaple-guess-history-guess">{latestAttempt.guessYears} years</span>
+                <div className="guess-history-latest">
+                  <span className="guess-history-guess">{latestAttempt.guessYears} years</span>
                   {latestAttempt.direction === "exact" ? (
-                    <strong className="agegaple-guess-history-status-correct">Correct</strong>
+                    <strong className="guess-history-status-correct">Correct</strong>
                   ) : (
-                    <strong className="agegaple-guess-history-status-wrong">Wrong</strong>
+                    <strong className="guess-history-status-wrong">Wrong</strong>
                   )}
                 </div>
                 {isHistoryOpen && earlierAttempts.length > 0 && (
-                  <ul id="agegaple-guess-history-panel" className="agegaple-guess-history-list">
+                  <ul id="agegaple-guess-history-panel" className="guess-history-list">
                     {earlierAttempts.map((attempt, index) => (
-                      <li key={`${attempt.guessYears}-${index}`} className="agegaple-guess-history-item">
-                        <span className="agegaple-guess-history-guess">{attempt.guessYears} years</span>
+                      <li key={`${attempt.guessYears}-${index}`} className="guess-history-item">
+                        <span className="guess-history-guess">{attempt.guessYears} years</span>
                         {attempt.direction === "exact" ? (
-                          <strong className="agegaple-guess-history-status-correct">Correct</strong>
+                          <strong className="guess-history-status-correct">Correct</strong>
                         ) : (
-                          <strong className="agegaple-guess-history-status-wrong">Wrong</strong>
+                          <strong className="guess-history-status-wrong">Wrong</strong>
                         )}
                       </li>
                     ))}
@@ -858,7 +701,7 @@ export default function Home() {
               type="button"
               onClick={() => setIsResultOpen(false)}
               aria-label="Close result dialog"
-              className="agegaple-result-modal-close"
+              className="result-modal-close"
               style={{
                 position: "absolute",
                 top: "0.55rem",
@@ -885,12 +728,12 @@ export default function Home() {
                 </span>
               </p>
               <p className={mutedTextClass}>{performanceLabel}</p>
-              {primaryImage && (
+              {activeImage && (
                 <div className="mb-2 h-48 overflow-hidden rounded-lg border border-zinc-600/40 bg-zinc-950/30 sm:h-52">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={primaryImage.imageUrl}
-                    alt={primaryImage.imageAlt}
+                    src={activeImage.imageUrl}
+                    alt={activeImage.imageAlt}
                     className="h-full w-full object-contain object-top"
                   />
                 </div>

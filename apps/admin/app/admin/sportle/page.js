@@ -10,7 +10,6 @@ const sportOptions = [
   { value: "nhl", label: "NHL" },
 ];
 
-const batchSizeOptions = [1, 3, 5, 7, 10, 14];
 const statuses = ["pending_review", "approved", "finished"];
 const filterStatuses = ["pending_review", "approved", "today", "finished"];
 const candidatePageSize = 10;
@@ -28,7 +27,8 @@ export default function SportleAdminTab() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [seedBusy, setSeedBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [uploadBusyField, setUploadBusyField] = useState("");
 
   const [statusFilter, setStatusFilter] = useState("pending_review");
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,11 +36,12 @@ export default function SportleAdminTab() {
 
   const [newSport, setNewSport] = useState("nba");
   const [newFullName, setNewFullName] = useState("");
-  const [seedSport, setSeedSport] = useState("nba");
-  const [seedBatchSize, setSeedBatchSize] = useState(5);
+  const [importSport, setImportSport] = useState("nba");
+  const [importWikipediaUrl, setImportWikipediaUrl] = useState("");
 
   const [detailsAthleteId, setDetailsAthleteId] = useState(null);
   const [detailsForm, setDetailsForm] = useState(null);
+  const [previewItem, setPreviewItem] = useState(null);
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -101,30 +102,31 @@ export default function SportleAdminTab() {
     }
   };
 
-  const runSeed = async () => {
-    setSeedBusy(true);
+  const importFromWikipedia = async () => {
+    setImportBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch("/api/admin/sportle/seed", {
+      const response = await fetch("/api/admin/sportle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sport: seedSport,
-          batchSize: seedBatchSize,
+          action: "import-wikipedia-url",
+          sport: importSport,
+          wikipediaUrl: importWikipediaUrl,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.details || payload.error || "Seed failed");
+        throw new Error(payload.error || "Import failed");
       }
-      const summary = payload?.summary;
-      setMessage(summary ? `Seeded ${summary.insertedCount} candidates.` : "Seed completed.");
+      setImportWikipediaUrl("");
+      setMessage("Imported candidate from Wikipedia.");
       await load({ page: 1, status: statusFilter });
-    } catch (seedError) {
-      setError(seedError instanceof Error ? seedError.message : "Could not run seed.");
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : "Could not import candidate.");
     } finally {
-      setSeedBusy(false);
+      setImportBusy(false);
     }
   };
 
@@ -174,15 +176,19 @@ export default function SportleAdminTab() {
       fullName: item.full_name || "",
       aliases: Array.isArray(item.aliases) ? item.aliases.join(", ") : "",
       teamName: item.team_name || "",
+      teamLogoUrl: item.team_logo_url || "",
       yearsWithTeam: item.years_with_team || "",
       position: item.position || "",
       keyStat1: item.key_stat_1 || "",
       keyStat2: item.key_stat_2 || "",
-      finalClue: item.final_clue || "",
       wikipediaUrl: item.wikipedia_url || "",
       headshotUrl: item.headshot_url || "",
       isActive: item.is_active !== false,
     });
+  };
+
+  const openPreview = (item) => {
+    setPreviewItem(item);
   };
 
   const saveDetails = async () => {
@@ -202,11 +208,11 @@ export default function SportleAdminTab() {
           fullName: detailsForm.fullName,
           aliases: parseAliases(detailsForm.aliases),
           teamName: detailsForm.teamName,
+          teamLogoUrl: detailsForm.teamLogoUrl,
           yearsWithTeam: detailsForm.yearsWithTeam,
           position: detailsForm.position,
           keyStat1: detailsForm.keyStat1,
           keyStat2: detailsForm.keyStat2,
-          finalClue: detailsForm.finalClue,
           wikipediaUrl: detailsForm.wikipediaUrl,
           headshotUrl: detailsForm.headshotUrl,
           isActive: detailsForm.isActive,
@@ -223,6 +229,36 @@ export default function SportleAdminTab() {
       setError(saveError instanceof Error ? saveError.message : "Could not save athlete details");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const uploadImageForField = async (fieldName, file) => {
+    if (!file || !detailsForm) {
+      return;
+    }
+
+    setError("");
+    setUploadBusyField(fieldName);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/admin/images/upload", {
+        method: "POST",
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error || "Could not upload image.");
+      }
+
+      setDetailsForm((current) => ({
+        ...current,
+        [fieldName]: payload.url,
+      }));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
+    } finally {
+      setUploadBusyField("");
     }
   };
 
@@ -244,20 +280,21 @@ export default function SportleAdminTab() {
 
       <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem", display: "grid", gap: ".7rem" }}>
         <div>
-          <p style={{ margin: 0, fontWeight: 900 }}>Wikipedia seed</p>
+          <p style={{ margin: 0, fontWeight: 900 }}>Import from Wikipedia URL</p>
           <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap", alignItems: "center" }}>
-            <select value={seedSport} onChange={(event) => setSeedSport(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
+            <select value={importSport} onChange={(event) => setImportSport(event.target.value)} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
               {sportOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
-            <select value={seedBatchSize} onChange={(event) => setSeedBatchSize(Number(event.target.value))} style={{ padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}>
-              {batchSizeOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={seedBusy}>
-              {seedBusy ? "Seeding..." : "Seed from Wikipedia"}
+            <input
+              value={importWikipediaUrl}
+              onChange={(event) => setImportWikipediaUrl(event.target.value)}
+              placeholder="https://en.wikipedia.org/wiki/LeBron_James"
+              style={{ minWidth: 360, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
+            />
+            <button className="admin-btn primary" type="button" onClick={() => void importFromWikipedia()} disabled={importBusy}>
+              {importBusy ? "Importing..." : "Import Athlete"}
             </button>
           </div>
         </div>
@@ -317,6 +354,7 @@ export default function SportleAdminTab() {
             ) : null}
 
             <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
+              <button className="admin-btn" type="button" onClick={() => openPreview(item)}>Preview</button>
               <button className="admin-btn" type="button" onClick={() => openDetails(item)}>Edit details</button>
               {statuses.map((status) => {
                 const isSelected = status === "finished" ? item.isFinished : item.status === status;
@@ -359,7 +397,63 @@ export default function SportleAdminTab() {
       {detailsAthleteId && detailsForm ? (
         <div onClick={() => { setDetailsAthleteId(null); setDetailsForm(null); }} style={{ position: "fixed", inset: 0, zIndex: 125, background: "rgba(0,0,0,0.65)", display: "grid", placeItems: "center", padding: "1rem" }}>
           <div onClick={(event) => event.stopPropagation()} style={{ width: "min(900px, 96vw)", maxHeight: "92vh", overflow: "auto", borderRadius: 16, border: "1px solid #d8dce2", background: "#fff", padding: ".9rem" }}>
-            <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+            <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>Hint Tiles Preview</p>
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Team Hint</p>
+                <input value={detailsForm.teamName} onChange={(event) => setDetailsForm((current) => ({ ...current, teamName: event.target.value }))} placeholder="Team name" style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+                <input value={detailsForm.teamLogoUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, teamLogoUrl: event.target.value }))} placeholder="Team logo URL" style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/avif"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    void uploadImageForField("teamLogoUrl", file);
+                    event.target.value = "";
+                  }}
+                  disabled={uploadBusyField === "teamLogoUrl"}
+                  style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".35rem .5rem", background: "#fff" }}
+                />
+              </article>
+
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Years With Team</p>
+                <textarea rows={4} value={detailsForm.yearsWithTeam} onChange={(event) => setDetailsForm((current) => ({ ...current, yearsWithTeam: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+              </article>
+
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Position</p>
+                <textarea rows={4} value={detailsForm.position} onChange={(event) => setDetailsForm((current) => ({ ...current, position: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+              </article>
+
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Key Stat #1</p>
+                <textarea rows={4} value={detailsForm.keyStat1} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat1: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+              </article>
+
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Key Stat #2 / Accolade</p>
+                <textarea rows={4} value={detailsForm.keyStat2} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat2: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+              </article>
+
+              <article style={{ border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".55rem", minHeight: 170, display: "grid", gap: ".35rem", alignContent: "start" }}>
+                <p style={{ margin: 0, fontSize: ".76rem", fontWeight: 800, color: "#8a4a06", textTransform: "uppercase", letterSpacing: ".06em" }}>Headshot Hint</p>
+                <input value={detailsForm.headshotUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, headshotUrl: event.target.value }))} placeholder="Headshot URL" style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/avif"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    void uploadImageForField("headshotUrl", file);
+                    event.target.value = "";
+                  }}
+                  disabled={uploadBusyField === "headshotUrl"}
+                  style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".35rem .5rem", background: "#fff" }}
+                />
+              </article>
+            </div>
+
+            <div style={{ marginTop: ".65rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
               <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
                 Sport
                 <select value={detailsForm.sport} onChange={(event) => setDetailsForm((current) => ({ ...current, sport: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}>
@@ -380,46 +474,8 @@ export default function SportleAdminTab() {
                 <input value={detailsForm.aliases} onChange={(event) => setDetailsForm((current) => ({ ...current, aliases: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
               </label>
               <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Team name
-                <input value={detailsForm.teamName} onChange={(event) => setDetailsForm((current) => ({ ...current, teamName: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-            </div>
-
-            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Position
-                <input value={detailsForm.position} onChange={(event) => setDetailsForm((current) => ({ ...current, position: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Years with team
-                <input value={detailsForm.yearsWithTeam} onChange={(event) => setDetailsForm((current) => ({ ...current, yearsWithTeam: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-            </div>
-
-            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Key stat #1
-                <textarea rows={2} value={detailsForm.keyStat1} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat1: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Key stat #2
-                <textarea rows={2} value={detailsForm.keyStat2} onChange={(event) => setDetailsForm((current) => ({ ...current, keyStat2: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-            </div>
-
-            <label style={{ marginTop: ".55rem", display: "grid", gap: ".28rem", fontWeight: 700 }}>
-              Final clue
-              <textarea rows={2} value={detailsForm.finalClue} onChange={(event) => setDetailsForm((current) => ({ ...current, finalClue: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-            </label>
-
-            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
                 Wikipedia URL
                 <input value={detailsForm.wikipediaUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, wikipediaUrl: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
-              </label>
-              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Headshot URL
-                <input value={detailsForm.headshotUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, headshotUrl: event.target.value }))} style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }} />
               </label>
             </div>
 
@@ -431,6 +487,64 @@ export default function SportleAdminTab() {
             <div style={{ marginTop: ".8rem", display: "flex", justifyContent: "flex-end", gap: ".45rem" }}>
               <button className="admin-btn" type="button" onClick={() => { setDetailsAthleteId(null); setDetailsForm(null); }}>Cancel</button>
               <button className="admin-btn primary" type="button" onClick={() => void saveDetails()} disabled={busy}>Save details</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewItem ? (
+        <div onClick={() => setPreviewItem(null)} style={{ position: "fixed", inset: 0, zIndex: 126, background: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center", padding: "1rem" }}>
+          <div onClick={(event) => event.stopPropagation()} style={{ width: "min(840px, 96vw)", maxHeight: "92vh", overflow: "auto", borderRadius: 16, border: "1px solid #d8dce2", background: "#f4f7fb", padding: "1rem" }}>
+            <div style={{ background: "#fff", borderRadius: "1.15rem", boxShadow: "0 20px 40px rgba(36, 48, 64, 0.07)", padding: "1rem", display: "grid", gap: ".85rem" }}>
+              <div style={{ display: "grid", gap: ".5rem", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 999, background: "#fff1e0", color: "#a45508", fontWeight: 800, fontSize: ".76rem", textTransform: "uppercase", padding: ".45rem .62rem", minHeight: "2rem" }}>Preview game layout</span>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 999, background: "#fff1e0", color: "#a45508", fontWeight: 800, fontSize: ".76rem", textTransform: "uppercase", padding: ".45rem .62rem", minHeight: "2rem" }}>All hints visible</span>
+              </div>
+
+              <div style={{ borderTop: "1px solid rgba(137, 154, 177, 0.32)", paddingTop: ".75rem" }}>
+                <p style={{ margin: "0 0 .45rem", fontFamily: "\"Plus Jakarta Sans\", \"Manrope\", sans-serif", fontSize: ".8rem", letterSpacing: ".08em", textTransform: "uppercase", color: "#4d5b70" }}>Clues</p>
+                <ul className="sportle-preview-grid" style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gridAutoRows: "8.75rem", gap: ".45rem" }}>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", display: "grid", placeItems: "center", textAlign: "center" }}>
+                    {previewItem.team_logo_url ? (
+                      <div style={{ display: "flex", width: "100%", height: "100%", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: ".35rem" }}>
+                        <img src={previewItem.team_logo_url} alt={previewItem.team_name || "Team logo"} style={{ maxWidth: "100%", maxHeight: "88px", objectFit: "contain", borderRadius: 4 }} />
+                        <span>{previewItem.team_name || "Team not revealed"}</span>
+                      </div>
+                    ) : (
+                      <span>{previewItem.team_name || "Team not revealed"}</span>
+                    )}
+                  </li>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", position: "relative", display: "grid", placeItems: "center", textAlign: "center" }}>
+                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Years played for that team</span>
+                    <span>{previewItem.years_with_team || "Unknown"}</span>
+                  </li>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", position: "relative", display: "grid", placeItems: "center", textAlign: "center" }}>
+                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Position</span>
+                    <span>{previewItem.position || "Unknown"}</span>
+                  </li>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", position: "relative", display: "grid", placeItems: "center", textAlign: "center" }}>
+                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Key stat #1</span>
+                    <span>{previewItem.key_stat_1 || "Manual stat clue pending"}</span>
+                  </li>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", position: "relative", display: "grid", placeItems: "center", textAlign: "center" }}>
+                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Key stat #2 / accolade</span>
+                    <span>{previewItem.key_stat_2 || "Manual accolade clue pending"}</span>
+                  </li>
+                  <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", display: "grid", placeItems: "center", textAlign: "center", overflow: "hidden" }}>
+                    {previewItem.headshot_url ? (
+                      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                        <img src={previewItem.headshot_url} alt={previewItem.full_name || "Athlete headshot"} style={{ display: "block", width: "auto", height: "auto", maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 8 }} />
+                      </div>
+                    ) : (
+                      <span>Headshot not set</span>
+                    )}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ marginTop: ".75rem", display: "flex", justifyContent: "flex-end" }}>
+              <button className="admin-btn" type="button" onClick={() => setPreviewItem(null)}>Close preview</button>
             </div>
           </div>
         </div>

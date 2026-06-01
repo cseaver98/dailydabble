@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "pipeline:build": "node scripts/build-doodle-pipeline.mjs"
+    "pipeline:build": "node scripts/build-doodle-pipeline.mjs",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dailydabble/ui": "0.1.0",
@@ -14,5 +16,11 @@
     "next": "16.1.7",
     "react": "19.2.3",
     "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "16.1.7",
+    "typescript": "^5.9.3",
+    "@types/node": "^24.10.1"
   }
 }

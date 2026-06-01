@@ -139,6 +139,10 @@ a {
   background: white;
 }
 
+.sportle-preview-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 960px) {
   .admin-shell {
     grid-template-columns: 1fr;
@@ -151,5 +155,11 @@ a {
 
   .admin-nav {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .sportle-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

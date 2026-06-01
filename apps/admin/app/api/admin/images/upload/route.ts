@@ -26,12 +26,12 @@ export async function POST(request: Request) {
     }
 
     const mime = String(file.type || "").toLowerCase();
-    const allowedMimes = new Set(["image/jpeg", "image/jpg", "image/png"]);
+    const allowedMimes = new Set(["image/jpeg", "image/jpg", "image/png", "image/avif"]);
     if (!allowedMimes.has(mime)) {
-      return NextResponse.json({ error: "Only JPG and PNG files are supported." }, { status: 400 });
+      return NextResponse.json({ error: "Only JPG, PNG, and AVIF files are supported." }, { status: 400 });
     }
 
-    const ext = mime.includes("png") ? "png" : "jpg";
+    const ext = mime.includes("png") ? "png" : mime.includes("avif") ? "avif" : "jpg";
     const filePath = `couples/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
     const supabase = getSupabaseAgegapleAdmin();

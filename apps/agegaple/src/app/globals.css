@@ -34,6 +34,24 @@ body {
   font-family: var(--font-manrope), sans-serif;
 }
 
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
 .font-headline {
   font-family: var(--font-plus-jakarta), sans-serif;
 }
@@ -52,13 +70,19 @@ body {
   box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
 }
 
-.stat-chip {
+.agegaple-meta-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary-container) 58%, white);
+  background: color-mix(in srgb, var(--primary-container) 28%, white);
   color: var(--primary-dim);
   font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
   font-weight: 800;
@@ -71,17 +95,35 @@ body {
   white-space: nowrap;
 }
 
-.stat-chip-value {
-  color: var(--primary-dim);
-  font-family: inherit;
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.01em;
-  text-transform: none;
+.puzzle-title {
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--foreground);
 }
 
-.stat-chip-separator {
-  color: color-mix(in srgb, var(--primary-dim) 62%, var(--outline));
+.agegaple-image-frame {
+  border: 1px solid var(--surface-container);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--primary-container) 10%, white);
+  overflow: hidden;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.agegaple-image {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
 }
 
 .no-native-spinner {
@@ -95,14 +137,14 @@ body {
   margin: 0;
 }
 
-.agegaple-guess-history-wrap {
+.guess-history-wrap {
   border-top: 1px solid var(--surface-container);
   padding-top: 0.75rem;
   display: grid;
   gap: 0.45rem;
 }
 
-.agegaple-guess-history-toggle {
+.guess-history-toggle {
   border: 0;
   background: transparent;
   padding: 0;
@@ -115,7 +157,7 @@ body {
   cursor: pointer;
 }
 
-.agegaple-guess-history-title {
+.guess-history-title {
   margin: 0;
   font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
   font-size: 0.8rem;
@@ -125,13 +167,13 @@ body {
   color: var(--outline);
 }
 
-.agegaple-guess-history-toggle-icon {
+.guess-history-toggle-icon {
   display: inline-flex;
   color: var(--primary-dim);
   transition: transform 200ms ease;
 }
 
-.agegaple-guess-history-latest {
+.guess-history-latest {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
@@ -142,7 +184,7 @@ body {
   font-size: 0.92rem;
 }
 
-.agegaple-guess-history-list {
+.guess-history-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -150,7 +192,7 @@ body {
   gap: 0.35rem;
 }
 
-.agegaple-guess-history-item {
+.guess-history-item {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
@@ -161,17 +203,17 @@ body {
   font-size: 0.9rem;
 }
 
-.agegaple-guess-history-guess {
+.guess-history-guess {
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-.agegaple-guess-history-status-correct {
+.guess-history-status-correct {
   color: #0a7a37;
   font-weight: 800;
 }
 
-.agegaple-guess-history-status-wrong {
+.guess-history-status-wrong {
   color: #b02500;
   font-weight: 800;
 }
@@ -197,30 +239,5 @@ body {
 }
 
 .result-modal-close:hover {
-  background: var(--surface-container-high, #f3f4f6);
-}
-
-.agegaple-result-modal-close {
-  position: absolute !important;
-  top: 0.55rem !important;
-  right: 0.55rem !important;
-  left: auto !important;
-  display: inline-flex;
-  height: 2.25rem;
-  width: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid var(--surface-container, var(--outline-variant));
-  background: var(--surface-container-lowest, #fff);
-  color: var(--foreground);
-  font-size: 1.55rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  transition: background-color 200ms ease;
-}
-
-.agegaple-result-modal-close:hover {
   background: var(--surface-container-high, #f3f4f6);
 }

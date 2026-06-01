@@ -10,6 +10,7 @@ import type {
   ReviewCandidateDetailsUpdate,
 } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { randomUUID } from "node:crypto";
 
 const getDateInTimeZone = (timeZone: string): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -61,7 +62,6 @@ type PuzzleRow = {
     couple_id: string;
     computed_age_gap_years: number;
     review_notes: string | null;
-    editorial_relationship_note: string | null;
     editorial_person_a_bio: string | null;
     editorial_person_a_bio_url: string | null;
     editorial_person_b_bio: string | null;
@@ -80,11 +80,6 @@ type PuzzleRow = {
       license: string | null;
     };
   };
-};
-
-type CoupleGalleryImageRow = {
-  image_url: string;
-  file_title: string | null;
 };
 
 type ApprovedCandidateRow = {
@@ -110,37 +105,16 @@ const buildImageAlt = (
 
 const buildPublicPuzzle = (
   row: PuzzleRow,
-  galleryImages: CoupleGalleryImageRow[],
   editorialContext: PuzzlePublic["editorialContext"],
 ): PuzzlePublic => {
-  const primaryImage = {
-    imageUrl: row.puzzle_candidates.images.image_url,
-    imageAlt: buildImageAlt(row, row.puzzle_candidates.images.file_title),
-  };
-
-  const seenImageUrls = new Set<string>([primaryImage.imageUrl]);
-  const dedupedGallery = galleryImages
-    .filter((item) => {
-      if (seenImageUrls.has(item.image_url)) {
-        return false;
-      }
-      seenImageUrls.add(item.image_url);
-      return true;
-    })
-    .map((item) => ({
-      imageUrl: item.image_url,
-      imageAlt: buildImageAlt(row, item.file_title),
-    }));
-
   return {
     puzzleId: row.id,
     puzzleDate: row.puzzle_date,
     personAName: row.puzzle_candidates.couples.person_a.name,
     personBName: row.puzzle_candidates.couples.person_b.name,
     relationshipType: row.puzzle_candidates.couples.relationship_type,
-    imageUrl: primaryImage.imageUrl,
-    imageAlt: primaryImage.imageAlt,
-    galleryImages: [primaryImage, ...dedupedGallery].slice(0, 5),
+    imageUrl: row.puzzle_candidates.images.image_url,
+    imageAlt: buildImageAlt(row, row.puzzle_candidates.images.file_title),
     editorialContext,
   };
 };
@@ -152,7 +126,6 @@ const basePuzzleSelect = `
     couple_id,
     computed_age_gap_years,
     review_notes,
-    editorial_relationship_note,
     editorial_person_a_bio,
     editorial_person_a_bio_url,
     editorial_person_b_bio,
@@ -364,20 +337,6 @@ export const listArchivePuzzles = async (): Promise<ArchivePuzzleListItem[]> => 
 };
 
 const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic> => {
-  const supabase = getSupabaseAdmin();
-  const { data: galleryData, error } = await supabase
-    .from("images")
-    .select("image_url,file_title")
-    .eq("subject_type", "couple")
-    .eq("subject_id", row.puzzle_candidates.couple_id)
-    .eq("is_usable", true)
-    .order("created_at", { ascending: false })
-    .limit(12);
-
-  if (error) {
-    throw new Error(`Failed to fetch couple gallery images: ${error.message}`);
-  }
-
   const relationshipLabelByType: Record<
     "spouse" | "couple" | "former_spouse" | "former_couple",
     string
@@ -388,17 +347,22 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
     former_couple: "no longer a couple",
   };
   const relationshipLabel = relationshipLabelByType[row.puzzle_candidates.couples.relationship_type];
-  const editorialRelationshipNote =
-    row.puzzle_candidates.editorial_relationship_note?.trim() ||
-    `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
+  const editorialRelationshipNote = `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
   const editorialPersonABio = row.puzzle_candidates.editorial_person_a_bio?.trim() || null;
   const editorialPersonABioUrl = row.puzzle_candidates.editorial_person_a_bio_url?.trim() || null;
   const editorialPersonBBio = row.puzzle_candidates.editorial_person_b_bio?.trim() || null;
   const editorialPersonBBioUrl = row.puzzle_candidates.editorial_person_b_bio_url?.trim() || null;
-  const editorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || null;
-  const editorialCoupleContextUrl = row.puzzle_candidates.editorial_couple_context_url?.trim() || null;
+  const rawEditorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || null;
+  const editorialCoupleContext =
+    rawEditorialCoupleContext &&
+    rawEditorialCoupleContext.toLocaleLowerCase() === editorialRelationshipNote.toLocaleLowerCase()
+      ? null
+      : rawEditorialCoupleContext;
+  const editorialCoupleContextUrl = editorialCoupleContext
+    ? row.puzzle_candidates.editorial_couple_context_url?.trim() || null
+    : null;
 
-  return buildPublicPuzzle(row, (galleryData as CoupleGalleryImageRow[]) ?? [], {
+  return buildPublicPuzzle(row, {
     relationshipNote: editorialRelationshipNote,
     personABio: editorialPersonABio,
     personABioUrl: editorialPersonABioUrl,
@@ -460,6 +424,7 @@ export const submitGuess = async (puzzleId: string, guessYears: number): Promise
 type CandidateRow = {
   id: string;
   couple_id: string;
+  image_id: string;
   computed_age_gap_years: number;
   quality_score: number;
   status: CandidateStatus;
@@ -476,13 +441,6 @@ type CandidateRow = {
   };
 };
 
-type CoupleImageRow = {
-  id: string;
-  subject_id: string;
-  image_url: string;
-  file_title: string | null;
-};
-
 type CandidateUsageRow = {
   candidate_id: string;
   puzzle_date: string;
@@ -491,6 +449,7 @@ type CandidateUsageRow = {
 type CandidateWithPrimaryImageRow = {
   id: string;
   couple_id: string;
+  image_id: string;
   couples: {
     person_a: { name: string };
     person_b: { name: string };
@@ -505,7 +464,6 @@ type CandidateDetailsRow = {
   id: string;
   couple_id: string;
   review_notes: string | null;
-  editorial_relationship_note: string | null;
   editorial_person_a_bio: string | null;
   editorial_person_a_bio_url: string | null;
   editorial_person_b_bio: string | null;
@@ -538,6 +496,265 @@ const normalizeNullableDate = (value: string | null | undefined): string | null 
   return normalized;
 };
 
+const MANUAL_PLACEHOLDER_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520"><rect width="800" height="520" fill="#eef1f4"/><g fill="none" stroke="#c6ccd3" stroke-width="8"><rect x="140" y="96" width="520" height="328" rx="24"/><path d="M178 362 304 238l92 90 98-116 128 150"/><circle cx="300" cy="188" r="28"/></g><text x="400" y="466" text-anchor="middle" fill="#7c8590" font-family="Arial, Helvetica, sans-serif" font-size="28">No image yet</text></svg>`,
+)}`;
+
+const calculateExactAgeGapYears = (personABirthDate: string, personBBirthDate: string): number => {
+  const a = new Date(`${personABirthDate}T00:00:00Z`);
+  const b = new Date(`${personBBirthDate}T00:00:00Z`);
+  const diffMs = Math.abs(a.getTime() - b.getTime());
+  const msPerYear = 365.2425 * 24 * 60 * 60 * 1000;
+  return Number((diffMs / msPerYear).toFixed(2));
+};
+
+export const createManualReviewCandidate = async ({
+  personAName,
+  personABirthDate,
+  personAWikipediaTitle,
+  personBName,
+  personBBirthDate,
+  personBWikipediaTitle,
+  relationshipType,
+  imageUrl,
+  imageTitle,
+  attributionText,
+  editorialPersonABio,
+  editorialPersonABioUrl,
+  editorialPersonBBio,
+  editorialPersonBBioUrl,
+  editorialCoupleContext,
+  editorialCoupleContextUrl,
+}: {
+  personAName: string;
+  personABirthDate: string;
+  personAWikipediaTitle?: string | null;
+  personBName: string;
+  personBBirthDate: string;
+  personBWikipediaTitle?: string | null;
+  relationshipType: "spouse" | "couple" | "former_spouse" | "former_couple";
+  imageUrl?: string | null;
+  imageTitle?: string | null;
+  attributionText?: string | null;
+  editorialPersonABio?: string | null;
+  editorialPersonABioUrl?: string | null;
+  editorialPersonBBio?: string | null;
+  editorialPersonBBioUrl?: string | null;
+  editorialCoupleContext?: string | null;
+  editorialCoupleContextUrl?: string | null;
+}): Promise<string> => {
+  const supabase = getSupabaseAdmin();
+
+  const normalizedPersonAName = normalizeNullableText(personAName);
+  const normalizedPersonBName = normalizeNullableText(personBName);
+  const normalizedPersonABirthDate = normalizeNullableDate(personABirthDate);
+  const normalizedPersonBBirthDate = normalizeNullableDate(personBBirthDate);
+
+  if (!normalizedPersonAName || !normalizedPersonBName) {
+    throw new Error("Both person names are required");
+  }
+  if (!normalizedPersonABirthDate || !normalizedPersonBBirthDate) {
+    throw new Error("Both birth dates are required (YYYY-MM-DD)");
+  }
+  const normalizedImageUrl = normalizeNullableText(imageUrl);
+  if (normalizedImageUrl) {
+    let parsedImageUrl: URL;
+    try {
+      parsedImageUrl = new URL(normalizedImageUrl);
+    } catch {
+      throw new Error("Image URL must be a valid URL");
+    }
+    if (parsedImageUrl.protocol !== "http:" && parsedImageUrl.protocol !== "https:") {
+      throw new Error("Image URL must use http or https");
+    }
+  }
+
+  const findOrCreatePerson = async ({
+    name,
+    birthDate,
+    wikipediaTitle,
+  }: {
+    name: string;
+    birthDate: string;
+    wikipediaTitle: string | null;
+  }): Promise<string> => {
+    const { data: existingPerson, error: existingError } = await supabase
+      .from("people")
+      .select("id")
+      .eq("name", name)
+      .eq("birth_date", birthDate)
+      .maybeSingle();
+
+    if (existingError) {
+      throw new Error(`Failed to search for existing person: ${existingError.message}`);
+    }
+
+    if (existingPerson?.id) {
+      return existingPerson.id;
+    }
+
+    const { data: createdPerson, error: createPersonError } = await supabase
+      .from("people")
+      .insert({
+        wikidata_qid: `manual:${randomUUID()}`,
+        name,
+        birth_date: birthDate,
+        wikipedia_title: wikipediaTitle,
+      })
+      .select("id")
+      .single();
+
+    if (createPersonError) {
+      throw new Error(`Failed to create person: ${createPersonError.message}`);
+    }
+
+    return createdPerson.id;
+  };
+
+  const personAWikipedia = normalizeNullableText(personAWikipediaTitle);
+  const personBWikipedia = normalizeNullableText(personBWikipediaTitle);
+  const personAId = await findOrCreatePerson({
+    name: normalizedPersonAName,
+    birthDate: normalizedPersonABirthDate,
+    wikipediaTitle: personAWikipedia,
+  });
+  const personBId = await findOrCreatePerson({
+    name: normalizedPersonBName,
+    birthDate: normalizedPersonBBirthDate,
+    wikipediaTitle: personBWikipedia,
+  });
+
+  const orderedPeople = [
+    { id: personAId, name: normalizedPersonAName },
+    { id: personBId, name: normalizedPersonBName },
+  ].sort((a, b) => a.id.localeCompare(b.id));
+  const orderedPersonAId = orderedPeople[0].id;
+  const orderedPersonBId = orderedPeople[1].id;
+
+  let coupleId: string;
+  const { data: existingCouple, error: existingCoupleError } = await supabase
+    .from("couples")
+    .select("id")
+    .eq("person_a_id", orderedPersonAId)
+    .eq("person_b_id", orderedPersonBId)
+    .maybeSingle();
+  if (existingCoupleError) {
+    throw new Error(`Failed to search for existing couple: ${existingCoupleError.message}`);
+  }
+
+  if (existingCouple?.id) {
+    coupleId = existingCouple.id;
+    const { error: relationshipUpdateError } = await supabase
+      .from("couples")
+      .update({ relationship_type: relationshipType })
+      .eq("id", coupleId);
+    if (relationshipUpdateError) {
+      throw new Error(`Failed to update couple relationship type: ${relationshipUpdateError.message}`);
+    }
+  } else {
+    const { data: createdCouple, error: createCoupleError } = await supabase
+      .from("couples")
+      .insert({
+        person_a_id: orderedPersonAId,
+        person_b_id: orderedPersonBId,
+        relationship_type: relationshipType,
+        source: "manual",
+      })
+      .select("id")
+      .single();
+    if (createCoupleError) {
+      throw new Error(`Failed to create couple: ${createCoupleError.message}`);
+    }
+    coupleId = createdCouple.id;
+  }
+
+  let imageId: string | null = null;
+  if (normalizedImageUrl) {
+    const resolvedImageTitle =
+      normalizeNullableText(imageTitle) || `${normalizedPersonAName} + ${normalizedPersonBName} (manual)`;
+    const { data: createdImage, error: createImageError } = await supabase
+      .from("images")
+      .insert({
+        subject_type: "couple",
+        subject_id: coupleId,
+        source: "manual",
+        file_title: resolvedImageTitle,
+        image_url: normalizedImageUrl,
+        thumb_url: normalizedImageUrl,
+        attribution_text: normalizeNullableText(attributionText),
+        is_usable: true,
+      })
+      .select("id")
+      .single();
+    if (createImageError) {
+      throw new Error(`Failed to create image: ${createImageError.message}`);
+    }
+    imageId = createdImage.id;
+  } else {
+    const { data: existingImage, error: existingImageError } = await supabase
+      .from("images")
+      .select("id")
+      .eq("subject_type", "couple")
+      .eq("subject_id", coupleId)
+      .eq("is_usable", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingImageError) {
+      throw new Error(`Failed to find existing couple image: ${existingImageError.message}`);
+    }
+    if (existingImage) {
+      imageId = existingImage.id;
+    } else {
+      const placeholderTitle = `${normalizedPersonAName} + ${normalizedPersonBName} (placeholder)`;
+      const { data: placeholderImage, error: placeholderError } = await supabase
+        .from("images")
+        .insert({
+          subject_type: "couple",
+          subject_id: coupleId,
+          source: "manual",
+          file_title: placeholderTitle,
+          image_url: MANUAL_PLACEHOLDER_IMAGE,
+          thumb_url: MANUAL_PLACEHOLDER_IMAGE,
+          attribution_text: "Placeholder image",
+          is_usable: false,
+        })
+        .select("id")
+        .single();
+
+      if (placeholderError) {
+        throw new Error(`Failed to create placeholder image: ${placeholderError.message}`);
+      }
+      imageId = placeholderImage.id;
+    }
+  }
+
+  const exactAgeGapYears = calculateExactAgeGapYears(normalizedPersonABirthDate, normalizedPersonBBirthDate);
+  const { data: candidateRow, error: createCandidateError } = await supabase
+    .from("puzzle_candidates")
+    .insert({
+      couple_id: coupleId,
+      image_id: imageId,
+      computed_age_gap_years: exactAgeGapYears,
+      quality_score: 100,
+      status: "pending_review",
+      editorial_person_a_bio: normalizeNullableText(editorialPersonABio),
+      editorial_person_a_bio_url: normalizeNullableText(editorialPersonABioUrl),
+      editorial_person_b_bio: normalizeNullableText(editorialPersonBBio),
+      editorial_person_b_bio_url: normalizeNullableText(editorialPersonBBioUrl),
+      editorial_couple_context: normalizeNullableText(editorialCoupleContext),
+      editorial_couple_context_url: normalizeNullableText(editorialCoupleContextUrl),
+    })
+    .select("id")
+    .single();
+
+  if (createCandidateError) {
+    throw new Error(`Failed to create candidate: ${createCandidateError.message}`);
+  }
+
+  return candidateRow.id;
+};
+
 export const listReviewCandidates = async ({
   status = "all",
   page = 1,
@@ -563,6 +780,7 @@ export const listReviewCandidates = async ({
       `
       id,
       couple_id,
+      image_id,
       computed_age_gap_years,
       quality_score,
       status,
@@ -662,8 +880,9 @@ export const listReviewCandidates = async ({
     roundedAgeGapYears: Math.round(Number(row.computed_age_gap_years)),
     personABirthDate: row.couples.person_a.birth_date ?? "unknown",
     personBBirthDate: row.couples.person_b.birth_date ?? "unknown",
+    imageId: row.image_id,
     imageUrl: row.images.image_url,
-    galleryImages: [],
+    imageAlt: row.images.file_title ?? `${row.couples.person_a.name} + ${row.couples.person_b.name}`,
     license: row.images.license ?? "Unknown",
     qualityScore: row.quality_score,
     status: row.status,
@@ -695,9 +914,9 @@ export const listReviewCandidates = async ({
   };
 };
 
-export const getReviewCandidateGallery = async (
+export const getReviewCandidateImage = async (
   candidateId: string,
-): Promise<{ coupleId: string; galleryImages: { id: string; imageUrl: string; imageAlt: string }[] }> => {
+): Promise<{ coupleId: string; image: { id: string; imageUrl: string; imageAlt: string } }> => {
   const supabase = getSupabaseAdmin();
 
   const { data: candidateData, error: candidateError } = await supabase
@@ -706,6 +925,7 @@ export const getReviewCandidateGallery = async (
       `
       id,
       couple_id,
+      image_id,
       couples!inner(
         person_a:people!couples_person_a_id_fkey(name),
         person_b:people!couples_person_b_id_fkey(name)
@@ -726,50 +946,15 @@ export const getReviewCandidateGallery = async (
 
   const candidate = candidateData as unknown as CandidateWithPrimaryImageRow;
 
-  const { data: galleryData, error: galleryError } = await supabase
-    .from("images")
-    .select("id,image_url,file_title")
-    .eq("subject_type", "couple")
-    .eq("subject_id", candidate.couple_id)
-    .eq("is_usable", true)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (galleryError) {
-    throw new Error(`Failed to load candidate gallery images: ${galleryError.message}`);
-  }
-
   const baseAlt = `${candidate.couples.person_a.name} + ${candidate.couples.person_b.name}`;
-  const rows = (galleryData as { id: string; image_url: string; file_title: string | null }[] | null) ?? [];
-  const deduped: { id: string; imageUrl: string; imageAlt: string }[] = [];
-  const seen = new Set<string>();
-
-  for (const row of rows) {
-    if (!row?.image_url || seen.has(row.image_url)) {
-      continue;
-    }
-    seen.add(row.image_url);
-    deduped.push({
-      id: row.id,
-      imageUrl: row.image_url,
-      imageAlt: row.file_title ?? baseAlt,
-    });
-    if (deduped.length >= 5) {
-      break;
-    }
-  }
-
-  if (deduped.length === 0) {
-    deduped.push({
-      id: `fallback-${candidate.id}`,
-      imageUrl: candidate.images.image_url,
-      imageAlt: candidate.images.file_title ?? baseAlt,
-    });
-  }
 
   return {
     coupleId: candidate.couple_id,
-    galleryImages: deduped,
+    image: {
+      id: candidate.image_id,
+      imageUrl: candidate.images.image_url,
+      imageAlt: candidate.images.file_title ?? baseAlt,
+    },
   };
 };
 
@@ -782,7 +967,6 @@ export const getReviewCandidateDetails = async (candidateId: string): Promise<Re
       id,
       couple_id,
       review_notes,
-      editorial_relationship_note,
       editorial_person_a_bio,
       editorial_person_a_bio_url,
       editorial_person_b_bio,
@@ -828,7 +1012,6 @@ export const getReviewCandidateDetails = async (candidateId: string): Promise<Re
     personBWikipediaTitle: row.couples.person_b.wikipedia_title,
     relationshipType: row.couples.relationship_type,
     reviewNotes: row.review_notes,
-    editorialRelationshipNote: row.editorial_relationship_note,
     editorialPersonABio,
     editorialPersonABioUrl,
     editorialPersonBBio,
@@ -855,7 +1038,6 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
   const personBWikipediaTitle = normalizeNullableText(payload.personBWikipediaTitle);
 
   const reviewNotes = normalizeNullableText(payload.reviewNotes);
-  const editorialRelationshipNote = normalizeNullableText(payload.editorialRelationshipNote);
   const editorialPersonABio = normalizeNullableText(payload.editorialPersonABio);
   const editorialPersonABioUrl = normalizeNullableText(payload.editorialPersonABioUrl);
   const editorialPersonBBio = normalizeNullableText(payload.editorialPersonBBio);
@@ -906,7 +1088,6 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
     .from("puzzle_candidates")
     .update({
       review_notes: reviewNotes,
-      editorial_relationship_note: editorialRelationshipNote,
       editorial_person_a_bio: editorialPersonABio,
       editorial_person_a_bio_url: editorialPersonABioUrl,
       editorial_person_b_bio: editorialPersonBBio,
@@ -1191,4 +1372,55 @@ export const addManualCoupleImage = async ({
   }
 
   return data.id;
+};
+
+export const assignCandidateImage = async ({
+  candidateId,
+  imageId,
+}: {
+  candidateId: string;
+  imageId: string;
+}): Promise<void> => {
+  const supabase = getSupabaseAdmin();
+
+  const { data: candidateRow, error: candidateError } = await supabase
+    .from("puzzle_candidates")
+    .select("id,couple_id")
+    .eq("id", candidateId)
+    .maybeSingle();
+
+  if (candidateError) {
+    throw new Error(`Failed to load candidate for image assignment: ${candidateError.message}`);
+  }
+  if (!candidateRow) {
+    throw new Error("Candidate not found");
+  }
+
+  const { data: imageRow, error: imageError } = await supabase
+    .from("images")
+    .select("id,subject_type,subject_id,is_usable")
+    .eq("id", imageId)
+    .maybeSingle();
+
+  if (imageError) {
+    throw new Error(`Failed to load image for candidate assignment: ${imageError.message}`);
+  }
+  if (!imageRow) {
+    throw new Error("Image not found");
+  }
+  if (imageRow.subject_type !== "couple" || imageRow.subject_id !== candidateRow.couple_id) {
+    throw new Error("Image does not belong to this candidate's couple");
+  }
+  if (!imageRow.is_usable) {
+    throw new Error("Image is not usable");
+  }
+
+  const { error: updateError } = await supabase
+    .from("puzzle_candidates")
+    .update({ image_id: imageId })
+    .eq("id", candidateId);
+
+  if (updateError) {
+    throw new Error(`Failed to assign image to candidate: ${updateError.message}`);
+  }
 };

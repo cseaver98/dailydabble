@@ -10,7 +10,7 @@ export const games: Game[] = [
     slug: "agegaple",
     name: "Agegaple",
     href: "https://agegaple.dailydabble.app",
-    description: "Guess the celebrity age gap.",
+    description: "Guess the celebrity couple age gap.",
   },
   {
     slug: "doodle",

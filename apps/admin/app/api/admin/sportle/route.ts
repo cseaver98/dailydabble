@@ -26,6 +26,80 @@ const normalizeAliases = (aliases: string[]): string[] =>
     .map((item) => normalizeName(item))
     .filter(Boolean);
 
+type WikipediaSummary = {
+  description?: string | null;
+  extract?: string | null;
+  thumbnail?: { source?: string };
+  content_urls?: { desktop?: { page?: string } };
+};
+
+const inferPosition = (text: string, sport: string): string => {
+  const value = text.toLowerCase();
+  if (sport === "nba" || sport === "soccer") {
+    if (value.includes("point guard")) return "Point guard";
+    if (value.includes("shooting guard")) return "Shooting guard";
+    if (value.includes("small forward")) return "Small forward";
+    if (value.includes("power forward")) return "Power forward";
+    if (value.includes("center")) return "Center";
+    if (value.includes("forward")) return "Forward";
+    if (value.includes("guard")) return "Guard";
+  }
+  if (sport === "nfl") {
+    if (value.includes("quarterback")) return "Quarterback";
+    if (value.includes("wide receiver")) return "Wide receiver";
+    if (value.includes("running back")) return "Running back";
+    if (value.includes("tight end")) return "Tight end";
+    if (value.includes("linebacker")) return "Linebacker";
+    if (value.includes("cornerback")) return "Cornerback";
+    if (value.includes("safety")) return "Safety";
+  }
+  if (sport === "mlb") {
+    if (value.includes("pitcher")) return "Pitcher";
+    if (value.includes("catcher")) return "Catcher";
+    if (value.includes("outfielder")) return "Outfielder";
+    if (value.includes("infielder")) return "Infielder";
+  }
+  if (sport === "nhl") {
+    if (value.includes("goaltender") || value.includes("goalie")) return "Goaltender";
+    if (value.includes("defenceman") || value.includes("defenseman")) return "Defenseman";
+    if (value.includes("center")) return "Center";
+    if (value.includes("winger")) return "Winger";
+  }
+  return "Manual update needed";
+};
+
+const inferTeam = (text: string): string => {
+  const match =
+    text.match(/\bfor the ([A-Z][A-Za-z0-9 .'-]{2,60}?)(?: of| in| who| and|,|\.|\)|$)/) ||
+    text.match(/\bplayed for the ([A-Z][A-Za-z0-9 .'-]{2,60}?)(?: of| in| who| and|,|\.|\)|$)/);
+  return match?.[1]?.trim() || "Manual update needed";
+};
+
+const parseWikipediaArticleTitleFromUrl = (rawUrl: string): string | null => {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!parsed.hostname.endsWith("wikipedia.org")) return null;
+    if (!parsed.pathname.startsWith("/wiki/")) return null;
+    const rawTitle = parsed.pathname.replace(/^\/wiki\//, "").trim();
+    if (!rawTitle) return null;
+    return decodeURIComponent(rawTitle).replace(/_/g, " ");
+  } catch {
+    return null;
+  }
+};
+
+const fetchWikipediaSummary = async (title: string): Promise<WikipediaSummary | null> => {
+  const response = await fetch(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+    {
+      headers: { "Api-User-Agent": "DailyDabble Sportle Admin/1.0" },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) return null;
+  return (await response.json()) as WikipediaSummary;
+};
+
 const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
 const getSupabaseSportleAdmin = () =>
@@ -55,7 +129,7 @@ export async function GET(request: Request) {
     const { data: athletesData, error: athletesError } = await supabase
       .from("athletes")
       .select(
-        "id,sport,full_name,aliases,team_name,years_with_team,position,key_stat_1,key_stat_2,final_clue,wikipedia_url,headshot_url,is_active,status,created_at",
+        "id,sport,full_name,aliases,team_name,team_logo_url,years_with_team,position,key_stat_1,key_stat_2,wikipedia_url,headshot_url,is_active,status,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(5000);
@@ -71,11 +145,11 @@ export async function GET(request: Request) {
         full_name: string;
         aliases: string[];
         team_name: string | null;
+        team_logo_url: string | null;
         years_with_team: string | null;
         position: string | null;
         key_stat_1: string | null;
         key_stat_2: string | null;
-        final_clue: string | null;
         wikipedia_url: string | null;
         headshot_url: string | null;
         is_active: boolean;
@@ -162,6 +236,7 @@ export async function POST(request: Request) {
       sport?: string;
       fullName?: string;
       sourceKey?: string;
+      wikipediaUrl?: string;
     };
 
     const action = payload.action ?? "add-athlete";
@@ -189,7 +264,6 @@ export async function POST(request: Request) {
           full_name_normalized: normalized,
           key_stat_1: "Manual stat clue pending",
           key_stat_2: "Manual accolade clue pending",
-          final_clue: "Manual identifying clue pending",
           is_active: true,
           status: "pending_review",
         })
@@ -198,6 +272,65 @@ export async function POST(request: Request) {
 
       if (error) {
         throw new Error(`Failed to add athlete: ${error.message}`);
+      }
+
+      return NextResponse.json({ ok: true, item: data });
+    }
+
+    if (action === "import-wikipedia-url") {
+      const sport = String(payload.sport || "nba").toLowerCase();
+      const wikipediaUrl = String(payload.wikipediaUrl || "").trim();
+      if (!supportedSports.has(sport)) {
+        return NextResponse.json({ error: "Unsupported sport" }, { status: 400 });
+      }
+      if (!wikipediaUrl) {
+        return NextResponse.json({ error: "wikipediaUrl is required" }, { status: 400 });
+      }
+
+      const pageTitle = parseWikipediaArticleTitleFromUrl(wikipediaUrl);
+      if (!pageTitle) {
+        return NextResponse.json({ error: "Provide a valid Wikipedia athlete URL." }, { status: 400 });
+      }
+
+      const summary = await fetchWikipediaSummary(pageTitle);
+      const description = String(summary?.description || "").trim();
+      const extract = String(summary?.extract || "").trim();
+      if (!description && !extract) {
+        return NextResponse.json({ error: "Could not fetch athlete details from that Wikipedia page." }, { status: 400 });
+      }
+
+      const fullName = pageTitle.replace(/\s+\(.+\)\s*$/, "").trim();
+      const normalized = normalizeName(fullName);
+      const sourceKey = `${sport}-${normalized.replace(/\s+/g, "-")}`;
+      const keyStat2 = description || "Professional athlete";
+
+      const { data, error } = await supabase
+        .from("athletes")
+        .upsert(
+          {
+            sport,
+            source_key: sourceKey,
+            full_name: fullName,
+            full_name_normalized: normalized,
+            aliases: [] as string[],
+            aliases_normalized: [] as string[],
+            team_name: inferTeam(extract || description),
+            years_with_team: "Manual update needed",
+            position: inferPosition(`${description}. ${extract}`, sport),
+            key_stat_1: "Manual stat clue pending",
+            key_stat_2: keyStat2,
+            wikipedia_url: summary?.content_urls?.desktop?.page || wikipediaUrl,
+            headshot_url: summary?.thumbnail?.source || null,
+            is_active: true,
+            status: "pending_review",
+          },
+          { onConflict: "source_key" },
+        )
+        .select("id,sport,full_name,team_name,position,key_stat_1,key_stat_2,wikipedia_url,headshot_url,status")
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to import athlete: ${error.message}`);
       }
 
       return NextResponse.json({ ok: true, item: data });
@@ -224,7 +357,6 @@ export async function PATCH(request: Request) {
       position?: string;
       keyStat1?: string;
       keyStat2?: string;
-      finalClue?: string;
       wikipediaUrl?: string;
       headshotUrl?: string;
       isActive?: boolean;
@@ -275,7 +407,6 @@ export async function PATCH(request: Request) {
       position: String(payload.position || "").trim() || null,
       key_stat_1: String(payload.keyStat1 || "").trim() || null,
       key_stat_2: String(payload.keyStat2 || "").trim() || null,
-      final_clue: String(payload.finalClue || "").trim() || null,
       wikipedia_url: String(payload.wikipediaUrl || "").trim() || null,
       headshot_url: String(payload.headshotUrl || "").trim() || null,
       is_active: payload.isActive !== false,

@@ -132,6 +132,7 @@ export async function PATCH(request: Request) {
       eventId?: string;
       status?: CandidateStatus;
       imageUrl?: string;
+      clearImage?: boolean;
       candidate?: {
         title?: string;
         eventYear?: number;
@@ -143,13 +144,18 @@ export async function PATCH(request: Request) {
     const eventId = String(payload.eventId || "");
     const status = String(payload.status || "").trim() as CandidateStatus;
     const imageUrl = String(payload.imageUrl || "").trim();
+    const clearImage = Boolean(payload.clearImage);
     const candidate = payload.candidate && typeof payload.candidate === "object" ? payload.candidate : null;
     const hasStatus = Boolean(status);
     const hasImageUrl = Boolean(imageUrl);
+    const hasClearImage = clearImage;
     const hasCandidate = Boolean(candidate);
 
-    if (!eventId || (!hasStatus && !hasImageUrl && !hasCandidate)) {
+    if (!eventId || (!hasStatus && !hasImageUrl && !hasClearImage && !hasCandidate)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+    if (hasImageUrl && hasClearImage) {
+      return NextResponse.json({ error: "Provide imageUrl or clearImage, not both." }, { status: 400 });
     }
     if (hasStatus && !validStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
@@ -201,6 +207,9 @@ export async function PATCH(request: Request) {
     }
     if (hasImageUrl) {
       updatePayload.image_url = imageUrl;
+    }
+    if (hasClearImage) {
+      updatePayload.image_url = null;
     }
     if (hasCandidate) {
       updatePayload.title = String(candidate?.title || "").trim();

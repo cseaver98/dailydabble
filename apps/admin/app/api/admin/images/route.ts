@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 
-import { addManualCoupleImage, getReviewCandidateGallery, markCoupleImageUnusable } from "@/lib/puzzle-repository";
+import {
+  addManualCoupleImage,
+  assignCandidateImage,
+  getReviewCandidateImage,
+  markCoupleImageUnusable,
+} from "@/lib/puzzle-repository";
 
 type PatchPayload = {
   imageId?: string;
 };
 
 type PostPayload = {
+  candidateId?: string;
   coupleId?: string;
   imageUrl?: string;
   fileTitle?: string;
@@ -46,6 +52,11 @@ export async function POST(request: Request) {
       author: payload.author,
       attributionText: payload.attributionText,
     });
+
+    if (payload.candidateId) {
+      await assignCandidateImage({ candidateId: payload.candidateId, imageId });
+    }
+
     return NextResponse.json({ ok: true, imageId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
@@ -62,7 +73,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const data = await getReviewCandidateGallery(candidateId);
+    const data = await getReviewCandidateImage(candidateId);
     return NextResponse.json({ ok: true, ...data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

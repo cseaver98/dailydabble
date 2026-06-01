@@ -55,7 +55,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       personBWikipediaTitle: payload.personBWikipediaTitle ? String(payload.personBWikipediaTitle) : null,
       relationshipType: payload.relationshipType,
       reviewNotes: payload.reviewNotes ? String(payload.reviewNotes) : null,
-      editorialRelationshipNote: payload.editorialRelationshipNote ? String(payload.editorialRelationshipNote) : null,
       editorialPersonABio: payload.editorialPersonABio ? String(payload.editorialPersonABio) : null,
       editorialPersonABioUrl: payload.editorialPersonABioUrl ? String(payload.editorialPersonABioUrl) : null,
       editorialPersonBBio: payload.editorialPersonBBio ? String(payload.editorialPersonBBio) : null,

@@ -57,7 +57,6 @@ type PuzzleRow = {
   puzzle_candidates: {
     couple_id: string;
     computed_age_gap_years: number;
-    editorial_relationship_note: string | null;
     editorial_person_a_bio: string | null;
     editorial_person_a_bio_url: string | null;
     editorial_person_b_bio: string | null;
@@ -76,11 +75,6 @@ type PuzzleRow = {
       license: string | null;
     };
   };
-};
-
-type CoupleGalleryImageRow = {
-  image_url: string;
-  file_title: string | null;
 };
 
 type ApprovedCandidateRow = {
@@ -106,37 +100,16 @@ const buildImageAlt = (
 
 const buildPublicPuzzle = (
   row: PuzzleRow,
-  galleryImages: CoupleGalleryImageRow[],
   editorialContext: PuzzlePublic["editorialContext"],
 ): PuzzlePublic => {
-  const primaryImage = {
-    imageUrl: row.puzzle_candidates.images.image_url,
-    imageAlt: buildImageAlt(row, row.puzzle_candidates.images.file_title),
-  };
-
-  const seenImageUrls = new Set<string>([primaryImage.imageUrl]);
-  const dedupedGallery = galleryImages
-    .filter((item) => {
-      if (seenImageUrls.has(item.image_url)) {
-        return false;
-      }
-      seenImageUrls.add(item.image_url);
-      return true;
-    })
-    .map((item) => ({
-      imageUrl: item.image_url,
-      imageAlt: buildImageAlt(row, item.file_title),
-    }));
-
   return {
     puzzleId: row.id,
     puzzleDate: row.puzzle_date,
     personAName: row.puzzle_candidates.couples.person_a.name,
     personBName: row.puzzle_candidates.couples.person_b.name,
     relationshipType: row.puzzle_candidates.couples.relationship_type,
-    imageUrl: primaryImage.imageUrl,
-    imageAlt: primaryImage.imageAlt,
-    galleryImages: [primaryImage, ...dedupedGallery].slice(0, 5),
+    imageUrl: row.puzzle_candidates.images.image_url,
+    imageAlt: buildImageAlt(row, row.puzzle_candidates.images.file_title),
     editorialContext,
   };
 };
@@ -147,7 +120,6 @@ const basePuzzleSelect = `
   puzzle_candidates!inner(
     couple_id,
     computed_age_gap_years,
-    editorial_relationship_note,
     editorial_person_a_bio,
     editorial_person_a_bio_url,
     editorial_person_b_bio,
@@ -359,20 +331,6 @@ export const listArchivePuzzles = async (): Promise<ArchivePuzzleListItem[]> => 
 };
 
 const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic> => {
-  const supabase = getSupabaseAdmin();
-  const { data: galleryData, error } = await supabase
-    .from("images")
-    .select("image_url,file_title")
-    .eq("subject_type", "couple")
-    .eq("subject_id", row.puzzle_candidates.couple_id)
-    .eq("is_usable", true)
-    .order("created_at", { ascending: false })
-    .limit(12);
-
-  if (error) {
-    throw new Error(`Failed to fetch couple gallery images: ${error.message}`);
-  }
-
   const relationshipLabelByType: Record<
     "spouse" | "couple" | "former_spouse" | "former_couple",
     string
@@ -383,17 +341,22 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
     former_couple: "no longer a couple",
   };
   const relationshipLabel = relationshipLabelByType[row.puzzle_candidates.couples.relationship_type];
-  const editorialRelationshipNote =
-    row.puzzle_candidates.editorial_relationship_note?.trim() ||
-    `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
+  const editorialRelationshipNote = `${row.puzzle_candidates.couples.person_a.name} and ${row.puzzle_candidates.couples.person_b.name} are ${relationshipLabel}.`;
   const editorialPersonABio = row.puzzle_candidates.editorial_person_a_bio?.trim() || null;
   const editorialPersonABioUrl = row.puzzle_candidates.editorial_person_a_bio_url?.trim() || null;
   const editorialPersonBBio = row.puzzle_candidates.editorial_person_b_bio?.trim() || null;
   const editorialPersonBBioUrl = row.puzzle_candidates.editorial_person_b_bio_url?.trim() || null;
-  const editorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || null;
-  const editorialCoupleContextUrl = row.puzzle_candidates.editorial_couple_context_url?.trim() || null;
+  const rawEditorialCoupleContext = row.puzzle_candidates.editorial_couple_context?.trim() || null;
+  const editorialCoupleContext =
+    rawEditorialCoupleContext &&
+    rawEditorialCoupleContext.toLocaleLowerCase() === editorialRelationshipNote.toLocaleLowerCase()
+      ? null
+      : rawEditorialCoupleContext;
+  const editorialCoupleContextUrl = editorialCoupleContext
+    ? row.puzzle_candidates.editorial_couple_context_url?.trim() || null
+    : null;
 
-  return buildPublicPuzzle(row, (galleryData as CoupleGalleryImageRow[]) ?? [], {
+  return buildPublicPuzzle(row, {
     relationshipNote: editorialRelationshipNote,
     personABio: editorialPersonABio,
     personABioUrl: editorialPersonABioUrl,
@@ -455,6 +418,7 @@ export const submitGuess = async (puzzleId: string, guessYears: number): Promise
 type CandidateRow = {
   id: string;
   couple_id: string;
+  image_id: string;
   computed_age_gap_years: number;
   quality_score: number;
   status: CandidateStatus;
@@ -469,13 +433,6 @@ type CandidateRow = {
     file_title: string | null;
     license: string | null;
   };
-};
-
-type CoupleImageRow = {
-  id: string;
-  subject_id: string;
-  image_url: string;
-  file_title: string | null;
 };
 
 type CandidateUsageRow = {
@@ -495,6 +452,7 @@ export const listReviewCandidates = async (): Promise<ReviewCandidate[]> => {
       `
       id,
       couple_id,
+      image_id,
       computed_age_gap_years,
       quality_score,
       status,
@@ -516,24 +474,9 @@ export const listReviewCandidates = async (): Promise<ReviewCandidate[]> => {
   const rows = (data as unknown as CandidateRow[]) ?? [];
   const coupleIds = Array.from(new Set(rows.map((row) => row.couple_id)));
 
-  let coupleImagesData: CoupleImageRow[] = [];
   let usageRows: CandidateUsageRow[] = [];
   let upNextCandidateId: string | null = null;
   if (coupleIds.length > 0) {
-    const { data: fetchedCoupleImages, error: coupleImagesError } = await supabase
-      .from("images")
-      .select("id,subject_id,image_url,file_title")
-      .eq("subject_type", "couple")
-      .eq("is_usable", true)
-      .in("subject_id", coupleIds)
-      .order("created_at", { ascending: false });
-
-    if (coupleImagesError) {
-      throw new Error(`Failed to load candidate galleries: ${coupleImagesError.message}`);
-    }
-
-    coupleImagesData = (fetchedCoupleImages as CoupleImageRow[] | null) ?? [];
-
     const { data: fetchedUsageRows, error: usageError } = await supabase
       .from("daily_puzzles")
       .select("candidate_id,puzzle_date")
@@ -559,21 +502,6 @@ export const listReviewCandidates = async (): Promise<ReviewCandidate[]> => {
     if (!upNextCandidateId) {
       upNextCandidateId = await getNextApprovedCandidateId();
     }
-  }
-
-  const galleryByCouple = new Map<string, { id: string; imageUrl: string; imageAlt: string }[]>();
-  for (const imageRow of coupleImagesData) {
-    const existing = galleryByCouple.get(imageRow.subject_id) ?? [];
-    if (existing.length >= 5) {
-      continue;
-    }
-
-    existing.push({
-      id: imageRow.id,
-      imageUrl: imageRow.image_url,
-      imageAlt: imageRow.file_title ?? "Couple photo",
-    });
-    galleryByCouple.set(imageRow.subject_id, existing);
   }
 
   const usageByCandidate = new Map<string, string[]>();
@@ -606,15 +534,9 @@ export const listReviewCandidates = async (): Promise<ReviewCandidate[]> => {
     roundedAgeGapYears: Math.round(Number(row.computed_age_gap_years)),
     personABirthDate: row.couples.person_a.birth_date ?? "unknown",
     personBBirthDate: row.couples.person_b.birth_date ?? "unknown",
+    imageId: row.image_id,
     imageUrl: row.images.image_url,
-    galleryImages:
-      galleryByCouple.get(row.couple_id) ?? [
-        {
-          id: `fallback-${row.id}`,
-          imageUrl: row.images.image_url,
-          imageAlt: row.images.file_title ?? `${row.couples.person_a.name} + ${row.couples.person_b.name}`,
-        },
-      ],
+    imageAlt: row.images.file_title ?? `${row.couples.person_a.name} + ${row.couples.person_b.name}`,
     license: row.images.license ?? "Unknown",
     qualityScore: row.quality_score,
     status: row.status,

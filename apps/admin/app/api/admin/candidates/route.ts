@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  createManualReviewCandidate,
   deleteReviewCandidate,
   getQueueHealth,
   listReviewCandidates,
@@ -13,9 +14,28 @@ type PatchPayload = {
   id?: string;
   status?: CandidateStatus;
 };
+type PostPayload = {
+  personAName?: string;
+  personABirthDate?: string;
+  personAWikipediaTitle?: string;
+  personBName?: string;
+  personBBirthDate?: string;
+  personBWikipediaTitle?: string;
+  relationshipType?: "spouse" | "couple" | "former_spouse" | "former_couple";
+  imageUrl?: string;
+  imageTitle?: string;
+  attributionText?: string;
+  editorialPersonABio?: string;
+  editorialPersonABioUrl?: string;
+  editorialPersonBBio?: string;
+  editorialPersonBBioUrl?: string;
+  editorialCoupleContext?: string;
+  editorialCoupleContextUrl?: string;
+};
 
 const validStatuses: CandidateStatus[] = ["pending_review", "approved"];
 const validFilters: CandidateFilter[] = ["all", "pending_review", "approved", "finished", "used_today"];
+const validRelationshipTypes = new Set(["spouse", "couple", "former_spouse", "former_couple"]);
 
 export async function GET(request: Request) {
   try {
@@ -54,6 +74,41 @@ export async function PATCH(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  const payload = (await request.json().catch(() => ({}))) as PostPayload;
+  const relationshipType = String(payload.relationshipType ?? "couple");
+
+  if (!validRelationshipTypes.has(relationshipType)) {
+    return NextResponse.json({ error: "Invalid relationship type" }, { status: 400 });
+  }
+
+  try {
+    const candidateId = await createManualReviewCandidate({
+      personAName: String(payload.personAName ?? ""),
+      personABirthDate: String(payload.personABirthDate ?? ""),
+      personAWikipediaTitle: payload.personAWikipediaTitle,
+      personBName: String(payload.personBName ?? ""),
+      personBBirthDate: String(payload.personBBirthDate ?? ""),
+      personBWikipediaTitle: payload.personBWikipediaTitle,
+      relationshipType: relationshipType as "spouse" | "couple" | "former_spouse" | "former_couple",
+      imageUrl: String(payload.imageUrl ?? ""),
+      imageTitle: payload.imageTitle,
+      attributionText: payload.attributionText,
+      editorialPersonABio: payload.editorialPersonABio,
+      editorialPersonABioUrl: payload.editorialPersonABioUrl,
+      editorialPersonBBio: payload.editorialPersonBBio,
+      editorialPersonBBioUrl: payload.editorialPersonBBioUrl,
+      editorialCoupleContext: payload.editorialCoupleContext,
+      editorialCoupleContextUrl: payload.editorialCoupleContextUrl,
+    });
+
+    return NextResponse.json({ ok: true, candidateId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 

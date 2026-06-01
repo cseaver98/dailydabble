@@ -24,9 +24,29 @@ export default function AgegapleAdminTab() {
   const [seedError, setSeedError] = useState("");
   const [seedOutput, setSeedOutput] = useState("");
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isCreatingManual, setIsCreatingManual] = useState(false);
+  const [manualError, setManualError] = useState("");
+  const [manualForm, setManualForm] = useState({
+    personAName: "",
+    personABirthDate: "",
+    personAWikipediaTitle: "",
+    personBName: "",
+    personBBirthDate: "",
+    personBWikipediaTitle: "",
+    relationshipType: "couple",
+    imageUrl: "",
+    imageTitle: "",
+    attributionText: "",
+    editorialPersonABio: "",
+    editorialPersonABioUrl: "",
+    editorialPersonBBio: "",
+    editorialPersonBBioUrl: "",
+    editorialCoupleContext: "",
+    editorialCoupleContextUrl: "",
+  });
 
   const [galleryCandidateId, setGalleryCandidateId] = useState(null);
-  const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryByCandidateId, setGalleryByCandidateId] = useState({});
   const [isGalleryLoading, setIsGalleryLoading] = useState(false);
   const [galleryLoadError, setGalleryLoadError] = useState("");
@@ -83,18 +103,7 @@ export default function AgegapleAdminTab() {
   );
 
   const galleryImages = galleryCandidateId ? (galleryByCandidateId[galleryCandidateId]?.galleryImages ?? []) : [];
-  const activeGalleryImage = galleryImages[galleryIndex] ?? galleryImages[0] ?? null;
-  const canNavigateGallery = galleryImages.length > 1;
-
-  useEffect(() => {
-    if (!galleryImages.length) {
-      setGalleryIndex(0);
-      return;
-    }
-    if (galleryIndex >= galleryImages.length) {
-      setGalleryIndex(galleryImages.length - 1);
-    }
-  }, [galleryImages.length, galleryIndex]);
+  const activeGalleryImage = galleryImages[0] ?? null;
 
   const patchStatus = async (id, status) => {
     if (status === "finished") {
@@ -159,6 +168,52 @@ export default function AgegapleAdminTab() {
     }
   };
 
+  const patchManualField = (field, value) => {
+    setManualForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const createManualCandidate = async () => {
+    setManualError("");
+    setError("");
+    setIsCreatingManual(true);
+    try {
+      const response = await fetch("/api/admin/candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(manualForm),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to create manual candidate");
+      }
+      setManualForm((current) => ({
+        ...current,
+        personAName: "",
+        personABirthDate: "",
+        personAWikipediaTitle: "",
+        personBName: "",
+        personBBirthDate: "",
+        personBWikipediaTitle: "",
+        imageUrl: "",
+        imageTitle: "",
+        attributionText: "",
+        editorialPersonABio: "",
+        editorialPersonABioUrl: "",
+        editorialPersonBBio: "",
+        editorialPersonBBioUrl: "",
+        editorialCoupleContext: "",
+        editorialCoupleContextUrl: "",
+      }));
+      await load({ page: 1, status: "pending_review" });
+      setStatusFilter("pending_review");
+      setIsManualModalOpen(false);
+    } catch (createError) {
+      setManualError(createError instanceof Error ? createError.message : "Could not create manual candidate.");
+    } finally {
+      setIsCreatingManual(false);
+    }
+  };
+
   const loadGallery = async (candidateId) => {
     if (!candidateId) {
       return;
@@ -176,7 +231,11 @@ export default function AgegapleAdminTab() {
         ...current,
         [candidateId]: {
           coupleId: payload.coupleId || null,
-          galleryImages: Array.isArray(payload.galleryImages) ? payload.galleryImages : [],
+          galleryImages: Array.isArray(payload.galleryImages)
+            ? payload.galleryImages.slice(0, 1)
+            : payload.image
+              ? [payload.image]
+              : [],
         },
       }));
     } catch (loadError) {
@@ -195,7 +254,6 @@ export default function AgegapleAdminTab() {
 
   const openGallery = (candidateId) => {
     setGalleryCandidateId(candidateId);
-    setGalleryIndex(0);
     setRemoveImageError("");
     setAddImageError("");
     void loadGallery(candidateId);
@@ -203,7 +261,6 @@ export default function AgegapleAdminTab() {
 
   const closeGallery = () => {
     setGalleryCandidateId(null);
-    setGalleryIndex(0);
     setRemoveImageError("");
     setAddImageError("");
     setGalleryLoadError("");
@@ -292,7 +349,6 @@ export default function AgegapleAdminTab() {
       }
 
       await Promise.all([load({ page: currentPage, status: statusFilter }), loadGallery(galleryCandidateId)]);
-      setGalleryIndex(0);
     } catch {
       setRemoveImageError("Could not remove image.");
     } finally {
@@ -314,6 +370,7 @@ export default function AgegapleAdminTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          candidateId: galleryCandidate.id,
           coupleId: galleryCandidate.coupleId,
           imageUrl: newImageUrl.trim(),
           fileTitle: newImageTitle.trim() || undefined,
@@ -331,7 +388,6 @@ export default function AgegapleAdminTab() {
       setNewImageTitle("");
       setNewImageAttribution("");
       await Promise.all([load({ page: currentPage, status: statusFilter }), loadGallery(galleryCandidateId)]);
-      setGalleryIndex(0);
     } catch {
       setAddImageError("Could not add image.");
     } finally {
@@ -364,6 +420,7 @@ export default function AgegapleAdminTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          candidateId: galleryCandidate.id,
           coupleId: galleryCandidate.coupleId,
           imageUrl: String(uploadPayload.url),
           fileTitle: newImageTitle.trim() || undefined,
@@ -379,7 +436,6 @@ export default function AgegapleAdminTab() {
       setNewImageTitle("");
       setNewImageAttribution("");
       await Promise.all([load({ page: currentPage, status: statusFilter }), loadGallery(galleryCandidateId)]);
-      setGalleryIndex(0);
     } catch (uploadError) {
       setAddImageError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
     } finally {
@@ -429,6 +485,9 @@ export default function AgegapleAdminTab() {
           <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={isSeeding}>
             {isSeeding ? "Seeding..." : `Start Batch Seed (${batchSize})`}
           </button>
+          <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(true)}>
+            Create candidate
+          </button>
           <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
             Status
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
@@ -472,7 +531,7 @@ export default function AgegapleAdminTab() {
                     </b>
                   </p>
                   <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
-                    <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage photos</button>
+                    <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage photo</button>
                     <button className="admin-btn" type="button" onClick={() => void openDetails(item.id)}>Edit details</button>
                     {statuses.map((status) => (
                       (() => {
@@ -683,7 +742,7 @@ export default function AgegapleAdminTab() {
               <div>
                 <p style={{ margin: 0, fontWeight: 900 }}>{galleryCandidate.couple}</p>
                 <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
-                  Gallery image {galleryImages.length ? Math.min(galleryIndex + 1, galleryImages.length) : 0} of {galleryImages.length}
+                  Current photo
                 </p>
               </div>
               <button className="admin-btn" type="button" onClick={closeGallery}>Close</button>
@@ -704,26 +763,6 @@ export default function AgegapleAdminTab() {
                 />
               )}
               {galleryLoadError ? <p style={{ margin: ".55rem 0 0", color: "#b42318", fontWeight: 700 }}>{galleryLoadError}</p> : null}
-              {canNavigateGallery ? (
-                <div style={{ marginTop: ".55rem", display: "flex", gap: ".45rem", justifyContent: "space-between" }}>
-                  <button
-                    className="admin-btn"
-                    type="button"
-                    onClick={() => setGalleryIndex((current) => Math.max(0, current - 1))}
-                    disabled={isGalleryLoading || galleryIndex <= 0}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    className="admin-btn"
-                    type="button"
-                    onClick={() => setGalleryIndex((current) => Math.min(galleryImages.length - 1, current + 1))}
-                    disabled={isGalleryLoading || galleryIndex >= galleryImages.length - 1}
-                  >
-                    Next
-                  </button>
-                </div>
-              ) : null}
             </div>
 
             <div style={{ marginTop: ".75rem", display: "grid", gap: ".5rem" }}>
@@ -805,6 +844,89 @@ export default function AgegapleAdminTab() {
                 {addImageError ? <p style={{ margin: 0, color: "#b42318", fontWeight: 700 }}>{addImageError}</p> : null}
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isManualModalOpen ? (
+        <div
+          onClick={() => setIsManualModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 130,
+            background: "rgba(0,0,0,0.65)",
+            display: "grid",
+            placeItems: "center",
+            padding: "1rem",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(980px, 96vw)",
+              maxHeight: "92vh",
+              overflow: "auto",
+              borderRadius: 16,
+              border: "1px solid #d8dce2",
+              background: "#fff",
+              padding: ".9rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".8rem" }}>
+              <p style={{ margin: 0, fontWeight: 900 }}>Add Manual Candidate</p>
+              <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(false)}>Close</button>
+            </div>
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person A name
+                <input value={manualForm.personAName} onChange={(event) => patchManualField("personAName", event.target.value)} />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person B name
+                <input value={manualForm.personBName} onChange={(event) => patchManualField("personBName", event.target.value)} />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person A birth date
+                <input type="date" value={manualForm.personABirthDate} onChange={(event) => patchManualField("personABirthDate", event.target.value)} />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person B birth date
+                <input type="date" value={manualForm.personBBirthDate} onChange={(event) => patchManualField("personBBirthDate", event.target.value)} />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Relationship type
+                <select value={manualForm.relationshipType} onChange={(event) => patchManualField("relationshipType", event.target.value)}>
+                  <option value="spouse">spouse</option>
+                  <option value="couple">couple</option>
+                  <option value="former_spouse">former spouse</option>
+                  <option value="former_couple">former couple</option>
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Image URL (optional)
+                <input value={manualForm.imageUrl} onChange={(event) => patchManualField("imageUrl", event.target.value)} placeholder="https://..." />
+              </label>
+            </div>
+            <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person A bio
+                <textarea rows={3} value={manualForm.editorialPersonABio} onChange={(event) => patchManualField("editorialPersonABio", event.target.value)} />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person B bio
+                <textarea rows={3} value={manualForm.editorialPersonBBio} onChange={(event) => patchManualField("editorialPersonBBio", event.target.value)} />
+              </label>
+            </div>
+            <div style={{ marginTop: ".55rem", display: "flex", gap: ".45rem" }}>
+              <button className="admin-btn primary" type="button" onClick={() => void createManualCandidate()} disabled={isCreatingManual}>
+                {isCreatingManual ? "Creating..." : "Create manual candidate"}
+              </button>
+              <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(false)} disabled={isCreatingManual}>
+                Cancel
+              </button>
+            </div>
+            {manualError ? <p style={{ marginTop: ".5rem", color: "#b42318", fontWeight: 700 }}>{manualError}</p> : null}
           </div>
         </div>
       ) : null}

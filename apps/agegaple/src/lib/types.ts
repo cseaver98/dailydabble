@@ -20,7 +20,6 @@ export type PuzzlePublic = {
   relationshipType: RelationshipType;
   imageUrl: string;
   imageAlt: string;
-  galleryImages: { imageUrl: string; imageAlt: string }[];
   editorialContext: EditorialContext;
 };
 
@@ -45,7 +44,8 @@ export type ReviewCandidate = {
   personABirthDate: string;
   personBBirthDate: string;
   imageUrl: string;
-  galleryImages: { id: string; imageUrl: string; imageAlt: string }[];
+  imageId: string;
+  imageAlt: string;
   license: string;
   qualityScore: number;
   status: CandidateStatus;
