@@ -60,12 +60,15 @@ export default function Home() {
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
             const isDoodle = game.slug === "doodle";
+            const isDabble = game.slug === "dabble";
             const isYeardle = game.slug === "yeardle";
             const isEquadle = game.slug === "equadle";
             const isMoviedle = game.slug === "moviedle";
             const isSportle = game.slug === "sportle";
             const iconBackground = isDoodle
                 ? "bg-sky-100"
+                : isDabble
+                  ? "bg-slate-200"
                 : isYeardle
                   ? "bg-violet-100"
                 : isEquadle
@@ -77,6 +80,8 @@ export default function Home() {
                     : "bg-blue-100";
             const iconAccent = isDoodle
                 ? "bg-sky-700/12"
+                : isDabble
+                  ? "bg-slate-700/12"
                 : isYeardle
                   ? "bg-violet-700/12"
                 : isEquadle
@@ -88,6 +93,8 @@ export default function Home() {
                     : "bg-[#d87093]/14";
             const buttonBackground = isDoodle
                 ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white transition-colors hover:from-sky-700 hover:to-blue-900"
+                : isDabble
+                  ? "bg-gradient-to-r from-slate-600 to-gray-800 text-white transition-colors hover:from-slate-700 hover:to-gray-900"
                 : isYeardle
                   ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white transition-colors hover:from-violet-700 hover:to-indigo-900"
                   : isEquadle
@@ -119,6 +126,8 @@ export default function Home() {
                         height={38}
                         className="h-9 w-9 object-contain"
                       />
+                    ) : isDabble ? (
+                      <span className="font-headline text-xl font-black tracking-tight text-slate-700">D</span>
                     ) : isYeardle ? (
                       <Image
                         src="/yeardle-mark.svg"

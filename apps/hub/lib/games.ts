@@ -7,6 +7,12 @@ export type Game = {
 
 export const games: Game[] = [
   {
+    slug: "dabble",
+    name: "Dabble",
+    href: "https://dabble.dailydabble.app",
+    description: "Guess the daily phrase one word at a time.",
+  },
+  {
     slug: "agegaple",
     name: "Agegaple",
     href: "https://agegaple.dailydabble.app",

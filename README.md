@@ -2,6 +2,8 @@
 
 This repository now contains all Dailydabble apps in one workspace so UI and shared patterns can stay consistent.
 
+Repo operating notes live in [AGENTS.md](./AGENTS.md). Read that first for game structure, admin conventions, and Supabase patterns.
+
 ## Structure
 
 - `apps/hub` - splash page and game status hub
@@ -34,6 +36,7 @@ npm run build
 
 - Hub details: `apps/hub/README.md`
 - Agegaple details: `apps/agegaple/README.md`
+- Game scaffolding checklist: `docs/game-app-checklist.md`
 
 ## Daily Scheduling (ET)
 

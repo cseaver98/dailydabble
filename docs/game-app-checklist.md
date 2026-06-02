@@ -2,6 +2,8 @@
 
 Use this checklist when creating or normalizing any DailyDabble game app.
 
+Reference [AGENTS.md](../AGENTS.md) first for repo-specific structure, admin patterns, and Supabase conventions.
+
 ## Structure
 - Use `src/` layout:
 - `src/app` for routes/UI

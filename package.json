@@ -15,7 +15,8 @@
     "dev:moviedle": "npm run dev -w @dailydabble/moviedle -- --port 3105",
     "dev:equadle": "npm run dev -w @dailydabble/equadle -- --port 3106",
     "dev:sportle": "npm run dev -w @dailydabble/sportle -- --port 3107",
-    "dev:all": "concurrently -n hub,agegaple,admin,doodle,yeardle,moviedle,equadle,sportle -c green,blue,cyan,yellow,white,red,magenta,blue \"npm run dev:hub\" \"npm run dev:agegaple\" \"npm run dev:admin\" \"npm run dev:doodle\" \"npm run dev:yeardle\" \"npm run dev:moviedle\" \"npm run dev:equadle\" \"npm run dev:sportle\"",
+    "dev:dabble": "npm run dev -w @dailydabble/dabble -- --port 3108",
+    "dev:all": "concurrently -n hub,dabble,agegaple,admin,doodle,yeardle,moviedle,equadle,sportle -c green,white,blue,cyan,yellow,red,magenta,blue,green \"npm run dev:hub\" \"npm run dev:dabble\" \"npm run dev:agegaple\" \"npm run dev:admin\" \"npm run dev:doodle\" \"npm run dev:yeardle\" \"npm run dev:moviedle\" \"npm run dev:equadle\" \"npm run dev:sportle\"",
     "seed:moviedle-titles": "node scripts/seed-moviedle-title-library.mjs",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
