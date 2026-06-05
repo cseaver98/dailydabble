@@ -10,7 +10,7 @@ type ArchiveLockGateProps = {
 
 export default function ArchiveLockGate({
   archiveHref,
-  description = "Enter the shared password to open this retired archive game.",
+  description = "",
   title = "Archive Game #1 is locked",
 }: ArchiveLockGateProps) {
   const [password, setPassword] = useState("");
@@ -48,7 +48,7 @@ export default function ArchiveLockGate({
   return (
     <section className="card legal-card archive-card">
       <h1 className="page-title">{title}</h1>
-      <p className="page-subtle">{description}</p>
+      {description ? <p className="page-subtle">{description}</p> : null}
       <form className="mt-6 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
         <input
           className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm font-medium text-[#2c2f31] outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/10"

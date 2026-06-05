@@ -6,6 +6,7 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import LoadingLabel from "../../components/LoadingLabel";
 
 const CLUE_TILE_COUNT = 6;
 const CLUE_FLIP_DURATION_MS = 640;
@@ -477,7 +478,7 @@ export default function SportleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card sportle-card">
-            <h1 className="page-title">Loading puzzle...</h1>
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
           </section>
         </main>
       </div>
@@ -544,14 +545,14 @@ export default function SportleGameClient({
                           {index === 0 && clue.logoUrl ? (
                             <div className="clue-team-row">
                               <img src={clue.logoUrl} alt={clue.value || "Team logo"} className="team-logo" />
-                              <span>{clue.value}</span>
+                              <span className="clue-value">{clue.value}</span>
                             </div>
                           ) : clue.imageUrl ? (
                             <div className="clue-team-row clue-image-row">
                               <img src={clue.imageUrl} alt={clue.value || "Athlete headshot"} className="team-logo headshot-logo" />
                             </div>
                           ) : (
-                            <span>{clue?.value}</span>
+                            <span className="clue-value">{clue?.value}</span>
                           )}
                         </>
                       ) : null}

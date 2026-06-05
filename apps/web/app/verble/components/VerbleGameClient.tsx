@@ -7,6 +7,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import LoadingLabel from "../../components/LoadingLabel";
 
 type VerbleGameClientProps = {
   apiUrl: string;
@@ -969,7 +970,11 @@ export default function VerbleGameClient({
     return (
       <div className="verble-shell">
         <MainNav label={navLabel} hideToday={hideToday} />
-        <main className="container"><section className="card"><p className="message">Loading Verble...</p></section></main>
+        <main className="container">
+          <section className="card legal-card">
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
+          </section>
+        </main>
       </div>
     );
   }

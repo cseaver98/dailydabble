@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 
@@ -483,7 +484,7 @@ export default function MoviedleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card moviedle-card">
-            <h1 className="page-title">Loading puzzle...</h1>
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
           </section>
         </main>
       </div>

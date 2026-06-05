@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
 import { useEffect, useMemo, useState } from "react";
+import LockedArchiveTile from "../../components/LockedArchiveTile";
 
 import type { ArchivePuzzleListItem } from "@/lib/agegaple/types";
+import LoadingLabel from "../../components/LoadingLabel";
 
 type ArchiveResponse = {
   items?: ArchivePuzzleListItem[];
@@ -116,17 +117,20 @@ export default function ArchivePage() {
         <section className="card legal-card archive-card">
           <h1 className="page-title">Archive Games</h1>
 
-          {loading ? <p className="page-subtle">Loading archive...</p> : null}
+          {loading ? <p className="page-subtle"><LoadingLabel text="Loading archive" /></p> : null}
           {!loading && error ? <p className="page-subtle error-text">{error}</p> : null}
 
           {!loading && !error ? (
             <div className="archive-grid">
-              {rows.length === 0 ? <p className="page-subtle">No archived Agegaple games yet.</p> : null}
+              {rows.length === 0 ? <p className="page-subtle archive-empty-copy">No archived Agegaple games yet.</p> : null}
               {pagedRows.map((item) => (
-                <Link key={item.puzzleDate} className="archive-tile" href={`/agegaple/archive/${item.puzzleDate}`}>
-                  <span className="archive-tile-title">{item.tileLabel}</span>
-                  <span className="archive-tile-date">{item.isLocked ? `Locked · ${item.dateLabel}` : item.dateLabel}</span>
-                </Link>
+                <LockedArchiveTile
+                  key={item.puzzleDate}
+                  href={`/agegaple/archive/${item.puzzleDate}`}
+                  tileLabel={item.tileLabel}
+                  dateLabel={item.dateLabel}
+                  isLocked={item.isLocked}
+                />
               ))}
             </div>
           ) : null}

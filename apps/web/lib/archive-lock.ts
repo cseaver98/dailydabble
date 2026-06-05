@@ -33,7 +33,7 @@ export const createArchiveLockedResponse = (gameLabel: string, date: string) =>
     {
       locked: true,
       lockTitle: "Archive Game #1 is locked",
-      lockDescription: `Enter the shared password to open ${gameLabel} archive game #1 from ${date}.`,
+      lockDescription: "",
     },
     { status: 423 },
   );

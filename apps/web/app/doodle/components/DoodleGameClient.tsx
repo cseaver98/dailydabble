@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 
 type DoodleGameClientProps = {
@@ -485,7 +486,7 @@ export default function DoodleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card legal-card">
-            <h1 className="page-title">Loading puzzle...</h1>
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
           </section>
         </main>
       </div>

@@ -7,6 +7,7 @@ import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import LoadingLabel from "../../components/LoadingLabel";
 
 type YeardleGameClientProps = {
   apiUrl: string;
@@ -439,7 +440,7 @@ export default function YeardleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card yeardle-card">
-            <h1 className="page-title">Loading puzzle...</h1>
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
           </section>
         </main>
       </div>

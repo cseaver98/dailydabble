@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
+import LoadingLabel from "../../../components/LoadingLabel";
 
 import EditorialDrawer from "../../components/EditorialDrawer";
 import ArchiveLockGate from "../../../components/ArchiveLockGate";
@@ -458,7 +459,7 @@ export default function ArchiveGamePage() {
       />
 
       <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
-        {loading && <p className={mutedTextClass}>Loading game...</p>}
+        {loading && <p className={mutedTextClass}><LoadingLabel text="Loading puzzle" /></p>}
         {!loading && archiveLock ? (
           <ArchiveLockGate archiveHref="/agegaple/archive" title={archiveLock.title} description={archiveLock.description} />
         ) : null}

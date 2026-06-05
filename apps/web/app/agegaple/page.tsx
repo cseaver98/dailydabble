@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
+import LoadingLabel from "../components/LoadingLabel";
 
 import EditorialDrawer from "./components/EditorialDrawer";
 import type { PuzzleAnswer, PuzzlePublic } from "@/lib/agegaple/types";
@@ -511,7 +512,7 @@ export default function Home() {
       />
 
       <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
-        {loading && <p className={mutedTextClass}>Loading puzzle...</p>}
+        {loading && <p className={mutedTextClass}><LoadingLabel text="Loading puzzle" /></p>}
 
         {!loading && !puzzle && !error && (
           <DailydabbleUnavailable title="Agegaple unavailable" message="No puzzle available right now." />

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
 
@@ -537,7 +538,7 @@ export default function EquadleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card equadle-card">
-            <h1 className="page-title">Loading puzzle...</h1>
+            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
           </section>
         </main>
       </div>

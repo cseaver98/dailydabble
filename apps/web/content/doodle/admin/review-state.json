@@ -22,5 +22,9 @@
   "sheep": {
     "status": "approved",
     "updatedAt": "2026-06-05T03:11:03.869Z"
+  },
+  "miffy": {
+    "status": "approved",
+    "updatedAt": "2026-06-05T18:46:10.914Z"
   }
 }

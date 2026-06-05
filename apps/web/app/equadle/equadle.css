@@ -474,6 +474,38 @@
   margin-top: 0.35rem;
 }
 
+.equadle-shell .archive-tile.is-locked {
+  position: relative;
+  background: linear-gradient(180deg, #f7f9fc 0%, #e1e7f0 100%);
+  border-color: rgba(44, 47, 49, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 10px 22px rgba(44, 47, 49, 0.08);
+}
+
+.equadle-shell .archive-tile.is-locked:hover {
+  background: linear-gradient(180deg, #f7f9fc 0%, #e1e7f0 100%);
+}
+
+.equadle-shell .archive-tile.is-locked {
+  cursor: default;
+}
+
+.equadle-shell .archive-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.22rem 0.46rem;
+  border-radius: 999px;
+  background: rgba(44, 47, 49, 0.08);
+  color: var(--text);
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+
 .equadle-shell .legal-card { display: grid; gap: 0.6rem; }
 
 @media (max-width: 720px) {
