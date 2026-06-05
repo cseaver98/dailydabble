@@ -6,8 +6,10 @@ Repo operating notes live in [AGENTS.md](./AGENTS.md). Read that first for game 
 
 ## Structure
 
-- `apps/hub` - splash page and game status hub
-- `apps/agegaple` - Agegaple game app
+- `apps/web` - public site, homepage, and shared game routes
+- `apps/admin` - admin and curation surface
+- `apps/web/content/doodle` - Doodle raw, processed, preview, and review-state content
+- `apps/web/scripts` - shared app-support scripts for migrated public games
 - `supabase` - shared Supabase config and migrations
 
 ## Workspace Commands
@@ -21,8 +23,8 @@ npm install
 Run apps:
 
 ```bash
-npm run dev:hub
-npm run dev:agegaple
+npm run dev:web
+npm run dev:admin
 ```
 
 Quality/build:
@@ -34,12 +36,10 @@ npm run build
 
 ## App Docs
 
-- Hub details: `apps/hub/README.md`
-- Agegaple details: `apps/agegaple/README.md`
+- Web app details: `apps/web/README.md`
 - Game scaffolding checklist: `docs/game-app-checklist.md`
 
 ## Daily Scheduling (ET)
 
-- Daily puzzle auto-assignment is triggered by Vercel cron in each game app.
-- Cron schedules run at `04:05` and `05:05` UTC so midnight in `America/New_York` is covered across DST changes.
-- Set `CRON_SECRET` in each Vercel project to protect `/api/internal/schedule-today`.
+- Public daily puzzle auto-assignment now runs through `apps/web`.
+- Admin remains its own deploy target at `admin.dailydabble.app`.

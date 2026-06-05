@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import { listVerbleArchive } from "../../../../../lib/verble/puzzle-repository";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  try {
+    const items = await listVerbleArchive(120);
+    return NextResponse.json({ items });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load archive";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

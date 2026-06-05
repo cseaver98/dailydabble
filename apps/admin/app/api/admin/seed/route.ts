@@ -12,24 +12,24 @@ const validBatchSizes = new Set([1, 5, 10, 15, 20]);
 
 const findAgegapleCwd = (): string => {
   const candidates = [
-    resolve(process.cwd(), "apps/agegaple"),
-    resolve(process.cwd(), "../agegaple"),
     process.cwd(),
-  ];
+    resolve(process.cwd(), ".."),
+    resolve(process.cwd(), "../.."),
+  ] as const;
 
-  const match = candidates.find((cwd) => existsSync(resolve(cwd, "scripts/seed-mvp.mjs")));
+  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/web/scripts/seed-agegaple-mvp.mjs")));
   if (!match) {
     throw new Error("Could not locate Agegaple seed script directory");
   }
 
-  return match;
+  return resolve(match, "apps/web");
 };
 
 const runSeedScript = async (batchSize: number): Promise<{ stdout: string; stderr: string }> => {
   const cwd = findAgegapleCwd();
   const poolSize = Math.max(120, Math.min(360, batchSize * 48));
   const { stdout, stderr } = await execAsync(
-    `node --env-file=.env.local scripts/seed-mvp.mjs --batch-size=${batchSize} --pool-size=${poolSize}`,
+    `node --env-file=.env.local scripts/seed-agegaple-mvp.mjs --batch-size=${batchSize} --pool-size=${poolSize}`,
     {
       cwd,
       env: process.env,

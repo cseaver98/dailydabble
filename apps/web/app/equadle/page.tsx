@@ -1,0 +1,5 @@
+import EquadleGameClient from "./components/EquadleGameClient";
+
+export default function HomePage() {
+  return <EquadleGameClient apiUrl="/api/equadle/puzzle/today" navLabel="" hideToday lockDailyCompletion />;
+}

@@ -15,7 +15,7 @@ const DOODLE_STORAGE_PREFIX = (process.env.DOODLE_STORAGE_PREFIX || "raw").repla
 
 const findRepoRoot = (): string => {
   const candidates = [process.cwd(), resolve(process.cwd(), ".."), resolve(process.cwd(), "../..")] as const;
-  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/doodle/scripts/build-doodle-pipeline.mjs")));
+  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/web/scripts/build-doodle-pipeline.mjs")));
   if (!match) {
     throw new Error("Could not locate the Doodle app directory");
   }
@@ -41,7 +41,7 @@ const ensureStorageBucket = async () => {
 const syncStorageRawToLocal = async (doodleDir: string): Promise<number> => {
   await ensureStorageBucket();
 
-  const rawDir = resolve(doodleDir, "content/raw");
+  const rawDir = resolve(doodleDir, "content/doodle/raw");
   mkdirSync(rawDir, { recursive: true });
 
   for (const file of readdirSync(rawDir)) {
@@ -84,7 +84,7 @@ const syncStorageRawToLocal = async (doodleDir: string): Promise<number> => {
 
 const runDoodlePipeline = async (slug?: string): Promise<{ stdout: string; stderr: string; doodleDir: string }> => {
   const repoRoot = findRepoRoot();
-  const doodleDir = resolve(repoRoot, "apps/doodle");
+  const doodleDir = resolve(repoRoot, "apps/web");
   const seed = Date.now();
   const command = slug
     ? `node scripts/build-doodle-pipeline.mjs --slug=${slug} --seed=${seed}`
@@ -98,7 +98,7 @@ const runDoodlePipeline = async (slug?: string): Promise<{ stdout: string; stder
 };
 
 const readManifestSummary = (doodleDir: string): { itemCount: number; slugs: string[]; generatedAt: string | null } => {
-  const manifestPath = resolve(doodleDir, "content/processed/puzzles.generated.json");
+  const manifestPath = resolve(doodleDir, "content/doodle/processed/puzzles.generated.json");
   if (!existsSync(manifestPath)) {
     return { itemCount: 0, slugs: [], generatedAt: null };
   }
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       ? payload.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "")
       : "";
     const repoRoot = findRepoRoot();
-    const doodleDir = resolve(repoRoot, "apps/doodle");
+    const doodleDir = resolve(repoRoot, "apps/web");
     const syncedCount = await syncStorageRawToLocal(doodleDir);
 
     const { stdout, stderr } = await runDoodlePipeline(normalizedSlug || undefined);

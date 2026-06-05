@@ -1,0 +1,711 @@
+.yeardle-shell {
+  --background: #f5f6f9;
+  --surface: #ffffff;
+  --surface-low: #eff1f4;
+  --surface-high: #e0e3e6;
+  --text: #2c2f31;
+  --muted: #595c5e;
+  --outline-soft: rgba(171, 173, 176, 0.28);
+
+  --brand: #7a5af8;
+  --brand-strong: #5a40cb;
+  --brand-soft: #e9e3ff;
+  --accent: #a88bff;
+
+  --surface-container-low: var(--surface-low);
+  --surface-container-high: var(--surface-high);
+  --surface-container-lowest: var(--surface);
+  --foreground: var(--text);
+  --outline: var(--muted);
+  --primary: var(--brand);
+  --primary-dim: var(--brand-strong);
+  --dd-menu-accent: var(--brand-strong);
+  --dd-menu-hover-bg: #eee8ff;
+  --dd-menu-focus-ring: rgba(122, 90, 248, 0.35);
+}
+
+.yeardle-shell * { box-sizing: border-box; }
+
+.yeardle-shell {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+.yeardle-shell {
+  min-height: 100dvh;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 0% 0%, color-mix(in srgb, var(--brand-soft) 35%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--brand) 14%, transparent) 0%, transparent 64%),
+    var(--background);
+}
+
+.yeardle-shell .container {
+  width: min(840px, 94vw);
+  margin: 0 auto;
+  padding: 0.85rem 0 2.2rem;
+}
+
+.yeardle-shell main.container {
+  min-height: calc(100dvh - var(--nav-height, 78px));
+}
+
+.yeardle-shell .card {
+  background: var(--surface);
+  border-radius: 1.15rem;
+  border: 0;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
+}
+
+.yeardle-shell .yeardle-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.yeardle-shell .game-meta-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.yeardle-shell .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 58%, white);
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding: 0.45rem 0.62rem;
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.yeardle-shell .puzzle-title {
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.yeardle-shell .event-figure {
+  margin: 0;
+  border: 1px solid var(--outline-soft);
+  border-radius: 1rem;
+  background: #faf9ff;
+  overflow: hidden;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+.yeardle-shell .event-figure-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: zoom-in;
+  text-align: inherit;
+}
+
+.yeardle-shell .event-image {
+  width: 100%;
+  display: block;
+  max-height: 420px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.yeardle-shell .image-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1rem;
+}
+
+.yeardle-shell .image-modal-stage {
+  position: relative;
+  width: 100%;
+  max-width: 72rem;
+  height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.yeardle-shell .image-modal-close {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.75rem;
+  z-index: 20;
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(161, 161, 170, 0.7);
+  background: rgba(24, 24, 27, 0.9);
+  color: #f4f4f5;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.yeardle-shell .image-modal-close:hover {
+  background: #27272a;
+}
+
+.yeardle-shell .image-modal-viewport {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid #3f3f46;
+  background: #09090b;
+}
+
+.yeardle-shell .image-modal-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.yeardle-shell .image-modal-caption {
+  margin: 0.5rem 0 0;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #d4d4d8;
+}
+
+.yeardle-shell .image-modal-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  border: 1px solid #71717a;
+  background: rgba(24, 24, 27, 0.9);
+  color: #f4f4f5;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.yeardle-shell .image-modal-nav:hover {
+  background: #27272a;
+}
+
+.yeardle-shell .image-modal-prev {
+  left: 0.5rem;
+}
+
+.yeardle-shell .image-modal-next {
+  right: 0.5rem;
+}
+
+.yeardle-shell .guess-form {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1fr auto;
+}
+
+.yeardle-shell .guess-input {
+  border-radius: 999px;
+  border: 1px solid var(--outline-soft);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.yeardle-shell .guess-input:focus-visible {
+  outline: 3px solid rgba(122, 90, 248, 0.3);
+  outline-offset: 1px;
+}
+
+.yeardle-shell .guess-submit-btn,
+.yeardle-shell .admin-btn-like {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 10px 20px rgba(90, 64, 203, 0.28);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yeardle-shell .guess-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.yeardle-shell .guess-submit-btn:not(:disabled):hover,
+.yeardle-shell .admin-btn-like.primary:hover {
+  background: linear-gradient(135deg, var(--brand-strong), var(--brand-strong));
+}
+
+.yeardle-shell .admin-btn-like:hover {
+  background: color-mix(in srgb, var(--surface-low) 82%, white);
+}
+
+.yeardle-shell .message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.yeardle-shell .message[data-kind="won"] { color: #0a7a37; }
+.yeardle-shell .message[data-kind="lost"] { color: #b02500; }
+
+.yeardle-shell .temperature-hint-wrap {
+  margin-top: -0.1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.yeardle-shell .temperature-hint-heat {
+  margin: 0;
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.yeardle-shell .temperature-hint-trend {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.yeardle-shell .next-game-copy {
+  margin: -0.15rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
+
+.yeardle-shell .guess-history-wrap {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.yeardle-shell .guess-history-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.yeardle-shell .guess-history-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.yeardle-shell .guess-history-toggle-icon {
+  display: inline-flex;
+  color: var(--brand-strong);
+  transition: transform 200ms ease;
+}
+
+.yeardle-shell .guess-history-toggle[aria-expanded="true"] .guess-history-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.yeardle-shell .guess-history-latest {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--brand-soft) 56%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.yeardle-shell .guess-history-guess {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.yeardle-shell .guess-history-status-correct {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.yeardle-shell .guess-history-status-wrong {
+  color: #b02500;
+  font-weight: 800;
+}
+
+.yeardle-shell .guess-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.yeardle-shell .guess-history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--surface-low);
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.yeardle-shell .editorial-drawer {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.yeardle-shell .editorial-drawer-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.72rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.yeardle-shell .editorial-drawer-label {
+  margin: 0;
+  font-weight: 400;
+}
+
+.yeardle-shell .editorial-drawer-arrow {
+  display: inline-flex;
+  color: var(--primary);
+  transition: transform 200ms ease;
+}
+
+.yeardle-shell .editorial-drawer-arrow.open {
+  transform: rotate(180deg);
+}
+
+.yeardle-shell .editorial-drawer-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 80;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 18px 38px rgba(44, 47, 49, 0.16);
+}
+
+.yeardle-shell .editorial-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  border-bottom: 1px solid var(--outline-soft);
+  padding: 0.7rem 0.9rem;
+}
+
+.yeardle-shell .editorial-drawer-headline {
+  margin: 0;
+  font-weight: 400;
+}
+
+.yeardle-shell .editorial-drawer-close {
+  border: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.yeardle-shell .editorial-drawer-close:hover {
+  color: var(--brand-strong);
+}
+
+.yeardle-shell .editorial-drawer-content {
+  max-height: 45vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.7rem 0.9rem 0.9rem;
+}
+
+.yeardle-shell .editorial-drawer-content p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.yeardle-shell .editorial-field-label {
+  font-weight: 800;
+  margin-right: 0.3rem;
+}
+
+.yeardle-shell .post-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.yeardle-shell .result-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.yeardle-shell .result-modal-panel {
+  width: min(620px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface);
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.yeardle-shell .result-modal-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-soft));
+  background: var(--surface-container-lowest, var(--surface));
+  color: var(--foreground, var(--text));
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.yeardle-shell .result-modal-close:hover {
+  background: var(--surface-container-high, var(--surface-high));
+}
+
+.yeardle-shell .result-modal-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.1rem;
+}
+
+.yeardle-shell .result-modal-timer {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
+
+.yeardle-shell .result-modal-answer {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--brand-strong);
+}
+
+.yeardle-shell .result-modal-image {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 0.8rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+}
+
+.yeardle-shell .result-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.yeardle-shell .result-modal-copy {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.yeardle-shell .admin-btn-like {
+  background: #fff;
+  color: var(--brand-strong);
+  border: 1px solid #d8d0ff;
+  box-shadow: none;
+}
+
+.yeardle-shell .admin-btn-like.primary {
+  border: 0;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(90, 64, 203, 0.28);
+}
+
+.yeardle-shell .page-title {
+  margin: 0 0 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.yeardle-shell .page-subtle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.yeardle-shell .error-text { color: #b02500; }
+
+.yeardle-shell .archive-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.yeardle-shell .archive-card.legal-card {
+  gap: 0.8rem;
+}
+
+.yeardle-shell .archive-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: 0.55rem;
+}
+
+.yeardle-shell .archive-tile {
+  border: 1px solid var(--outline-soft);
+  background: #eaf0f8;
+  border-radius: 0.9rem;
+  padding: 0.45rem;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--text);
+}
+.yeardle-shell .archive-tile:hover {
+  background: #dce6f3;
+}
+
+.yeardle-shell .archive-tile-title {
+  font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.yeardle-shell .archive-tile-date {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.yeardle-shell .archive-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.yeardle-shell .legal-card {
+  display: grid;
+  gap: 0.6rem;
+}
+
+@media (max-width: 720px) {
+  .yeardle-shell .game-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .yeardle-shell .guess-form,
+  .yeardle-shell .post-actions {
+    grid-template-columns: 1fr;
+  }
+  .yeardle-shell .archive-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .yeardle-shell .result-modal-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Consistent interactive cursor across game UIs */
+.yeardle-shell a[href],
+.yeardle-shell button,
+.yeardle-shell [role="button"],
+.yeardle-shell summary,
+.yeardle-shell input[type="button"],
+.yeardle-shell input[type="submit"],
+.yeardle-shell input[type="reset"],
+.yeardle-shell input[type="checkbox"],
+.yeardle-shell input[type="radio"],
+.yeardle-shell input[type="range"],
+.yeardle-shell select,
+.yeardle-shell label[for] {
+  cursor: pointer;
+}

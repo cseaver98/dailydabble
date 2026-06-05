@@ -73,17 +73,17 @@ const normalizeSlug = (value: string): string =>
 
 const findRepoRoot = (): string => {
   const candidates = [process.cwd(), resolve(process.cwd(), ".."), resolve(process.cwd(), "../..")] as const;
-  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/doodle/scripts/build-doodle-pipeline.mjs")));
+  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/web/scripts/build-doodle-pipeline.mjs")));
   if (!match) {
     throw new Error("Could not locate the Doodle app directory");
   }
   return match;
 };
 
-const getRawDir = (): string => resolve(findRepoRoot(), "apps/doodle/content/raw");
-const getProcessedDir = (): string => resolve(findRepoRoot(), "apps/doodle/content/processed");
-const getPreviewDir = (): string => resolve(findRepoRoot(), "apps/doodle/content/previews");
-const getReviewStatePath = (): string => resolve(findRepoRoot(), "apps/doodle/content/admin/review-state.json");
+const getRawDir = (): string => resolve(findRepoRoot(), "apps/web/content/doodle/raw");
+const getProcessedDir = (): string => resolve(findRepoRoot(), "apps/web/content/doodle/processed");
+const getPreviewDir = (): string => resolve(findRepoRoot(), "apps/web/content/doodle/previews");
+const getReviewStatePath = (): string => resolve(findRepoRoot(), "apps/web/content/doodle/admin/review-state.json");
 
 const storagePathForSlug = (slug: string): string =>
   DOODLE_STORAGE_PREFIX ? `${DOODLE_STORAGE_PREFIX}/${slug}.svg` : `${slug}.svg`;

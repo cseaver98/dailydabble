@@ -7,16 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:hub": "npm run dev -w @dailydabble/hub -- --port 3100",
-    "dev:agegaple": "npm run dev -w @dailydabble/agegaple -- --port 3103",
-    "dev:doodle": "npm run dev -w @dailydabble/doodle -- --port 3102",
+    "dev:web": "npm run dev -w @dailydabble/web -- --port 3100",
     "dev:admin": "npm run dev -w @dailydabble/admin -- --port 3101",
-    "dev:yeardle": "npm run dev -w @dailydabble/yeardle -- --port 3104",
-    "dev:moviedle": "npm run dev -w @dailydabble/moviedle -- --port 3105",
-    "dev:equadle": "npm run dev -w @dailydabble/equadle -- --port 3106",
-    "dev:sportle": "npm run dev -w @dailydabble/sportle -- --port 3107",
-    "dev:dabble": "npm run dev -w @dailydabble/dabble -- --port 3108",
-    "dev:all": "concurrently -n hub,dabble,agegaple,admin,doodle,yeardle,moviedle,equadle,sportle -c green,white,blue,cyan,yellow,red,magenta,blue,green \"npm run dev:hub\" \"npm run dev:dabble\" \"npm run dev:agegaple\" \"npm run dev:admin\" \"npm run dev:doodle\" \"npm run dev:yeardle\" \"npm run dev:moviedle\" \"npm run dev:equadle\" \"npm run dev:sportle\"",
+    "dev:all": "concurrently -n web,admin -c green,cyan \"npm run dev:web\" \"npm run dev:admin\"",
     "seed:moviedle-titles": "node scripts/seed-moviedle-title-library.mjs",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"

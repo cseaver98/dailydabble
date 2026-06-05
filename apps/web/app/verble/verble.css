@@ -1,0 +1,745 @@
+.verble-shell {
+  --background: #f5f6f9;
+  --surface: #ffffff;
+  --surface-low: #eff1f4;
+  --surface-high: #e0e3e6;
+  --text: #2c2f31;
+  --muted: #595c5e;
+  --outline-soft: rgba(171, 173, 176, 0.28);
+
+  --brand: #e6d900;
+  --brand-strong: #9d9200;
+  --brand-soft: #f7ec56;
+
+  --surface-container-low: var(--surface-low);
+  --surface-container-high: var(--surface-high);
+  --surface-container-lowest: var(--surface);
+  --foreground: var(--text);
+  --outline: var(--muted);
+  --primary: var(--brand);
+  --primary-dim: var(--brand-strong);
+  --dd-menu-accent: #c7ba00;
+  --dd-menu-hover-bg: #fff7c2;
+  --dd-menu-focus-ring: rgba(230, 217, 0, 0.34);
+  isolation: isolate;
+}
+
+.verble-shell * { box-sizing: border-box; }
+.verble-shell { margin: 0; padding: 0; min-height: 100%; }
+
+.verble-shell {
+  min-height: 100dvh;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background-color: var(--background);
+  background:
+    radial-gradient(1100px 650px at 0% 0%, color-mix(in srgb, var(--brand) 14%, transparent) 0%, transparent 60%),
+    radial-gradient(1100px 650px at 100% 0%, color-mix(in srgb, var(--brand) 14%, transparent) 0%, transparent 60%),
+    var(--background);
+  overflow-x: clip;
+}
+
+.verble-shell .container { width: min(840px, 94vw); margin: 0 auto; padding: 0.85rem 0 2.2rem; }
+.verble-shell main.container { min-height: calc(100dvh - var(--nav-height, 78px)); }
+
+.verble-shell .card {
+  background: var(--surface);
+  border-radius: 1.15rem;
+  border: 0;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
+}
+
+.verble-shell .verble-card { display: grid; gap: 0.85rem; }
+.verble-shell .game-meta-row { display: grid; gap: 0.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.verble-shell .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 36%, white);
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding: 0.45rem 0.62rem;
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.verble-shell .puzzle-title {
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.verble-shell .rule-copy {
+  margin: 0;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--brand-soft) 36%, white);
+  padding: 0.62rem 0.78rem;
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
+.verble-shell .phrase-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.95rem 0.78rem;
+  align-items: flex-end;
+}
+
+.verble-shell .slot-cluster {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.verble-shell .slot-word-button {
+  display: grid;
+  gap: 0.3rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.verble-shell .slot-word-button:focus {
+  outline: none;
+}
+
+.verble-shell .slot-word-button:focus-visible .slot-tile:not(.fixed):not(.reveal):not(.solved) {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.55);
+}
+
+.verble-shell .slot-word-button:disabled {
+  cursor: default;
+}
+
+.verble-shell .slot-tiles {
+  display: flex;
+  gap: clamp(0.1rem, 0.55vw, 0.2rem);
+}
+
+.verble-shell .slot-tile {
+  width: clamp(1.7rem, 7.4vw, 2.55rem);
+  height: clamp(2rem, 8.2vw, 2.85rem);
+  border-radius: clamp(0.45rem, 1.6vw, 0.7rem);
+  border: 1px solid var(--outline-soft);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.78rem, 3vw, 1.05rem);
+  text-transform: uppercase;
+  color: var(--text);
+  box-shadow: inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+}
+
+.verble-shell .slot-tile.fixed {
+  width: clamp(0.44rem, 1.9vw, 0.62rem);
+  min-width: clamp(0.44rem, 1.9vw, 0.62rem);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  padding-bottom: 0.12rem;
+}
+
+.verble-shell .slot-word-button.selected .slot-tile.fixed {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.verble-shell .slot-tile.filled {
+  border-color: #bcc4ce;
+  background: #f9fbfd;
+}
+
+.verble-shell .slot-tile.correct {
+  background: #65b84d;
+  border-color: #5aa545;
+  color: #fff;
+}
+
+.verble-shell .slot-tile.present {
+  background: #e4bc4d;
+  border-color: #c7a340;
+  color: #fff;
+}
+
+.verble-shell .slot-tile.absent {
+  background: #b5bbc5;
+  border-color: #a3a9b4;
+  color: #fff;
+}
+
+.verble-shell .slot-word-button.selected .slot-tile:not(.fixed):not(.reveal):not(.solved) {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.42);
+}
+
+.verble-shell .slot-word-button.solved .slot-tile:not(.fixed),
+.verble-shell .slot-tile.solved {
+  background: #65b84d;
+  border-color: #5aa545;
+  color: #fff;
+}
+
+.verble-shell .slot-tile.locked {
+  box-shadow: none;
+}
+
+.verble-shell .slot-tile.reveal {
+  --flip-start-bg: #fff;
+  --flip-start-border: #d8dce2;
+  --flip-start-color: #2c2f31;
+  --flip-end-bg: #fff;
+  --flip-end-border: #d8dce2;
+  --flip-end-color: #2c2f31;
+  animation: verble-tile-flip var(--flip-duration, 260ms) ease both;
+  animation-delay: var(--flip-delay, 0ms);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.verble-shell .slot-tile.reveal-swap {
+  position: relative;
+}
+
+.verble-shell .tile-letter-stack {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.verble-shell .tile-letter-face {
+  grid-area: 1 / 1;
+}
+
+.verble-shell .tile-letter-face-front {
+  animation: verble-letter-front var(--flip-duration, 260ms) linear both;
+  animation-delay: var(--flip-delay, 0ms);
+}
+
+.verble-shell .tile-letter-face-back {
+  opacity: 0;
+  animation: verble-letter-back var(--flip-duration, 260ms) linear both;
+  animation-delay: var(--flip-delay, 0ms);
+}
+
+@keyframes verble-tile-flip {
+0% {
+    transform: rotateX(0deg);
+    background: var(--flip-start-bg);
+    border-color: var(--flip-start-border);
+    color: var(--flip-start-color);
+  }
+49% {
+    transform: rotateX(-90deg);
+    background: var(--flip-start-bg);
+    border-color: var(--flip-start-border);
+    color: var(--flip-start-color);
+  }
+50% {
+    transform: rotateX(-90deg);
+    background: var(--flip-end-bg);
+    border-color: var(--flip-end-border);
+    color: var(--flip-end-color);
+  }
+100% {
+    transform: rotateX(0deg);
+    background: var(--flip-end-bg);
+    border-color: var(--flip-end-border);
+    color: var(--flip-end-color);
+  }
+}
+
+@keyframes verble-letter-front {
+0% {
+    opacity: 1;
+  }
+49% {
+    opacity: 1;
+  }
+50% {
+    opacity: 0;
+  }
+100% {
+    opacity: 0;
+  }
+}
+
+@keyframes verble-letter-back {
+0% {
+    opacity: 0;
+  }
+49% {
+    opacity: 0;
+  }
+50% {
+    opacity: 1;
+  }
+100% {
+    opacity: 1;
+  }
+}
+
+.verble-shell .slot-len {
+  justify-self: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.verble-shell .slot-sep {
+  padding-bottom: 1.1rem;
+  color: var(--muted);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.verble-shell .verble-actions {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.verble-shell .phrase-submit-row {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+}
+
+.verble-shell .phrase-submit-input {
+  width: 100%;
+}
+
+.verble-shell .guess-input {
+  border-radius: 999px;
+  border: 1px solid var(--outline-soft);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+  font-family: "Manrope", sans-serif;
+}
+.verble-shell .guess-input:focus-visible { outline: 3px solid rgba(47, 51, 61, 0.2); outline-offset: 1px; }
+
+.verble-shell .guess-submit-btn,
+.verble-shell .admin-btn-like {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #eadf10, #d9cb00);
+  box-shadow: 0 10px 20px rgba(125, 109, 0, 0.24);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.verble-shell .guess-submit-btn.danger { background: linear-gradient(135deg, #7f1d1d, #450a0a); }
+.verble-shell .guess-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.verble-shell .guess-submit-btn:not(:disabled):hover,
+.verble-shell .admin-btn-like.primary:hover {
+  background: linear-gradient(135deg, #d9cb00, #d9cb00);
+}
+
+.verble-shell .attempts { display: grid; gap: 0.35rem; }
+.verble-shell .attempt-row { display: flex; align-items: center; gap: 0.25rem; }
+.verble-shell .attempt-label {
+  width: auto;
+  min-width: 4.8rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.verble-shell .attempt-cell {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--outline-soft);
+  display: grid;
+  place-items: center;
+  text-transform: uppercase;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+}
+.verble-shell .attempt-cell.correct { background: #65b84d; border-color: #5aa545; color: #fff; }
+.verble-shell .attempt-cell.present { background: #e4bc4d; border-color: #c7a340; color: #fff; }
+.verble-shell .attempt-cell.absent { background: #b5bbc5; border-color: #a3a9b4; color: #fff; }
+
+.verble-shell .keyboard {
+  --alpha-key-size: clamp(1.55rem, calc((100vw - 3rem) / 10), 2.1rem);
+  display: grid;
+  gap: 0.35rem;
+}
+.verble-shell .keyboard-row { display: flex; justify-content: center; gap: 0.3rem; width: 100%; }
+.verble-shell .key {
+  height: 2.3rem;
+  border-radius: 0.52rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  color: var(--text);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.verble-shell .alpha-key {
+  width: var(--alpha-key-size);
+  min-width: var(--alpha-key-size);
+  height: var(--alpha-key-size);
+  padding: 0;
+  flex: 0 0 auto;
+}
+.verble-shell .key.wide { min-width: 5rem; }
+.verble-shell .keyboard-row.controls .key.wide { min-width: 6rem; }
+.verble-shell .control-key {
+  padding-inline: 0.8rem;
+}
+.verble-shell .backspace-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.verble-shell .verble-backspace-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.verble-shell .key[data-state="absent"] { background: #b5bbc5; border-color: #a3a9b4; color: #fff; }
+.verble-shell .key[data-state="present"] { background: #e4bc4d; border-color: #c7a340; color: #fff; }
+.verble-shell .key[data-state="resolved"] { background: #65b84d; border-color: #5aa545; color: #fff; }
+.verble-shell .key:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.verble-shell .message { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--muted); }
+.verble-shell .message[data-kind="won"] { color: #0a7a37; }
+.verble-shell .message[data-kind="lost"] { color: #b02500; }
+.verble-shell .message[data-kind="hint"] { color: #2f672d; }
+
+.verble-shell .result-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.verble-shell .result-modal-panel {
+  width: min(620px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface);
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.verble-shell .result-modal-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-soft));
+  background: var(--surface-container-lowest, var(--surface));
+  color: var(--foreground, var(--text));
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.verble-shell .result-modal-close:hover {
+  background: var(--surface-container-high, var(--surface-high));
+}
+
+.verble-shell .result-modal-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.1rem;
+}
+
+.verble-shell .result-modal-timer {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
+
+.verble-shell .result-modal-answer {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--brand-strong);
+}
+
+.verble-shell .result-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.verble-shell .result-modal-copy {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.verble-shell .guess-history-wrap {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.verble-shell .guess-history-title {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.verble-shell .guess-history-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.verble-shell .guess-history-toggle-icon {
+  display: inline-flex;
+  color: var(--brand-strong);
+  transition: transform 200ms ease;
+}
+
+.verble-shell .guess-history-toggle[aria-expanded="true"] .guess-history-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.verble-shell .guess-history-latest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--brand-soft) 36%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.verble-shell .guess-history-guess {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.verble-shell .guess-history-status-correct {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.verble-shell .guess-history-status-wrong {
+  color: #b02500;
+  font-weight: 800;
+}
+
+.verble-shell .guess-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.verble-shell .guess-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: #eef1f4;
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.verble-shell .guess-history-attempt-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.verble-shell .archive-card { display: grid; gap: 0.8rem; }
+.verble-shell .legal-card { display: grid; gap: 0.6rem; }
+.verble-shell .archive-card.legal-card { gap: 0.8rem; }
+.verble-shell .page-title { margin: 0 0 0.25rem; font-family: "Plus Jakarta Sans", "Manrope", sans-serif; font-size: 1.4rem; font-weight: 800; }
+.verble-shell .page-subtle { margin: 0; color: var(--muted); }
+.verble-shell .error-text { color: #b02500; }
+.verble-shell .archive-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: 0.55rem;
+}
+.verble-shell .archive-tile {
+  border: 1px solid var(--outline-soft);
+  background: #eaf0f8;
+  border-radius: 0.9rem;
+  padding: 0.45rem;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+}
+.verble-shell .archive-tile:hover {
+  background: #dce6f3;
+}
+.verble-shell .archive-tile-title {
+  font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+.verble-shell .archive-tile-date {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.verble-shell .archive-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 720px) {
+.verble-shell .card {
+    padding: 0.85rem;
+  }
+.verble-shell .game-meta-row { grid-template-columns: 1fr; }
+.verble-shell .phrase-layout {
+    gap: 0.75rem 0.58rem;
+  }
+.verble-shell .verble-actions { grid-template-columns: 1fr; }
+.verble-shell .phrase-submit-row { grid-template-columns: 1fr; }
+.verble-shell .result-modal-actions { grid-template-columns: 1fr; }
+.verble-shell .archive-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .verble-shell .guess-history-latest,
+  .verble-shell .guess-history-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+.verble-shell .guess-history-attempt-tiles {
+    justify-content: flex-start;
+  }
+.verble-shell .keyboard {
+    gap: 0.28rem;
+    --alpha-key-size: clamp(1.4rem, calc((100vw - 2rem) / 10), 1.95rem);
+  }
+.verble-shell .keyboard-row {
+    gap: 0.2rem;
+  }
+.verble-shell .key {
+    height: 2.15rem;
+    font-size: 0.82rem;
+    padding-inline: 0.2rem;
+  }
+.verble-shell .alpha-key {
+    width: var(--alpha-key-size);
+    min-width: var(--alpha-key-size);
+    height: var(--alpha-key-size);
+    padding: 0;
+  }
+.verble-shell .keyboard-row.controls .key.wide {
+    min-width: 0;
+    flex: 1 1 30%;
+  }
+.verble-shell .keyboard-row.controls {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+.verble-shell .container {
+    width: min(840px, calc(100vw - 0.8rem));
+  }
+.verble-shell .card {
+    padding: 0.72rem;
+  }
+.verble-shell .slot-cluster {
+    gap: 0.12rem;
+  }
+.verble-shell .slot-sep {
+    padding-bottom: 0.95rem;
+    font-size: 1rem;
+  }
+.verble-shell .attempt-label {
+    min-width: 0;
+    font-size: 0.72rem;
+  }
+.verble-shell .attempt-cell {
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 0.8rem;
+  }
+.verble-shell .keyboard {
+    --alpha-key-size: clamp(1.3rem, calc((100vw - 1.4rem) / 10), 1.7rem);
+  }
+  .verble-shell .guess-submit-btn,
+  .verble-shell .admin-btn-like {
+    padding: 0.62rem 0.88rem;
+    font-size: 0.86rem;
+  }
+.verble-shell .guess-input {
+    padding: 0.62rem 0.8rem;
+    font-size: 0.94rem;
+  }
+}

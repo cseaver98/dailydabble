@@ -1,0 +1,511 @@
+.doodle-shell {
+  --background: #f5f6f9;
+  --surface: #ffffff;
+  --surface-low: #eff1f4;
+  --surface-high: #e0e3e6;
+  --surface-highest: #dadde1;
+  --text: #2c2f31;
+  --muted: #595c5e;
+  --outline-soft: rgba(171, 173, 176, 0.28);
+
+  --brand: #1768a6;
+  --brand-strong: #0e4e7f;
+  --brand-soft: #d7ecff;
+  --accent: #2fa0ee;
+
+  --nav-height: 78px;
+  --container-width: 840px;
+  --nav-content-width: 1320px;
+
+  --surface-container-low: var(--surface-low);
+  --surface-container-high: var(--surface-high);
+  --surface-container-lowest: var(--surface);
+  --foreground: var(--text);
+  --outline: var(--muted);
+  --primary-dim: var(--brand-strong);
+  --dd-menu-accent: var(--brand-strong);
+  --dd-menu-hover-bg: #e8f5ff;
+  --dd-menu-focus-ring: rgba(47, 160, 238, 0.35);
+}
+
+.doodle-shell * { box-sizing: border-box; }
+
+.doodle-shell {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+.doodle-shell {
+  min-height: 100dvh;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 0% 0%, color-mix(in srgb, var(--brand-soft) 35%, transparent) 0%, transparent 58%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--brand) 14%, transparent) 0%, transparent 64%),
+    var(--background);
+}
+
+.doodle-shell .container  {
+  width: min(var(--container-width), 94vw);
+  margin: 0 auto;
+  padding: 0.85rem 0 2.2rem;
+}
+
+.doodle-shell main.container {
+  min-height: calc(100dvh - var(--nav-height, 78px));
+}
+
+.doodle-shell .card  {
+  background: var(--surface);
+  border-radius: 1.15rem;
+  border: 0;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(44, 47, 49, 0.06);
+}
+
+.doodle-shell .doodle-card  {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.doodle-shell .game-meta-row  {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.doodle-shell .chip  {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 58%, white);
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  padding: 0.45rem 0.62rem;
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.doodle-shell .doodle-stage-wrap  {
+  border: 1px solid var(--outline-soft);
+  border-radius: 1rem;
+  background: #fbfdff;
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 0.5rem;
+}
+
+.doodle-shell .doodle-canvas  {
+  width: min(100%, 360px);
+  height: auto;
+}
+
+.doodle-shell .doodle-path  {
+  animation: drawPath 1750ms ease forwards;
+}
+
+.doodle-shell .doodle-mask-path  {
+  animation: drawPath 1750ms ease forwards;
+}
+
+@keyframes drawPath {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.doodle-shell .doodle-clue  {
+  margin: 0;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--brand-soft) 52%, white);
+  padding: 0.62rem 0.78rem;
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
+.doodle-shell .guess-form  {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1fr auto;
+}
+
+.doodle-shell .guess-input  {
+  border-radius: 999px;
+  border: 1px solid var(--outline-soft);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.doodle-shell .guess-input:focus-visible  {
+  outline: 3px solid rgba(47, 160, 238, 0.3);
+  outline-offset: 1px;
+}
+
+.doodle-shell .guess-submit-btn,
+.doodle-shell .admin-btn-like  {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 10px 20px rgba(23, 104, 166, 0.28);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doodle-shell .guess-submit-btn:disabled  {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.doodle-shell .guess-submit-btn:not(:disabled):hover,
+.doodle-shell .admin-btn-like.primary:hover  {
+  background: linear-gradient(135deg, var(--brand-strong), var(--brand-strong));
+}
+
+.doodle-shell .admin-btn-like:hover  {
+  background: color-mix(in srgb, var(--surface-low) 82%, white);
+}
+
+.doodle-shell .message  {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.doodle-shell .message[data-kind="won"]  { color: #0a7a37; }
+.doodle-shell .message[data-kind="lost"]  { color: #b02500; }
+.doodle-shell .next-game-copy  {
+  margin: -0.15rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
+
+.doodle-shell .guess-history-wrap  {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.doodle-shell .guess-history-title  {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.doodle-shell .guess-history-toggle  {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.doodle-shell .guess-history-toggle-icon  {
+  display: inline-flex;
+  color: var(--brand-strong);
+  transition: transform 200ms ease;
+}
+
+.doodle-shell .guess-history-toggle[aria-expanded="true"] .guess-history-toggle-icon  {
+  transform: rotate(180deg);
+}
+
+.doodle-shell .guess-history-latest  {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--brand-soft) 56%, white);
+  padding: 0.55rem 0.68rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.doodle-shell .guess-history-guess  {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.doodle-shell .guess-history-status-correct  {
+  color: #0a7a37;
+  font-weight: 800;
+}
+
+.doodle-shell .guess-history-status-wrong  {
+  color: #b02500;
+  font-weight: 800;
+}
+
+.doodle-shell .guess-history-list  {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.doodle-shell .guess-history-item  {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--surface-low);
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.doodle-shell .post-actions  {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.doodle-shell .result-modal-backdrop  {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.doodle-shell .result-modal-panel  {
+  width: min(620px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface);
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.doodle-shell .result-modal-close  {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container, var(--outline-soft));
+  background: var(--surface-container-lowest, var(--surface));
+  color: var(--foreground, var(--text));
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.doodle-shell .result-modal-close:hover  {
+  background: var(--surface-container-high, var(--surface-high));
+}
+
+.doodle-shell .result-modal-title  {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.1rem;
+}
+
+.doodle-shell .result-modal-timer  {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+}
+
+.doodle-shell .result-modal-answer  {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--brand-strong);
+}
+
+.doodle-shell .result-modal-doodle-wrap  {
+  border: 1px solid var(--outline-soft);
+  border-radius: 0.85rem;
+  background: #fbfdff;
+  padding: 0.5rem;
+  display: grid;
+  place-items: center;
+}
+
+.doodle-shell .result-modal-doodle  {
+  width: min(100%, 320px);
+  height: auto;
+}
+
+.doodle-shell .result-modal-actions  {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.doodle-shell .result-modal-copy  {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.doodle-shell .admin-btn-like  {
+  background: #fff;
+  color: var(--brand-strong);
+  border: 1px solid #bedef4;
+  box-shadow: none;
+}
+
+.doodle-shell .admin-btn-like.primary  {
+  border: 0;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(23, 104, 166, 0.28);
+}
+
+.doodle-shell .page-title  {
+  margin: 0 0 0.25rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.doodle-shell .page-subtle  {
+  margin: 0;
+  color: var(--muted);
+}
+
+.doodle-shell .error-text  {
+  color: #b02500;
+}
+
+.doodle-shell .archive-card  {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.doodle-shell .archive-card.legal-card  {
+  gap: 0.8rem;
+}
+
+.doodle-shell .archive-grid  {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: 0.55rem;
+}
+
+.doodle-shell .archive-tile  {
+  border: 1px solid var(--outline-soft);
+  background: #eaf0f8;
+  border-radius: 0.9rem;
+  padding: 0.45rem;
+  text-decoration: none;
+  color: var(--text);
+  display: grid;
+  aspect-ratio: 1 / 1;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.doodle-shell .archive-tile:hover  {
+  background: #dce6f3;
+}
+
+.doodle-shell .archive-tile-title  {
+  font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.doodle-shell .archive-tile-date  {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.doodle-shell .archive-pagination  {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.doodle-shell .dd-nav .dd-brand-word  {
+  color: #0e4e7f;
+}
+
+@media (max-width: 680px) {
+  .doodle-shell { --nav-height: 72px; }
+
+  .doodle-shell .container {
+    width: 95vw;
+    padding-top: 0.75rem;
+  }
+
+  .doodle-shell .game-meta-row,
+  .doodle-shell .post-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .doodle-shell .guess-form {
+    grid-template-columns: 1fr;
+  }
+  .doodle-shell .archive-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .doodle-shell .result-modal-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Consistent interactive cursor across game UIs */
+.doodle-shell a[href],
+.doodle-shell button,
+.doodle-shell [role="button"],
+.doodle-shell summary,
+.doodle-shell input[type="button"],
+.doodle-shell input[type="submit"],
+.doodle-shell input[type="reset"],
+.doodle-shell input[type="checkbox"],
+.doodle-shell input[type="radio"],
+.doodle-shell input[type="range"],
+.doodle-shell select,
+.doodle-shell label[for] {
+  cursor: pointer;
+}

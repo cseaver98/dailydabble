@@ -4,7 +4,7 @@ This file is for repo-specific working rules and architecture patterns. It is no
 
 ## Repo Shape
 - `apps/` contains product apps.
-- `apps/hub` is the public launcher and completion hub.
+- `apps/web` is the public site, homepage, and shared game surface.
 - `apps/admin` is the curation surface for game ops.
 - Each game app should follow the normalized pattern:
 - `src/app` for routes and UI
@@ -23,7 +23,7 @@ This file is for repo-specific working rules and architecture patterns. It is no
 - shared nav/menu usage from `@dailydabble/ui`
 - local storage keys versioned like `game:v1:*`
 - New games should be wired into:
-- `apps/hub/lib/games.ts`
+- `apps/web/lib/games.ts`
 - root `package.json` workspace scripts
 - admin navigation if curation is needed
 
@@ -36,7 +36,7 @@ This file is for repo-specific working rules and architecture patterns. It is no
 - If a game has Supabase-backed content, admin APIs should talk directly to that game schema rather than local JSON files.
 
 ## Supabase Pattern
-- Prefer one schema per game: `agegaple`, `doodle`, `equadle`, `moviedle`, `sportle`, `yeardle`, `dabble`.
+- Prefer one schema per game: `agegaple`, `doodle`, `equadle`, `moviedle`, `sportle`, `yeardle`, `verble`.
 - Keep game-owned tables inside the game schema.
 - Typical daily game schema shape:
 - content table, e.g. `phrases`, `puzzles`, `events`, `athletes`
@@ -45,15 +45,15 @@ This file is for repo-specific working rules and architecture patterns. It is no
 - If a new schema or table must be reachable through the Data API, ensure PostgREST exposure/config is updated through migrations when needed.
 - Remote migrations are applied from root with `supabase db push`.
 
-## Dabble Notes
-- Dabble is the flagship phrase game.
+## Verble Notes
+- Verble is the flagship phrase game.
 - Current gameplay rules:
 - solve a phrase one word at a time
 - 6 total guesses
 - full phrase miss is instant loss
 - word validation and feedback should be server-side
-- Dictionary source of truth is `dabble.dictionary_words`.
-- Phrase curation lives in `dabble.phrases` and scheduling in `dabble.daily_schedule`.
+- Dictionary source of truth is `verble.dictionary_words`.
+- Phrase curation lives in `verble.phrases` and scheduling in `verble.daily_schedule`.
 
 ## Frontend Expectations
 - Match established DailyDabble structure and interaction patterns unless the game intentionally needs a different mechanic.

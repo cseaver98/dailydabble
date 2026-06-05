@@ -11,13 +11,14 @@ Last updated: 2026-05-25
 - Aligned all game apps to Next.js `16.1.7`.
 
 ## Verified
-- Production builds pass for:
-  - `@dailydabble/agegaple`
-  - `@dailydabble/doodle`
-  - `@dailydabble/equadle`
-  - `@dailydabble/moviedle`
-  - `@dailydabble/sportle`
-  - `@dailydabble/yeardle`
+- Public game routes now run inside `apps/web` for:
+  - `verble`
+  - `agegaple`
+  - `doodle`
+  - `yeardle`
+  - `equadle`
+  - `moviedle`
+  - `sportle`
 
 ## Next (Safe)
 - Add a shared lint preset package to avoid duplicated per-app ESLint config.
