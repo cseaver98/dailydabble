@@ -153,7 +153,8 @@ export default function VerbleAdminTab() {
         <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
           <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
           <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-            Pending: <b>{queueHealth.pending || 0}</b> | Approved: <b>{queueHealth.approved || 0}</b> |
+            Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
+            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
             Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
           </p>
         </div>

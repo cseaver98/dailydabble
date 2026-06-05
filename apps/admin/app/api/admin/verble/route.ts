@@ -130,6 +130,7 @@ export async function GET(request: Request) {
 
     const pending = hydrated.filter((row) => row.status === "pending_review").length;
     const approved = hydrated.filter((row) => row.status === "approved").length;
+    const approvedUnused = hydrated.filter((row) => row.status === "approved" && !row.isFinished).length;
     const finished = hydrated.filter((row) => row.isFinished).length;
 
     return NextResponse.json({
@@ -139,8 +140,10 @@ export async function GET(request: Request) {
       page,
       pageSize,
       queueHealth: {
+        runwayDays: approvedUnused,
         pending,
         approved,
+        approvedUnused,
         finished,
         total: hydrated.length,
       },
