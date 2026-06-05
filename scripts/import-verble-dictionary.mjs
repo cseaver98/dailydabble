@@ -20,7 +20,9 @@ const normalizeWord = (value) =>
   String(value || "")
     .toLowerCase()
     .trim()
-    .replace(/[^a-z]/g, "");
+    .replace(/[’‘`]/g, "'")
+    .replace(/[‐‑‒–—―]/g, "-")
+    .match(/^[a-z]+(?:['-][a-z]+)*$/)?.[0] || "";
 
 const chunk = (items, size) => {
   const out = [];

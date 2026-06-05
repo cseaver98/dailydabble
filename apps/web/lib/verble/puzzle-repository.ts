@@ -72,6 +72,13 @@ const getDateInTimeZone = (timeZone: string): string => {
 
 const normalizeWord = (value: string): string => value.toLowerCase().replace(/[^a-z]/g, "");
 
+const normalizeWordSurface = (value: string): string =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[’‘`]/g, "'")
+    .replace(/[‐‑‒–—―]/g, "-")
+    .match(/^[a-z]+(?:['-][a-z]+)*$/)?.[0] || "";
+
 const normalizePhraseWord = (value: string): string =>
   String(value || "")
     .toLowerCase()
@@ -248,6 +255,15 @@ export const normalizePhrase = (value: string): string => {
   return words.join(" ");
 };
 
+export const normalizePhraseWithPunctuation = (value: string): string => {
+  const sanitized = String(value || "")
+    .toLowerCase()
+    .replace(/[’‘`]/g, "'")
+    .replace(/[‐‑‒–—―]/g, "-");
+  const words = (sanitized.match(WORD_PATTERN) || []).map((item) => normalizeWordSurface(item)).filter(Boolean);
+  return words.join(" ");
+};
+
 type LetterFeedback = "correct" | "present" | "absent";
 
 const evaluateWordGuess = (guess: string, target: string): LetterFeedback[] => {
@@ -280,6 +296,57 @@ const evaluateWordGuess = (guess: string, target: string): LetterFeedback[] => {
   return result;
 };
 
+const validateDictionaryGuess = async ({
+  supabase,
+  parsed,
+  slotIndex,
+  surfaceGuess,
+  normalizedGuess,
+}: {
+  supabase: ReturnType<typeof getVerbleSupabaseAdmin>;
+  parsed: ReturnType<typeof parsePhrase>;
+  slotIndex: number;
+  surfaceGuess: string;
+  normalizedGuess: string;
+}) => {
+  const target = parsed.answerWords[slotIndex];
+  if (!target) {
+    throw new Error("Selected slot is invalid");
+  }
+  if (normalizedGuess.length !== target.length) {
+    throw new Error(`Word must be ${target.length} letters for this slot.`);
+  }
+
+  const exactSurfaceMatch = normalizeWordSurface(parsed.slots[slotIndex]?.display || "") === surfaceGuess;
+  const requiresExactPunctuation = /['-]/.test(surfaceGuess);
+  const inAnswer = parsed.answerWords.includes(normalizedGuess);
+  let isValidDictionaryWord = requiresExactPunctuation ? false : inAnswer;
+
+  if (requiresExactPunctuation && exactSurfaceMatch) {
+    isValidDictionaryWord = true;
+  } else if (!inAnswer || requiresExactPunctuation) {
+    const { data: dictionaryRow, error: dictionaryError } = await supabase
+      .from("dictionary_words")
+      .select("word")
+      .eq("word", requiresExactPunctuation ? surfaceGuess : normalizedGuess)
+      .eq("is_active", true)
+      .maybeSingle<{ word: string }>();
+
+    if (dictionaryError) {
+      const fallback = requiresExactPunctuation ? false : BASE_DICTIONARY_WORDS.includes(normalizedGuess);
+      isValidDictionaryWord = fallback;
+    } else {
+      isValidDictionaryWord = Boolean(dictionaryRow);
+    }
+  }
+
+  if (!isValidDictionaryWord) {
+    throw new Error("That word is not in the allowed dictionary.");
+  }
+
+  return target;
+};
+
 export const submitVerbleWordGuess = async ({
   puzzleId,
   slotIndex,
@@ -290,7 +357,8 @@ export const submitVerbleWordGuess = async ({
   guessWord: string;
 }): Promise<{ feedback: LetterFeedback[]; isCorrect: boolean; normalizedGuess: string }> => {
   const supabase = getVerbleSupabaseAdmin();
-  const normalizedGuess = normalizeWord(guessWord);
+  const surfaceGuess = normalizeWordSurface(guessWord);
+  const normalizedGuess = normalizeWord(surfaceGuess);
   if (!normalizedGuess) {
     throw new Error("Guess is required");
   }
@@ -309,35 +377,7 @@ export const submitVerbleWordGuess = async ({
   }
 
   const parsed = parsePhrase(phraseRow.phrase_text);
-  const target = parsed.answerWords[slotIndex];
-  if (!target) {
-    throw new Error("Selected slot is invalid");
-  }
-  if (normalizedGuess.length !== target.length) {
-    throw new Error(`Word must be ${target.length} letters for this slot.`);
-  }
-
-  const inAnswer = parsed.answerWords.includes(normalizedGuess);
-  let isValidDictionaryWord = inAnswer;
-  if (!inAnswer) {
-    const { data: dictionaryRow, error: dictionaryError } = await supabase
-      .from("dictionary_words")
-      .select("word")
-      .eq("word", normalizedGuess)
-      .eq("is_active", true)
-      .maybeSingle<{ word: string }>();
-
-    if (dictionaryError) {
-      const fallback = BASE_DICTIONARY_WORDS.includes(normalizedGuess);
-      isValidDictionaryWord = fallback;
-    } else {
-      isValidDictionaryWord = Boolean(dictionaryRow);
-    }
-  }
-
-  if (!isValidDictionaryWord) {
-    throw new Error("That word is not in the allowed dictionary.");
-  }
+  const target = await validateDictionaryGuess({ supabase, parsed, slotIndex, surfaceGuess, normalizedGuess });
 
   const feedback = evaluateWordGuess(normalizedGuess, target);
   return {

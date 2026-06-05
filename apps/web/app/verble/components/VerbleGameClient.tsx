@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
-import { normalizePhrase } from "../../../lib/verble/puzzle-repository";
+import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
 
 type VerbleGameClientProps = {
@@ -99,6 +99,18 @@ const buildDisplayedWordChars = (slot: Slot, letters: string[]): DisplayChar[] =
     items.push({ kind: "fixed", value: char, letterIndex: null });
     return items;
   }, []);
+};
+
+const buildSurfaceWordGuess = (slot: Slot, letters: string[]): string => {
+  let letterCursor = 0;
+  return slot.display.split("").map((char) => {
+    if (/[A-Za-z]/.test(char)) {
+      const next = letters[letterCursor] || "";
+      letterCursor += 1;
+      return next;
+    }
+    return char;
+  }).join("");
 };
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
@@ -389,7 +401,7 @@ export default function VerbleGameClient({
       return;
     }
 
-    setSlotDrafts((current) => {
+    const applyDraftUpdate = (current: SlotDrafts) => {
       const currentDraft = current[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => "");
       const currentLocks = slotLocks[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => false);
       const nextDraft = updater([...currentDraft], [...currentLocks]).slice(0, selectedSlotMeta.length);
@@ -400,7 +412,9 @@ export default function VerbleGameClient({
         ...current,
         [selectedSlotMeta.index]: nextDraft.map((letter) => normalizeWord(letter).slice(-1)),
       };
-    });
+    };
+
+    setSlotDrafts(applyDraftUpdate);
   };
 
   const appendWordGuessChar = (char: string) => {
@@ -505,7 +519,8 @@ export default function VerbleGameClient({
   const submitWordGuess = async () => {
     if (!puzzle || gameState !== "playing" || !selectedSlotMeta || isResolvingGuess) return;
 
-    const normalizedGuess = normalizeWord(selectedWordGuess);
+    const surfacedGuess = buildSurfaceWordGuess(selectedSlotMeta, selectedSlotDraft);
+    const normalizedGuess = normalizeWord(surfacedGuess);
     if (normalizedGuess.length !== selectedSlotMeta.length) {
       setMessage(`Word must be ${selectedSlotMeta.length} letters for this slot.`);
       return;
@@ -519,7 +534,7 @@ export default function VerbleGameClient({
         body: JSON.stringify({
           puzzleId: puzzle.puzzleId,
           slotIndex: selectedSlotMeta.index,
-          guessWord: normalizedGuess,
+          guessWord: surfacedGuess,
         }),
       });
       responsePayload = await response.json().catch(() => ({}));
@@ -533,13 +548,14 @@ export default function VerbleGameClient({
 
     const feedback = Array.isArray(responsePayload.feedback) ? responsePayload.feedback : [];
     const appliedGuess = responsePayload.normalizedGuess || normalizedGuess;
+    const submittedLetters = [...selectedSlotDraft];
     const isCorrect = Boolean(responsePayload.isCorrect);
     const nextAttempts = [...wordAttempts, { slotIndex: selectedSlotMeta.index, guess: appliedGuess, feedback }];
     const nextSolved = { ...solvedWords };
     const existingDraft = slotDrafts[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => "");
     const existingLocks = slotLocks[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => false);
-    const animatedGuessDraft = appliedGuess.split("").map((letter, index) => (existingLocks[index] ? existingDraft[index] || letter : letter));
-    const persistedGuessDraft = appliedGuess.split("").map((letter, index) => (
+    const animatedGuessDraft = submittedLetters.map((letter, index) => (existingLocks[index] ? existingDraft[index] || letter : letter));
+    const persistedGuessDraft = submittedLetters.map((letter, index) => (
       existingLocks[index] || feedback[index] === "correct" ? letter : ""
     ));
     const startFeedback = existingLocks.map((isLocked) => (isLocked ? "correct" : "empty")) as Array<LetterFeedback | "empty">;
@@ -767,13 +783,15 @@ export default function VerbleGameClient({
   const submitPhraseGuess = () => {
     if (!puzzle || gameState !== "playing") return;
 
-    const normalized = normalizePhrase(phraseGuess);
+    const normalized = normalizePhraseWithPunctuation(phraseGuess);
     if (!normalized) {
       setMessage("Enter a phrase guess first.");
       return;
     }
 
-    const target = puzzle.answerWords.join(" ");
+    const target = normalizePhraseWithPunctuation(
+      puzzle.slots.map((slot) => `${slot.display}${slot.separator}`).join("")
+    );
     if (normalized === target) {
       const allSolvedWords: Record<number, string> = {};
       const solvedDrafts: SlotDrafts = {};
@@ -926,7 +944,7 @@ export default function VerbleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, selectedSlotMeta, selectedWordGuess, phraseGuess]);
+  }, [canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, phraseGuess, selectedSlotMeta, solvedWords]);
  
   const latestAttempt = wordAttempts.length > 0 ? wordAttempts[wordAttempts.length - 1] : null;
   const earlierAttempts = wordAttempts.slice(0, -1).reverse();
