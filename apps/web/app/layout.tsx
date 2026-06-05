@@ -23,8 +23,11 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Dailydabble",
   description: "Daily trivia game hub",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icon.svg",
+    shortcut: "/apple-icon.png",
+    apple: "/apple-icon.png",
   },
 };
 
