@@ -190,6 +190,11 @@
   font-size: clamp(1.12rem, 3.4vw, 1.28rem);
 }
 
+.verble-shell .slot-inline-fixed.comma,
+.verble-shell .slot-inline-fixed.semicolon {
+  top: -0.18rem;
+}
+
 .verble-shell .slot-word-button.selected .slot-tile.fixed {
   border: 0;
   background: transparent;
@@ -344,6 +349,16 @@
   color: var(--muted);
   font-size: 1.15rem;
   font-weight: 700;
+}
+
+.verble-shell .slot-sep.semicolon {
+  padding-bottom: 0.58rem;
+  font-size: 1.28rem;
+}
+
+.verble-shell .slot-sep.comma {
+  padding-bottom: 0.18rem;
+  font-size: 1.32rem;
 }
 
 .verble-shell .verble-actions {
@@ -752,6 +767,14 @@
 .verble-shell .slot-sep {
     padding-bottom: 0.95rem;
     font-size: 1rem;
+  }
+.verble-shell .slot-sep.semicolon {
+    padding-bottom: 0.42rem;
+    font-size: 1.1rem;
+  }
+.verble-shell .slot-sep.comma {
+    padding-bottom: 0.1rem;
+    font-size: 1.14rem;
   }
 .verble-shell .attempt-label {
     min-width: 0;

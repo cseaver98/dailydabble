@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
+import ArchiveLockGate from "../../components/ArchiveLockGate";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
 
@@ -127,6 +128,7 @@ export default function EquadleGameClient({
   const [revealingRowIndex, setRevealingRowIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
@@ -141,10 +143,22 @@ export default function EquadleGameClient({
       try {
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
+        if (response.status === 423) {
+          if (active) {
+            setPuzzle(null);
+            setArchiveLock({
+              title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
+              description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+            });
+            setError("");
+          }
+          return;
+        }
         if (!response.ok) {
           if (response.status === 404) {
             if (active) {
               setPuzzle(null);
+              setArchiveLock(null);
               setError("");
             }
             return;
@@ -157,6 +171,7 @@ export default function EquadleGameClient({
         }
 
         setPuzzle(payload);
+        setArchiveLock(null);
         setGuess("");
         setAttempts([]);
         setGameState("playing");
@@ -169,6 +184,7 @@ export default function EquadleGameClient({
         if (!active) {
           return;
         }
+        setArchiveLock(null);
         setError(loadError instanceof Error ? loadError.message : "Failed to load Equadle puzzle");
       } finally {
         if (active) {
@@ -523,6 +539,17 @@ export default function EquadleGameClient({
           <section className="card equadle-card">
             <h1 className="page-title">Loading puzzle...</h1>
           </section>
+        </main>
+      </div>
+    );
+  }
+
+  if (archiveLock) {
+    return (
+      <div className="equadle-shell">
+        <MainNav label={navLabel} hideToday={hideToday} />
+        <main className="container">
+          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
         </main>
       </div>
     );

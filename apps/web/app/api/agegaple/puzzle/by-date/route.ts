@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createArchiveLockedResponse, hasArchiveUnlockCookie, isLockedArchiveGameNumber } from "@/lib/archive-lock";
 
 import { getPuzzleByDate } from "@/lib/agegaple/puzzle-repository";
 
@@ -6,7 +7,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
 
@@ -18,6 +19,9 @@ export async function GET(request: Request) {
     const puzzle = await getPuzzleByDate(date);
     if (!puzzle) {
       return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
+    }
+    if (isLockedArchiveGameNumber(puzzle.archiveGameNumber) && !hasArchiveUnlockCookie(request)) {
+      return createArchiveLockedResponse("Agegaple", date);
     }
 
     return NextResponse.json(puzzle, {

@@ -16,6 +16,7 @@ const formatDateLabel = (date: string): string => {
 
 export default function ArchivePage() {
   const [items, setItems] = useState<ArchiveItem[]>([]);
+  const [lockEnabled, setLockEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,6 +30,7 @@ export default function ArchivePage() {
         if (!response.ok) throw new Error(payload.error || "Failed to load archive");
         if (!active) return;
         setItems(Array.isArray(payload.items) ? payload.items : []);
+        setLockEnabled(Boolean(payload.lockEnabled));
       } catch (loadError) {
         if (!active) return;
         setError(loadError instanceof Error ? loadError.message : "Failed to load archive");
@@ -44,8 +46,17 @@ export default function ArchivePage() {
 
   const rows = useMemo(() => {
     const sequenceByDate = new Map([...items].sort((a, b) => a.puzzleDate.localeCompare(b.puzzleDate)).map((item, index) => [item.puzzleDate, index + 1]));
-    return items.map((item) => ({ ...item, dateLabel: formatDateLabel(item.puzzleDate), tileLabel: `#${sequenceByDate.get(item.puzzleDate) ?? 1}` }));
-  }, [items]);
+    return items.map((item) => {
+      const archiveGameNumber = sequenceByDate.get(item.puzzleDate) ?? 1;
+      return {
+        ...item,
+        archiveGameNumber,
+        isLocked: lockEnabled && archiveGameNumber === 1,
+        dateLabel: formatDateLabel(item.puzzleDate),
+        tileLabel: `#${archiveGameNumber}`,
+      };
+    });
+  }, [items, lockEnabled]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / archivePageSize));
   useEffect(() => setCurrentPage((page) => Math.min(Math.max(1, page), totalPages)), [totalPages]);
@@ -66,7 +77,7 @@ export default function ArchivePage() {
               {pagedRows.map((item) => (
                 <Link key={item.puzzleDate} className="archive-tile" href={`/verble/archive/${item.puzzleDate}`}>
                   <span className="archive-tile-title">{item.tileLabel}</span>
-                  <span className="archive-tile-date">{item.dateLabel}</span>
+                  <span className="archive-tile-date">{item.isLocked ? `Locked · ${item.dateLabel}` : item.dateLabel}</span>
                 </Link>
               ))}
             </div>

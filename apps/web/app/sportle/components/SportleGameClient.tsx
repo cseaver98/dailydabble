@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
+import ArchiveLockGate from "../../components/ArchiveLockGate";
 import { toPublicAppUrl } from "../../../lib/app-url";
 
 const CLUE_TILE_COUNT = 6;
@@ -93,6 +94,7 @@ export default function SportleGameClient({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [animatingClueIndexes, setAnimatingClueIndexes] = useState<number[]>([]);
   const [visibleClueCount, setVisibleClueCount] = useState(0);
   const clueAnimationTimeoutRef = useRef<number | null>(null);
@@ -110,10 +112,22 @@ export default function SportleGameClient({
       try {
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
+        if (response.status === 423) {
+          if (active) {
+            setPuzzle(null);
+            setArchiveLock({
+              title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
+              description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+            });
+            setError("");
+          }
+          return;
+        }
         if (!response.ok) {
           if (response.status === 404) {
             if (active) {
               setPuzzle(null);
+              setArchiveLock(null);
               setError("");
             }
             return;
@@ -126,6 +140,7 @@ export default function SportleGameClient({
         }
 
         setPuzzle(payload);
+        setArchiveLock(null);
         setGuess("");
         setAttempts([]);
         setGameState("playing");
@@ -140,6 +155,7 @@ export default function SportleGameClient({
         if (!active) {
           return;
         }
+        setArchiveLock(null);
         setError(loadError instanceof Error ? loadError.message : "Failed to load Sportle puzzle");
       } finally {
         if (active) {
@@ -468,6 +484,17 @@ export default function SportleGameClient({
     );
   }
 
+  if (archiveLock) {
+    return (
+      <div className="sportle-shell">
+        <MainNav label={navLabel} hideToday={hideToday} />
+        <main className="container">
+          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
+        </main>
+      </div>
+    );
+  }
+
   if (error || !puzzle) {
     return (
       <div className="sportle-shell">
@@ -513,7 +540,7 @@ export default function SportleGameClient({
                     <div className="clue-tile-face clue-tile-back">
                       {clue ? (
                         <>
-                          {clue.imageUrl || index === 0 ? null : <span className="hint-label">{clue.label}</span>}
+                          {index === 0 ? <span className="hint-label">TEAM</span> : clue.imageUrl ? null : <span className="hint-label">{clue.label}</span>}
                           {index === 0 && clue.logoUrl ? (
                             <div className="clue-team-row">
                               <img src={clue.logoUrl} alt={clue.value || "Team logo"} className="team-logo" />

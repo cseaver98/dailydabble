@@ -385,6 +385,7 @@ const getPublicPuzzleWithGallery = async (row: PuzzleRow): Promise<PuzzlePublic>
 };
 
 export const submitGuess = async (puzzleId: string, guessYears: number): Promise<PuzzleAnswer | null> => {
+
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase

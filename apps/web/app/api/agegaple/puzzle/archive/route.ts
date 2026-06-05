@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isArchiveLockEnabled } from "@/lib/archive-lock";
 
 import { listArchivePuzzles } from "@/lib/agegaple/puzzle-repository";
 
@@ -9,7 +10,7 @@ export async function GET() {
   try {
     const items = await listArchivePuzzles();
     return NextResponse.json(
-      { items },
+      { items, lockEnabled: isArchiveLockEnabled() },
       {
         headers: {
           "Cache-Control": "no-store, max-age=0",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createArchiveLockedResponse, hasArchiveUnlockCookie, isLockedArchiveGameNumber } from "../../../../../lib/archive-lock";
 import { getEquadlePuzzleByDate } from "../../../../../lib/equadle/puzzle-repository";
 
 export const runtime = "nodejs";
@@ -11,6 +12,9 @@ export async function GET(request: NextRequest) {
     const puzzle = await getEquadlePuzzleByDate(date);
     if (!puzzle) {
       return NextResponse.json({ error: `No Equadle puzzle scheduled for ${date}` }, { status: 404 });
+    }
+    if (isLockedArchiveGameNumber(puzzle.archiveGameNumber) && !hasArchiveUnlockCookie(request)) {
+      return createArchiveLockedResponse("Equadle", date);
     }
 
     return NextResponse.json(puzzle);

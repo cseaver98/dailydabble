@@ -40,6 +40,9 @@ export default function MoviedleAdminTab() {
   const [isAddingStill, setIsAddingStill] = useState(false);
   const [isRemovingStill, setIsRemovingStill] = useState(false);
 
+  const [editingCandidateId, setEditingCandidateId] = useState(null);
+  const [editingCandidateDraft, setEditingCandidateDraft] = useState(null);
+  const [savingCandidateId, setSavingCandidateId] = useState(null);
 
   const load = async ({ page = currentPage, status = statusFilter } = {}) => {
     try {
@@ -225,6 +228,67 @@ export default function MoviedleAdminTab() {
       return;
     }
     await load({ page: currentPage, status: statusFilter });
+  };
+
+  const beginEditCandidate = (item) => {
+    setEditingCandidateId(item.id);
+    setEditingCandidateDraft({
+      title: String(item.title || ""),
+      releaseYear: item.release_year ? String(item.release_year) : "",
+      director: String(item.director || ""),
+      leadActors: Array.isArray(item.lead_actors) ? item.lead_actors.join(", ") : "",
+      summary: String(item.summary || ""),
+      reviewNotes: String(item.review_notes || ""),
+    });
+  };
+
+  const cancelEditCandidate = () => {
+    setEditingCandidateId(null);
+    setEditingCandidateDraft(null);
+  };
+
+  const updateEditingCandidateField = (field, value) => {
+    setEditingCandidateDraft((current) => {
+      if (!current) return current;
+      return { ...current, [field]: value };
+    });
+  };
+
+  const saveCandidateDetails = async (candidateId) => {
+    if (!editingCandidateDraft) {
+      return;
+    }
+
+    setSavingCandidateId(candidateId);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/moviedle/candidates/${encodeURIComponent(candidateId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editingCandidateDraft.title,
+          releaseYear: editingCandidateDraft.releaseYear,
+          director: editingCandidateDraft.director,
+          summary: editingCandidateDraft.summary,
+          reviewNotes: editingCandidateDraft.reviewNotes,
+          leadActors: editingCandidateDraft.leadActors
+            .split(",")
+            .map((actor) => actor.trim())
+            .filter(Boolean),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to update movie candidate");
+      }
+
+      cancelEditCandidate();
+      await load({ page: currentPage, status: statusFilter });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not update movie candidate.");
+    } finally {
+      setSavingCandidateId(null);
+    }
   };
 
   const loadGallery = async (candidateId) => {
@@ -509,9 +573,91 @@ export default function MoviedleAdminTab() {
                     Lead actors: {item.lead_actors.join(", ")}
                   </p>
                 ) : null}
+                {item.review_notes ? (
+                  <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
+                    Review notes: {item.review_notes}
+                  </p>
+                ) : null}
+
+                {editingCandidateId === item.id && editingCandidateDraft ? (
+                  <div style={{ marginTop: ".5rem", display: "grid", gap: ".45rem", maxWidth: 780 }}>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Title
+                      <input
+                        type="text"
+                        value={editingCandidateDraft.title}
+                        onChange={(event) => updateEditingCandidateField("title", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 460, borderRadius: 10, border: "1px solid #cfd4da", padding: ".45rem .6rem" }}
+                      />
+                    </label>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Release year
+                      <input
+                        type="number"
+                        min="1888"
+                        max="2100"
+                        value={editingCandidateDraft.releaseYear}
+                        onChange={(event) => updateEditingCandidateField("releaseYear", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: 140, borderRadius: 10, border: "1px solid #cfd4da", padding: ".45rem .6rem" }}
+                      />
+                    </label>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Director
+                      <input
+                        type="text"
+                        value={editingCandidateDraft.director}
+                        onChange={(event) => updateEditingCandidateField("director", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 460, borderRadius: 10, border: "1px solid #cfd4da", padding: ".45rem .6rem" }}
+                      />
+                    </label>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Lead actors (comma-separated)
+                      <input
+                        type="text"
+                        value={editingCandidateDraft.leadActors}
+                        onChange={(event) => updateEditingCandidateField("leadActors", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 620, borderRadius: 10, border: "1px solid #cfd4da", padding: ".45rem .6rem" }}
+                      />
+                    </label>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Summary
+                      <textarea
+                        rows={4}
+                        value={editingCandidateDraft.summary}
+                        onChange={(event) => updateEditingCandidateField("summary", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 720, borderRadius: 10, border: "1px solid #cfd4da", padding: ".5rem .6rem" }}
+                      />
+                    </label>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Review notes
+                      <textarea
+                        rows={3}
+                        value={editingCandidateDraft.reviewNotes}
+                        onChange={(event) => updateEditingCandidateField("reviewNotes", event.target.value)}
+                        style={{ display: "block", marginTop: ".25rem", width: "100%", maxWidth: 720, borderRadius: 10, border: "1px solid #cfd4da", padding: ".5rem .6rem" }}
+                      />
+                    </label>
+                    <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
+                      <button
+                        className="admin-btn primary"
+                        type="button"
+                        onClick={() => void saveCandidateDetails(item.id)}
+                        disabled={savingCandidateId === item.id}
+                      >
+                        {savingCandidateId === item.id ? "Saving..." : "Save candidate"}
+                      </button>
+                      <button className="admin-btn" type="button" onClick={cancelEditCandidate}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div style={{ marginTop: ".35rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
                   <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage stills</button>
+                  <button className="admin-btn" type="button" onClick={() => beginEditCandidate(item)}>
+                    Edit candidate
+                  </button>
                   {candidateStatuses.map((status) => (
                     <button
                       key={status}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
+import ArchiveLockGate from "../../components/ArchiveLockGate";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
@@ -170,6 +171,7 @@ export default function VerbleGameClient({
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [revealState, setRevealState] = useState<{
     slotIndex: number;
     letters: string[];
@@ -226,10 +228,22 @@ export default function VerbleGameClient({
       try {
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = await response.json().catch(() => ({}));
+        if (response.status === 423) {
+          if (active) {
+            setPuzzle(null);
+            setArchiveLock({
+              title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
+              description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+            });
+            setError("");
+          }
+          return;
+        }
         if (!response.ok) {
           if (response.status === 404) {
             if (active) {
               setPuzzle(null);
+              setArchiveLock(null);
               setError("");
             }
             return;
@@ -239,6 +253,7 @@ export default function VerbleGameClient({
         if (!active) return;
 
         setPuzzle(payload);
+        setArchiveLock(null);
         setGameState("playing");
         setMessage("");
         setPhraseGuess("");
@@ -260,6 +275,7 @@ export default function VerbleGameClient({
         setIsResolvingGuess(false);
       } catch (loadError) {
         if (!active) return;
+        setArchiveLock(null);
         setError(loadError instanceof Error ? loadError.message : "Failed to load Verble puzzle");
       } finally {
         if (active) setLoading(false);
@@ -958,6 +974,17 @@ export default function VerbleGameClient({
     );
   }
 
+  if (archiveLock) {
+    return (
+      <div className="verble-shell">
+        <MainNav label={navLabel} hideToday={hideToday} />
+        <main className="container">
+          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
+        </main>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="verble-shell">
@@ -1149,7 +1176,7 @@ export default function VerbleGameClient({
                               </span>
                               {item.kind === "letter" && item.trailingFixed ? (
                                 <span
-                                  className={`slot-inline-fixed ${item.trailingFixed.includes("'") ? "apostrophe" : ""} ${item.trailingFixed.includes("-") ? "hyphen" : ""}`}
+                                  className={`slot-inline-fixed ${item.trailingFixed.includes("'") ? "apostrophe" : ""} ${item.trailingFixed.includes("-") ? "hyphen" : ""} ${item.trailingFixed.includes(",") ? "comma" : ""} ${item.trailingFixed.includes(";") ? "semicolon" : ""}`}
                                   aria-hidden="true"
                                 >
                                   {item.trailingFixed}
@@ -1161,7 +1188,13 @@ export default function VerbleGameClient({
                       ))}
                     </span>
                   </button>
-                  {slot.separator ? <span className="slot-sep">{slot.separator}</span> : null}
+                  {slot.separator ? (
+                    <span
+                      className={`slot-sep ${slot.separator.includes(",") ? "comma" : ""} ${slot.separator.includes(";") ? "semicolon" : ""}`}
+                    >
+                      {slot.separator}
+                    </span>
+                  ) : null}
                 </div>
               );
             })}

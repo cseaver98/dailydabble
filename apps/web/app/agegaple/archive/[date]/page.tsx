@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
 
 import EditorialDrawer from "../../components/EditorialDrawer";
+import ArchiveLockGate from "../../../components/ArchiveLockGate";
 import type { PuzzleAnswer, PuzzlePublic } from "@/lib/agegaple/types";
 
 const maxGuesses = 5;
@@ -159,6 +160,7 @@ export default function ArchiveGamePage() {
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const isDarkMode = false;
   const hasHydratedProgressRef = useRef(false);
@@ -176,13 +178,32 @@ export default function ArchiveGamePage() {
         setDate(resolvedDate);
 
         const response = await fetch(`/api/agegaple/puzzle/by-date?date=${resolvedDate}`, { cache: "no-store" });
-        const payload = (await response.json()) as PuzzlePublic & { error?: string };
+        const payload = (await response.json()) as PuzzlePublic & {
+          error?: string;
+          lockTitle?: string;
+          lockDescription?: string;
+        };
+        if (response.status === 423) {
+          if (!mounted) return;
+          setPuzzle(null);
+          setArchiveLock({
+            title: typeof payload.lockTitle === "string"
+              ? payload.lockTitle
+              : "Archive Game #1 is locked",
+            description: typeof payload.lockDescription === "string"
+              ? payload.lockDescription
+              : "Enter the shared password to open this retired archive game.",
+          });
+          setError(null);
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(payload.error ?? "Failed to load archived game");
         }
 
         if (!mounted) return;
+        setArchiveLock(null);
         setPuzzle(payload);
         setResult(null);
         setAttempts([]);
@@ -192,6 +213,7 @@ export default function ArchiveGamePage() {
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : "Failed to load archived game";
         if (!mounted) return;
+        setArchiveLock(null);
         setError(message);
       } finally {
         if (mounted) {
@@ -437,6 +459,9 @@ export default function ArchiveGamePage() {
 
       <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
         {loading && <p className={mutedTextClass}>Loading game...</p>}
+        {!loading && archiveLock ? (
+          <ArchiveLockGate archiveHref="/agegaple/archive" title={archiveLock.title} description={archiveLock.description} />
+        ) : null}
         {error && (
           <p
             className={`rounded-md border p-3 ${
@@ -449,7 +474,7 @@ export default function ArchiveGamePage() {
           </p>
         )}
 
-        {!loading && puzzle && (
+        {!loading && !archiveLock && puzzle && (
           <section className={panelClass}>
             <div className="agegaple-meta-row">
               <span className="chip">{`ARCHIVE GAME #${puzzle.archiveGameNumber}`}</span>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createArchiveLockedResponse, hasArchiveUnlockCookie, isLockedArchiveGameNumber } from "../../../../../lib/archive-lock";
 import { getYeardlePuzzleByDate } from "../../../../../lib/yeardle/puzzle-repository";
 
 export const runtime = "nodejs";
@@ -11,6 +12,9 @@ export async function GET(request: NextRequest) {
     const puzzle = await getYeardlePuzzleByDate(date);
     if (!puzzle) {
       return NextResponse.json({ error: `No Yeardle puzzle scheduled for ${date}` }, { status: 404 });
+    }
+    if (isLockedArchiveGameNumber(puzzle.archiveGameNumber) && !hasArchiveUnlockCookie(request)) {
+      return createArchiveLockedResponse("Yeardle", date);
     }
 
     return NextResponse.json(puzzle);
