@@ -24,6 +24,10 @@ type Slot = {
   separator: string;
 };
 
+type DisplayChar =
+  | { kind: "letter"; value: string; letterIndex: number; trailingFixed: string }
+  | { kind: "fixed"; value: string; letterIndex: null; trailingFixed?: never };
+
 type VerblePuzzle = {
   puzzleId: string;
   puzzleDate: string;
@@ -77,17 +81,24 @@ const getFlipVisual = (feedback: LetterFeedback | "empty") => {
   return { bg: "#ffffff", border: "#d8dce2", color: "#2c2f31" };
 };
 
-const buildDisplayedWordChars = (slot: Slot, letters: string[]): Array<{ kind: "letter" | "fixed"; value: string; letterIndex: number | null }> => {
+const buildDisplayedWordChars = (slot: Slot, letters: string[]): DisplayChar[] => {
   let letterCursor = 0;
-  return slot.display.split("").map((char) => {
+  return slot.display.split("").reduce<DisplayChar[]>((items, char) => {
     if (/[A-Za-z]/.test(char)) {
       const next = letters[letterCursor] || "";
       const currentIndex = letterCursor;
       letterCursor += 1;
-      return { kind: "letter", value: next, letterIndex: currentIndex };
+      items.push({ kind: "letter", value: next, letterIndex: currentIndex, trailingFixed: "" });
+      return items;
     }
-    return { kind: "fixed", value: char, letterIndex: null };
-  });
+    const previous = items[items.length - 1];
+    if (previous?.kind === "letter") {
+      previous.trailingFixed += char;
+      return items;
+    }
+    items.push({ kind: "fixed", value: char, letterIndex: null });
+    return items;
+  }, []);
 };
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
@@ -1081,42 +1092,51 @@ export default function VerbleGameClient({
                           const flipEndVisual = getFlipVisual((feedbackClass as LetterFeedback | "empty") || "empty");
 
                           return (
-                            <span
-                              key={`${slot.index}-${index}`}
-                              className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
-                              style={
-                                item.kind === "letter" && activeRevealIndex
-                                  ? ({
-                                      "--flip-start-bg": flipStartVisual.bg,
-                                      "--flip-start-border": flipStartVisual.border,
-                                      "--flip-start-color": flipStartVisual.color,
-                                      "--flip-end-bg": flipEndVisual.bg,
-                                      "--flip-end-border": flipEndVisual.border,
-                                      "--flip-end-color": flipEndVisual.color,
-                                      "--flip-delay": `${
-                                        slotRevealIndex
-                                          ? Math.max(0, slotRevealOrder) * FLIP_STAGGER_MS
-                                          : postRevealIndex
-                                            ? Math.max(0, postRevealOrder) * FLIP_STAGGER_MS
-                                            : globalRevealIndex
-                                              ? 0
-                                              : (phraseRevealForSlot?.wordDelayMs || 0) + Math.max(0, phraseRevealOrder) * FLIP_STAGGER_MS
-                                      }ms`,
-                                      "--flip-duration": `${
-                                        globalRevealIndex ? SLOW_FLIP_DURATION_MS : FLIP_DURATION_MS
-                                      }ms`,
-                                    } as CSSProperties)
-                                  : undefined
-                              }
-                            >
-                              {item.kind === "letter" && postRevealIndex ? (
-                                <span className="tile-letter-stack" aria-hidden="true">
-                                  <span className="tile-letter-face tile-letter-face-front">{preRevealLetter}</span>
-                                  <span className="tile-letter-face tile-letter-face-back">{finalRevealLetter}</span>
+                            <span key={`${slot.index}-${index}`} className="slot-char-group">
+                              <span
+                                className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
+                                style={
+                                  item.kind === "letter" && activeRevealIndex
+                                    ? ({
+                                        "--flip-start-bg": flipStartVisual.bg,
+                                        "--flip-start-border": flipStartVisual.border,
+                                        "--flip-start-color": flipStartVisual.color,
+                                        "--flip-end-bg": flipEndVisual.bg,
+                                        "--flip-end-border": flipEndVisual.border,
+                                        "--flip-end-color": flipEndVisual.color,
+                                        "--flip-delay": `${
+                                          slotRevealIndex
+                                            ? Math.max(0, slotRevealOrder) * FLIP_STAGGER_MS
+                                            : postRevealIndex
+                                              ? Math.max(0, postRevealOrder) * FLIP_STAGGER_MS
+                                              : globalRevealIndex
+                                                ? 0
+                                                : (phraseRevealForSlot?.wordDelayMs || 0) + Math.max(0, phraseRevealOrder) * FLIP_STAGGER_MS
+                                        }ms`,
+                                        "--flip-duration": `${
+                                          globalRevealIndex ? SLOW_FLIP_DURATION_MS : FLIP_DURATION_MS
+                                        }ms`,
+                                      } as CSSProperties)
+                                    : undefined
+                                }
+                              >
+                                {item.kind === "letter" && postRevealIndex ? (
+                                  <span className="tile-letter-stack" aria-hidden="true">
+                                    <span className="tile-letter-face tile-letter-face-front">{preRevealLetter}</span>
+                                    <span className="tile-letter-face tile-letter-face-back">{finalRevealLetter}</span>
+                                  </span>
+                                ) : (
+                                  item.value || ""
+                                )}
+                              </span>
+                              {item.kind === "letter" && item.trailingFixed ? (
+                                <span
+                                  className={`slot-inline-fixed ${item.trailingFixed.includes("'") ? "apostrophe" : ""} ${item.trailingFixed.includes("-") ? "hyphen" : ""}`}
+                                  aria-hidden="true"
+                                >
+                                  {item.trailingFixed}
                                 </span>
-                              ) : (
-                                item.value || ""
-                              )}
+                              ) : null}
                             </span>
                           );
                         })()

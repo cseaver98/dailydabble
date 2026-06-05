@@ -132,6 +132,11 @@
   gap: clamp(0.1rem, 0.55vw, 0.2rem);
 }
 
+.verble-shell .slot-char-group {
+  display: inline-flex;
+  align-items: flex-end;
+}
+
 .verble-shell .slot-tile {
   width: clamp(1.7rem, 7.4vw, 2.55rem);
   height: clamp(2rem, 8.2vw, 2.85rem);
@@ -149,13 +154,40 @@
 }
 
 .verble-shell .slot-tile.fixed {
-  width: clamp(0.44rem, 1.9vw, 0.62rem);
-  min-width: clamp(0.44rem, 1.9vw, 0.62rem);
+  width: auto;
+  min-width: 0;
+  height: auto;
   border: 0;
   background: transparent;
   box-shadow: none;
   color: var(--muted);
-  padding-bottom: 0.12rem;
+  padding: 0 0.08rem 0.2rem;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  align-self: flex-end;
+  font-size: clamp(0.88rem, 2.7vw, 1rem);
+  line-height: 1;
+}
+
+.verble-shell .slot-inline-fixed {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  align-self: flex-end;
+  position: relative;
+  top: -1rem;
+  color: var(--muted);
+  padding: 0 0.08rem 0;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.88rem, 2.7vw, 1rem);
+  line-height: 1;
+}
+
+.verble-shell .slot-inline-fixed.apostrophe {
+  top: -1.42rem;
+  font-size: clamp(1.12rem, 3.4vw, 1.28rem);
 }
 
 .verble-shell .slot-word-button.selected .slot-tile.fixed {
