@@ -737,7 +737,7 @@ export default function Home() {
                   <img
                     src={activeImage.imageUrl}
                     alt={activeImage.imageAlt}
-                    className="h-full w-full object-contain object-top"
+                    className="block max-h-full w-auto max-w-full object-contain object-top"
                   />
                 </div>
               )}

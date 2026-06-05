@@ -110,7 +110,7 @@
 
 .agegaple-shell .agegaple-image {
   width: auto;
-  height: 100%;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
   display: block;
