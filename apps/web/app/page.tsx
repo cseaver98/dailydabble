@@ -193,7 +193,10 @@ export default function Home() {
                     className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition group-hover:shadow-lg ${buttonBackground}`}
                   >
                     Play
-                    <span aria-hidden>▶</span>
+                    <span
+                      aria-hidden
+                      className="inline-block h-0 w-0 border-y-[0.38rem] border-l-[0.62rem] border-y-transparent border-l-current"
+                    />
                   </span>
                 </div>
               </a>
