@@ -43,3 +43,9 @@ next-env.d.ts
 # Supabase local state
 supabase/.temp/
 **/supabase/.temp/
+
+# Doodle local pipeline artifacts
+apps/web/content/doodle/admin/review-state.json
+apps/web/content/doodle/previews/
+apps/web/content/doodle/processed/
+apps/web/content/doodle/raw/*.svg
