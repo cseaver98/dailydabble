@@ -136,7 +136,6 @@ body {
   .nav-menu-legal-link:active,
   .dd-nav .nav-menu-legal-link:active {
     filter: brightness(0.96);
-    transform: translateY(1px);
   }
 
   input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):active,

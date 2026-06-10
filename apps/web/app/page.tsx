@@ -3,18 +3,29 @@
 import { games } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 
 type StatusResponse = {
   date: string;
   status: Record<string, boolean>;
 };
 
+type MobileCardMotion = {
+  cardTransform: string;
+  cardOpacity: number;
+  cardShadow: string;
+  orbTransform: string;
+  orbOpacity: number;
+  buttonTransform: string;
+  buttonShadow: string;
+};
+
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
-  const [activeMobileCard, setActiveMobileCard] = useState("");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -44,21 +55,56 @@ export default function Home() {
     }
 
     const updateActiveCard = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileViewport((current) => (current === mobile ? current : mobile));
+
+      if (!mobile) {
+        setMobileCardMotion((current) => (Object.keys(current).length ? {} : current));
+        return;
+      }
+
       const viewportMidpoint = window.innerHeight / 2;
-      const crossedMidpoint = cards.filter((card) => {
+      const nextMotion = cards.reduce<Record<string, MobileCardMotion>>((acc, card) => {
+        const slug = card.getAttribute("data-hub-card");
+        if (!slug) {
+          return acc;
+        }
+
         const bounds = card.getBoundingClientRect();
-        return bounds.top <= viewportMidpoint && bounds.bottom > 0;
-      });
+        const center = bounds.top + bounds.height / 2;
+        const normalizedOffset = (center - viewportMidpoint) / Math.max(window.innerHeight * 0.52, 1);
+        const clampedOffset = Math.max(-1, Math.min(1, normalizedOffset));
+        const proximity = 1 - Math.abs(clampedOffset);
+        const easedProximity = Math.max(0, proximity);
+        const translateY = clampedOffset * 22;
+        const translateZ = -50 + easedProximity * 50;
+        const scale = 0.92 + easedProximity * 0.08;
+        const rotateX = clampedOffset * -16;
+        const opacity = 0.76 + easedProximity * 0.24;
+        const shadowAlpha = 0.05 + easedProximity * 0.09;
+        const shadowBlur = 28 + easedProximity * 24;
+        const shadowLift = 18 + easedProximity * 18;
+        const orbScale = 0.88 + easedProximity * 0.24;
+        const orbOpacity = 0.72 + easedProximity * 0.28;
+        const buttonScale = 0.975 + easedProximity * 0.025;
+        const buttonShadowAlpha = 0.06 + easedProximity * 0.1;
+        const buttonShadowBlur = 12 + easedProximity * 14;
+        const buttonShadowLift = 10 + easedProximity * 12;
 
-      const targetCard = crossedMidpoint.length
-        ? crossedMidpoint[crossedMidpoint.length - 1]
-        : cards.find((card) => {
-            const bounds = card.getBoundingClientRect();
-            return bounds.bottom > 0;
-          });
+        acc[slug] = {
+          cardTransform: `perspective(1200px) translate3d(0, ${translateY.toFixed(2)}px, ${translateZ.toFixed(2)}px) rotateX(${rotateX.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+          cardOpacity: Number(opacity.toFixed(3)),
+          cardShadow: `0 ${shadowLift.toFixed(1)}px ${shadowBlur.toFixed(1)}px rgba(44,47,49,${shadowAlpha.toFixed(3)})`,
+          orbTransform: `perspective(1200px) translateZ(${(translateZ * 0.3).toFixed(2)}px) scale(${orbScale.toFixed(3)})`,
+          orbOpacity: Number(orbOpacity.toFixed(3)),
+          buttonTransform: `perspective(1200px) translateZ(${(translateZ * 0.18).toFixed(2)}px) scale(${buttonScale.toFixed(3)})`,
+          buttonShadow: `0 ${buttonShadowLift.toFixed(1)}px ${buttonShadowBlur.toFixed(1)}px rgba(44,47,49,${buttonShadowAlpha.toFixed(3)})`,
+        };
 
-      const slug = targetCard?.getAttribute("data-hub-card") || "";
-      setActiveMobileCard((current) => (current === slug ? current : slug));
+        return acc;
+      }, {});
+
+      setMobileCardMotion(nextMotion);
     };
 
     updateActiveCard();
@@ -91,16 +137,16 @@ export default function Home() {
           {error && <p className="mt-3 text-sm text-[#b02500]">{error}</p>}
         </div>
 
-        <div id="games" className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
+        <div id="games" className="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2 md:gap-8">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
-            const isMobileActive = activeMobileCard === game.slug;
             const isDoodle = game.slug === "doodle";
             const isVerble = game.slug === "verble";
             const isYeardle = game.slug === "yeardle";
             const isEquadle = game.slug === "equadle";
             const isMoviedle = game.slug === "moviedle";
             const isSportle = game.slug === "sportle";
+            const motion = mobileCardMotion[game.slug];
             const iconBackground = isDoodle
                 ? "bg-sky-100"
                 : isVerble
@@ -141,27 +187,41 @@ export default function Home() {
                       ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white transition-colors hover:from-amber-700 hover:to-orange-900"
                   : "bg-gradient-to-r from-[#d87093] to-[#9e4e6d] text-white transition-colors hover:from-[#c45f81] hover:to-[#8a435f]";
             const cardHoverClass = "hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(44,47,49,0.1)]";
-            const cardMobileActiveClass = isMobileActive
-              ? "max-md:-translate-y-1.5 max-md:scale-[1.05] max-md:shadow-[0_34px_62px_rgba(44,47,49,0.18)]"
-              : "";
             const orbHoverClass = "group-hover:scale-150";
-            const orbMobileActiveClass = isMobileActive ? "max-md:scale-[1.55] max-md:opacity-100" : "max-md:opacity-85";
             const buttonHoverClass = "group-hover:shadow-lg";
-            const buttonMobileActiveClass = isMobileActive ? "max-md:scale-[1.03] max-md:shadow-[0_18px_34px_rgba(44,47,49,0.18)]" : "";
+            const mobileCardStyle: CSSProperties | undefined = isMobileViewport && motion
+              ? {
+                  transform: motion.cardTransform,
+                  opacity: motion.cardOpacity,
+                  boxShadow: motion.cardShadow,
+                }
+              : undefined;
+            const mobileOrbStyle: CSSProperties | undefined = isMobileViewport && motion
+              ? {
+                  transform: motion.orbTransform,
+                  opacity: motion.orbOpacity,
+                }
+              : undefined;
+            const mobileButtonStyle: CSSProperties | undefined = isMobileViewport && motion
+              ? {
+                  transform: motion.buttonTransform,
+                  boxShadow: motion.buttonShadow,
+                }
+              : undefined;
 
             return (
               <a
                 key={game.slug}
                 href={game.href}
                 data-hub-card={game.slug}
-                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-transform transition-shadow ${cardHoverClass} ${cardMobileActiveClass} ${
-                  isMobileActive ? "max-md:duration-500 max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)]" : "max-md:duration-300 max-md:ease-out"
-                } ${
+                style={mobileCardStyle}
+                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${cardHoverClass} ${
                   index === 0 ? "md:-translate-y-2" : ""
                 }`}
               >
                 <div
-                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] ${orbHoverClass} ${orbMobileActiveClass} ${iconAccent}`}
+                  style={mobileOrbStyle}
+                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] ${orbHoverClass} ${iconAccent}`}
                 />
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
@@ -237,7 +297,8 @@ export default function Home() {
 
                   <p className="mb-8 text-lg text-[#595c5e]">{game.description}</p>
                   <span
-                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition ${isMobileActive ? "max-md:duration-500 max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)]" : "max-md:duration-300 max-md:ease-out"} ${buttonHoverClass} ${buttonMobileActiveClass} ${buttonBackground}`}
+                    style={mobileButtonStyle}
+                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${buttonBackground}`}
                   >
                     Play
                     <span
