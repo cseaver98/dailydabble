@@ -64,7 +64,7 @@
 .agegaple-shell .agegaple-meta-row {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
 }
 
 .agegaple-shell .chip {
@@ -84,6 +84,33 @@
   padding: 0.45rem 0.62rem;
   min-height: 2rem;
   white-space: nowrap;
+}
+
+.agegaple-shell .how-to-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary-dim) 28%, transparent);
+  background: transparent;
+  color: var(--primary-dim);
+  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  padding: 0.45rem 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.agegaple-shell .how-to-play-btn:hover {
+  border-color: color-mix(in srgb, var(--primary-dim) 42%, transparent);
+  background: color-mix(in srgb, var(--primary-container) 28%, white);
+  transform: translateY(-1px);
 }
 
 .agegaple-shell .puzzle-title {
@@ -231,6 +258,70 @@
   background: var(--surface-container-high, #f3f4f6);
 }
 
+.agegaple-shell .result-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.agegaple-shell .result-modal-panel {
+  width: min(560px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--surface-container);
+  background: var(--surface-container-lowest);
+  color: var(--foreground);
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.agegaple-shell .result-modal-title {
+  margin: 0;
+  padding-right: 2.5rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.agegaple-shell .how-to-play-list {
+  display: grid;
+  gap: 0.48rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #595c5e;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.agegaple-shell .guess-submit-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dim));
+  box-shadow: 0 10px 20px rgba(158, 78, 109, 0.24);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.agegaple-shell .guess-submit-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--primary-dim), var(--primary-dim));
+}
+
 .agegaple-shell .admin-btn-like {
   background: #fff;
   color: var(--primary-dim);
@@ -347,6 +438,9 @@
   .agegaple-shell .agegaple-meta-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
+  }
+  .agegaple-shell .how-to-play-btn {
+    grid-column: 1 / -1;
   }
 
   .agegaple-shell .chip {

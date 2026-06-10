@@ -68,7 +68,7 @@
 .moviedle-shell .game-meta-row  {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
 }
 
 .moviedle-shell .chip  {
@@ -88,6 +88,33 @@
   padding: 0.45rem 0.62rem;
   min-height: 2rem;
   white-space: nowrap;
+}
+
+.moviedle-shell .how-to-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-strong) 28%, transparent);
+  background: transparent;
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  padding: 0.45rem 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.moviedle-shell .how-to-play-btn:hover {
+  border-color: color-mix(in srgb, var(--brand-strong) 42%, transparent);
+  background: color-mix(in srgb, var(--brand-soft) 34%, white);
+  transform: translateY(-1px);
 }
 
 .moviedle-shell .still-figure  {
@@ -284,6 +311,25 @@
   margin: 0 0 0.55rem;
   color: var(--text);
   line-height: 1.4;
+}
+
+.moviedle-shell .how-to-play-modal-panel {
+  width: min(560px, 94vw);
+}
+
+.moviedle-shell .how-to-play-title {
+  padding-right: 2.5rem;
+  font-weight: 800;
+}
+
+.moviedle-shell .how-to-play-list {
+  display: grid;
+  gap: 0.48rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .moviedle-shell .result-modal-actions  {
@@ -728,6 +774,10 @@
   .moviedle-shell .game-meta-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
+  }
+
+  .moviedle-shell .how-to-play-btn {
+    grid-column: 1 / -1;
   }
 
   .moviedle-shell .chip {

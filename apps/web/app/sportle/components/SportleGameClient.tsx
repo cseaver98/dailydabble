@@ -5,6 +5,7 @@ import type { CSSProperties, FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -92,6 +93,7 @@ export default function SportleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
@@ -148,6 +150,7 @@ export default function SportleGameClient({
         setMessage("");
         setResolvedAnswer("");
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
         setAnimatingClueIndexes([]);
@@ -516,6 +519,9 @@ export default function SportleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
 
           <div className="hints-wrap">
@@ -682,6 +688,20 @@ export default function SportleGameClient({
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Sportle"
+          steps={[
+            "Guess the mystery athlete.",
+            "Each wrong guess reveals another clue.",
+            "Use the clue tiles to narrow down the player.",
+            "Solve it before you run out of attempts.",
+          ]}
+          buttonClassName="admin-btn-like primary"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
     </div>
   );

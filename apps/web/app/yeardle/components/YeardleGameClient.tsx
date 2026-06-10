@@ -7,6 +7,7 @@ import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -116,6 +117,7 @@ export default function YeardleGameClient({
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
@@ -170,6 +172,7 @@ export default function YeardleGameClient({
         setMessage("");
         setResolvedAnswer("");
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setCopyStatus("");
       } catch (loadError) {
         if (!active) {
@@ -479,6 +482,9 @@ export default function YeardleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
 
           {puzzle?.eventTitle ? <h2 className="puzzle-title">{puzzle.eventTitle}</h2> : null}
@@ -622,6 +628,20 @@ export default function YeardleGameClient({
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Yeardle"
+          steps={[
+            "Guess the year of the historical event.",
+            "After each guess, you will see whether the answer is earlier or later.",
+            "Warm and cold hints show how close your guess was.",
+            "Find the exact year before you run out of attempts.",
+          ]}
+          buttonClassName="admin-btn-like primary"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
     </div>
   );

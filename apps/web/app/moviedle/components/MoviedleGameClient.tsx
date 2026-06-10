@@ -6,6 +6,7 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
@@ -99,6 +100,7 @@ export default function MoviedleGameClient({
   const [revealedAnswer, setRevealedAnswer] = useState("");
   const [revealedDetails, setRevealedDetails] = useState<any>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
@@ -155,6 +157,7 @@ export default function MoviedleGameClient({
         setRevealedAnswer("");
         setRevealedDetails(null);
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
         setSelectedStillIndex(0);
@@ -546,6 +549,9 @@ export default function MoviedleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
 
           <figure className="still-figure">
@@ -764,6 +770,20 @@ export default function MoviedleGameClient({
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Moviedle"
+          steps={[
+            "Guess the movie from the still image.",
+            "Each wrong guess reveals another still.",
+            "Use the suggestions to pick the exact movie title.",
+            "Solve it before you run out of attempts.",
+          ]}
+          buttonClassName="admin-btn-like primary"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
     </div>
   );

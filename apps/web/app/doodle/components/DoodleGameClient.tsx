@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 
@@ -196,6 +197,7 @@ export default function DoodleGameClient({
   const [message, setMessage] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [winRevealStage, setWinRevealStage] = useState<number | null>(null);
   const [shouldAnimateWinReveal, setShouldAnimateWinReveal] = useState(false);
   const [isWinRevealAnimating, setIsWinRevealAnimating] = useState(false);
@@ -251,6 +253,7 @@ export default function DoodleGameClient({
         setGameState("playing");
         setMessage("");
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setWinRevealStage(null);
         setShouldAnimateWinReveal(false);
         setIsWinRevealAnimating(false);
@@ -628,6 +631,9 @@ export default function DoodleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
 
           <div className="doodle-stage-wrap">
@@ -968,6 +974,20 @@ export default function DoodleGameClient({
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Doodle"
+          steps={[
+            "Watch the drawing reveal one stage at a time.",
+            "Type what you think the doodle is.",
+            "Each wrong guess reveals more of the drawing.",
+            "Solve it before you run out of attempts.",
+          ]}
+          buttonClassName="admin-btn-like primary"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
     </div>
   );

@@ -5,6 +5,7 @@ import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailyd
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
 import AsyncImage from "../components/AsyncImage";
+import HowToPlayDialog from "../components/HowToPlayDialog";
 import LoadingLabel from "../components/LoadingLabel";
 
 import EditorialDrawer from "./components/EditorialDrawer";
@@ -146,6 +147,7 @@ export default function Home() {
   const [attempts, setAttempts] = useState<GuessAttempt[]>([]);
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -562,6 +564,9 @@ export default function Home() {
             <div className="agegaple-meta-row">
               <span className="chip">TODAY&apos;S GAME</span>
               <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+              <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+                ? How to play
+              </button>
             </div>
             <h2 className="puzzle-title">
               {title}
@@ -714,6 +719,20 @@ export default function Home() {
         )}
 
       </div>
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Agegaple"
+          steps={[
+            "Guess the age gap between the two people.",
+            "After each guess, you will see whether the gap is higher or lower.",
+            "Use the meter and prior guesses to narrow it down.",
+            "Find the exact rounded age gap before you run out of attempts.",
+          ]}
+          buttonClassName="guess-submit-btn"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
+      ) : null}
+
       {result && isResultOpen && (
         <div
           className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4"

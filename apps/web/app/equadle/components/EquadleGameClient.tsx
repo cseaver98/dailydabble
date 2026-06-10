@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
@@ -126,6 +127,7 @@ export default function EquadleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [revealingRowIndex, setRevealingRowIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
@@ -179,6 +181,7 @@ export default function EquadleGameClient({
         setMessage("");
         setResolvedAnswer("");
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setRevealingRowIndex(null);
         setCopyStatus("");
       } catch (loadError) {
@@ -576,11 +579,10 @@ export default function EquadleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
-
-          <p className="rule-copy">
-            Use digits and + - * /. Guess must be a true {equationLength}-character equation. PEMDAS rules apply.
-          </p>
 
           <div className="board">
             {boardRows.map((row, rowIndex) => (
@@ -723,6 +725,20 @@ export default function EquadleGameClient({
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Equadle"
+          steps={[
+            "Build a true equation using digits and + - * /.",
+            `Your guess must fit the ${equationLength}-character board.`,
+            "Green tiles are correct. Yellow tiles are in the equation, but in another spot.",
+            "Standard PEMDAS order applies.",
+          ]}
+          buttonClassName="admin-btn-like primary"
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
     </div>
   );

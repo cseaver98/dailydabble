@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import HowToPlayDialog from "../../components/HowToPlayDialog";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
@@ -171,6 +172,7 @@ export default function VerbleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isPhraseDialogOpen, setIsPhraseDialogOpen] = useState(false);
   const [phraseGuessError, setPhraseGuessError] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -269,6 +271,7 @@ export default function VerbleGameClient({
         setSelectedSlot(null);
         setCopyStatus("");
         setIsResultOpen(false);
+        setIsHowToPlayOpen(false);
         setIsPhraseDialogOpen(false);
         setPhraseGuessError("");
         setIsHistoryOpen(false);
@@ -1025,9 +1028,10 @@ export default function VerbleGameClient({
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
             <span className="chip">{`Guesses ${guessesUsed}/${maxGuesses}`}</span>
+            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+              ? How to play
+            </button>
           </div>
-
-          <p className="rule-copy">Pick one unsolved slot, guess one word, or risk a full-phrase guess.</p>
 
           <div className="phrase-layout">
             {puzzle.slots.map((slot) => {
@@ -1408,6 +1412,19 @@ export default function VerbleGameClient({
             </form>
           </section>
         </div>
+      ) : null}
+
+      {isHowToPlayOpen ? (
+        <HowToPlayDialog
+          title="How to play Verble"
+          steps={[
+            "Pick one blank word in the phrase.",
+            "Guess that word with the keyboard.",
+            "Green letters are correct. Yellow letters are in the word, but in another spot.",
+            "You can guess the full phrase, but a miss ends the game.",
+          ]}
+          onClose={() => setIsHowToPlayOpen(false)}
+        />
       ) : null}
 
       {isResultOpen && gameState !== "playing" ? (
