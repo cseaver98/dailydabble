@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  const [activeMobileCard, setActiveMobileCard] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -34,6 +35,40 @@ export default function Home() {
     };
 
     void load();
+  }, []);
+
+  useEffect(() => {
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
+    if (!cards.length) {
+      return;
+    }
+
+    const updateActiveCard = () => {
+      const viewportMidpoint = window.innerHeight / 2;
+      const crossedMidpoint = cards.filter((card) => {
+        const bounds = card.getBoundingClientRect();
+        return bounds.top <= viewportMidpoint && bounds.bottom > 0;
+      });
+
+      const targetCard = crossedMidpoint.length
+        ? crossedMidpoint[crossedMidpoint.length - 1]
+        : cards.find((card) => {
+            const bounds = card.getBoundingClientRect();
+            return bounds.bottom > 0;
+          });
+
+      const slug = targetCard?.getAttribute("data-hub-card") || "";
+      setActiveMobileCard((current) => (current === slug ? current : slug));
+    };
+
+    updateActiveCard();
+    window.addEventListener("scroll", updateActiveCard, { passive: true });
+    window.addEventListener("resize", updateActiveCard);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveCard);
+      window.removeEventListener("resize", updateActiveCard);
+    };
   }, []);
 
   return (
@@ -109,12 +144,15 @@ export default function Home() {
               <a
                 key={game.slug}
                 href={game.href}
+                data-hub-card={game.slug}
                 className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(44,47,49,0.1)] ${
+                  activeMobileCard === game.slug ? "max-md:-translate-y-1 max-md:shadow-[0_24px_44px_rgba(44,47,49,0.1)]" : ""
+                } ${
                   index === 0 ? "md:-translate-y-2" : ""
                 }`}
               >
                 <div
-                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-transform duration-500 group-hover:scale-150 ${iconAccent}`}
+                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-transform duration-500 group-hover:scale-150 ${activeMobileCard === game.slug ? "max-md:scale-150" : ""} ${iconAccent}`}
                 />
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
@@ -190,7 +228,7 @@ export default function Home() {
 
                   <p className="mb-8 text-lg text-[#595c5e]">{game.description}</p>
                   <span
-                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition group-hover:shadow-lg ${buttonBackground}`}
+                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition group-hover:shadow-lg ${activeMobileCard === game.slug ? "max-md:shadow-lg" : ""} ${buttonBackground}`}
                   >
                     Play
                     <span
