@@ -13,6 +13,7 @@
   --outline-variant: #abadb0;
   --dd-menu-accent: #d87093;
   --dd-menu-hover-bg: #ffe5ef;
+  --dd-menu-brand-hover-bg: color-mix(in srgb, #b6f6ab 75%, white);
   --dd-menu-focus-ring: rgba(216, 112, 147, 0.35);
   --font-plus-jakarta: var(--font-plus-jakarta-sans);
   min-height: 100dvh;
