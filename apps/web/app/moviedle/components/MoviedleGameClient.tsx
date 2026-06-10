@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import AsyncImage from "../../components/AsyncImage";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
@@ -176,6 +177,29 @@ export default function MoviedleGameClient({
       active = false;
     };
   }, [apiUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !Array.isArray(puzzle?.stillImages) || puzzle.stillImages.length === 0) {
+      return;
+    }
+
+    const preloaders = puzzle.stillImages
+      .map((still) => still?.url)
+      .filter((url): url is string => Boolean(url))
+      .map((url) => {
+        const image = new window.Image();
+        image.decoding = "async";
+        image.src = url;
+        return image;
+      });
+
+    return () => {
+      preloaders.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
+    };
+  }, [puzzle?.puzzleId, puzzle?.stillImages]);
 
   const progressKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
@@ -526,7 +550,13 @@ export default function MoviedleGameClient({
 
           <figure className="still-figure">
             {visibleStill ? (
-              <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="still-image" />
+              <AsyncImage
+                src={visibleStill.url}
+                alt={visibleStill.alt || "Movie still"}
+                className="still-image"
+                wrapperClassName="h-full w-full"
+                overlayClassName="bg-[#f6fffd]/88 text-[color:var(--brand-strong)]"
+              />
             ) : (
               <p className="page-subtle">No still image available.</p>
             )}
@@ -680,7 +710,12 @@ export default function MoviedleGameClient({
             <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {visibleStill ? (
               <div className="result-modal-image-wrap">
-                <img src={visibleStill.url} alt={visibleStill.alt || "Movie still"} className="result-modal-image" />
+                <AsyncImage
+                  src={visibleStill.url}
+                  alt={visibleStill.alt || "Movie still"}
+                  className="result-modal-image"
+                  overlayClassName="bg-[color:var(--surface-low)]/88 text-[color:var(--brand-strong)]"
+                />
                 {canNavigateStills ? (
                   <>
                     <button

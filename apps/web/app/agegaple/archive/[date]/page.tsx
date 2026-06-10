@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
+import AsyncImage from "../../../components/AsyncImage";
 import LoadingLabel from "../../../components/LoadingLabel";
 
 import EditorialDrawer from "../../components/EditorialDrawer";
@@ -513,11 +514,12 @@ export default function ArchiveGamePage() {
               {title}
             </h2>
             <div className="agegaple-image-frame h-[min(48vh,360px)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <AsyncImage
                 className="agegaple-image select-none"
                 src={activeImage?.imageUrl}
-                alt={activeImage?.imageAlt}
+                alt={activeImage?.imageAlt || "Celebrity couple"}
+                wrapperClassName="flex h-full w-full items-center justify-center"
+                overlayClassName="bg-[color:var(--surface-container-lowest)]/80 text-[color:var(--primary-dim)]"
               />
             </div>
             <EditorialDrawer
@@ -693,8 +695,12 @@ export default function ArchiveGamePage() {
               <p className={mutedTextClass}>{performanceLabel}</p>
               {activeImage && (
                 <div className="mb-2 h-48 overflow-hidden rounded-lg border border-zinc-600/40 bg-zinc-950/30 sm:h-52">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activeImage.imageUrl} alt={activeImage.imageAlt} className="h-full w-full object-contain object-top" />
+                  <AsyncImage
+                    src={activeImage.imageUrl}
+                    alt={activeImage.imageAlt || "Celebrity couple"}
+                    className="h-full w-full object-contain object-top"
+                    overlayClassName="bg-zinc-950/35 text-zinc-100"
+                  />
                 </div>
               )}
               {puzzle && (

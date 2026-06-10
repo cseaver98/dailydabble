@@ -6,6 +6,7 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import AsyncImage from "../../components/AsyncImage";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -483,10 +484,12 @@ export default function YeardleGameClient({
           {puzzle?.eventTitle ? <h2 className="puzzle-title">{puzzle.eventTitle}</h2> : null}
 
           <figure className="event-figure">
-            <img
+            <AsyncImage
               src={imageSrc}
               alt={puzzle.imageAlt || "Historical event"}
               className="event-image"
+              wrapperClassName="h-full w-full"
+              overlayClassName="bg-[#faf9ff]/88 text-[color:var(--brand-strong)]"
               onError={() => setImageFailed(true)}
             />
           </figure>
@@ -600,11 +603,13 @@ export default function YeardleGameClient({
             ) : null}
             <p className="result-modal-copy">{performanceLabel}</p>
             <p className="result-modal-answer">{effectiveAnswer}</p>
-            {activeImage?.imageUrl ? (
-              <img
-                src={activeImage.imageUrl}
+            {imageSrc ? (
+              <AsyncImage
+                src={imageSrc}
                 alt={activeImage.imageAlt || "Historical event"}
                 className="result-modal-image"
+                overlayClassName="bg-[color:var(--surface-low)]/88 text-[color:var(--brand-strong)]"
+                onError={() => setImageFailed(true)}
               />
             ) : null}
             <div className="result-modal-actions">
