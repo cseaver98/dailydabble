@@ -171,6 +171,8 @@ export default function VerbleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
+  const [isPhraseDialogOpen, setIsPhraseDialogOpen] = useState(false);
+  const [phraseGuessError, setPhraseGuessError] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [revealState, setRevealState] = useState<{
@@ -267,6 +269,8 @@ export default function VerbleGameClient({
         setSelectedSlot(null);
         setCopyStatus("");
         setIsResultOpen(false);
+        setIsPhraseDialogOpen(false);
+        setPhraseGuessError("");
         setIsHistoryOpen(false);
         setRevealState(null);
         setHeldRevealState(null);
@@ -802,9 +806,12 @@ export default function VerbleGameClient({
 
     const normalized = normalizePhraseWithPunctuation(phraseGuess);
     if (!normalized) {
-      setMessage("Enter a phrase guess first.");
+      setPhraseGuessError("Enter a phrase guess first.");
       return;
     }
+
+    setPhraseGuessError("");
+    setIsPhraseDialogOpen(false);
 
     const target = normalizePhraseWithPunctuation(
       puzzle.slots.map((slot) => `${slot.display}${slot.separator}`).join("")
@@ -1197,22 +1204,17 @@ export default function VerbleGameClient({
           </div>
 
           <div className="phrase-submit-row">
-            <input
-              className="guess-input phrase-submit-input"
-              type="text"
-              name="phraseGuess"
-              value={phraseGuess}
-              onChange={(event) => setPhraseGuess(event.target.value)}
-              placeholder="Guess the full phrase. All or nothing."
-              disabled={gameState !== "playing"}
-            />
             {gameState === "playing" ? (
               <button
-                className="guess-submit-btn"
+                className="guess-submit-btn phrase-submit-trigger"
                 type="button"
-                onClick={submitPhraseGuess}
+                onClick={() => {
+                  setPhraseGuessError("");
+                  setIsPhraseDialogOpen(true);
+                }}
+                disabled={isResolvingGuess}
               >
-                Submit
+                Guess full phrase
               </button>
             ) : (
               <button
@@ -1344,6 +1346,69 @@ export default function VerbleGameClient({
           ) : null}
         </section>
       </main>
+
+      {isPhraseDialogOpen && gameState === "playing" ? (
+        <div className="result-modal-backdrop" onClick={() => setIsPhraseDialogOpen(false)}>
+          <section
+            className="result-modal-panel phrase-guess-modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="phrase-guess-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="result-modal-close"
+              type="button"
+              onClick={() => setIsPhraseDialogOpen(false)}
+              aria-label="Close full phrase guess dialog"
+            >
+              ×
+            </button>
+            <h2 className="result-modal-title phrase-guess-title" id="phrase-guess-title">
+              Guess the full phrase
+            </h2>
+            <p className="result-modal-copy phrase-guess-warning">
+              Warning: a correct phrase wins immediately, but a miss ends the game.
+            </p>
+            <form
+              className="phrase-guess-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitPhraseGuess();
+              }}
+            >
+              <input
+                id="phraseGuess"
+                className="guess-input phrase-submit-input"
+                type="text"
+                name="phraseGuess"
+                aria-label="Full phrase"
+                value={phraseGuess}
+                onChange={(event) => {
+                  setPhraseGuess(event.target.value);
+                  setPhraseGuessError("");
+                }}
+                placeholder="Type the whole phrase"
+                autoComplete="off"
+                autoFocus
+              />
+              {phraseGuessError ? <p className="phrase-guess-error">{phraseGuessError}</p> : null}
+              <div className="phrase-guess-actions">
+                <button
+                  className="guess-submit-btn phrase-guess-secondary"
+                  type="button"
+                  onClick={() => setIsPhraseDialogOpen(false)}
+                >
+                  Keep solving
+                </button>
+                <button className="guess-submit-btn" type="submit">
+                  Submit
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
