@@ -102,7 +102,6 @@ body {
   .dd-nav .nav-menu-legal-link {
     -webkit-tap-highlight-color: transparent;
     transition:
-      transform 140ms ease,
       filter 140ms ease,
       box-shadow 140ms ease,
       background-color 140ms ease,
@@ -114,7 +113,6 @@ body {
   textarea {
     -webkit-tap-highlight-color: transparent;
     transition:
-      transform 140ms ease,
       box-shadow 140ms ease,
       background-color 140ms ease,
       border-color 140ms ease;
