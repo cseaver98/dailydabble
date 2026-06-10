@@ -726,7 +726,15 @@
 
 @media (max-width: 720px) {
   .moviedle-shell .game-meta-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .moviedle-shell .chip {
+    min-width: 0;
+    font-size: 0.68rem;
+    padding: 0.42rem 0.5rem;
+    letter-spacing: 0.03em;
   }
 
   .moviedle-shell .guess-form,
