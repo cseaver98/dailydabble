@@ -81,3 +81,70 @@ body {
 .archive-empty-copy {
   white-space: nowrap;
 }
+
+@media (hover: none) and (pointer: coarse) {
+  a[href],
+  button,
+  [role="button"],
+  summary,
+  label[for],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  .menu-toggle-btn,
+  .dd-nav .menu-toggle-btn,
+  .nav-menu-item,
+  .dd-nav .nav-menu-item,
+  .nav-menu-legal-link,
+  .dd-nav .nav-menu-legal-link {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 140ms ease,
+      filter 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease,
+      opacity 140ms ease;
+  }
+
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease,
+      border-color 140ms ease;
+  }
+
+  a[href]:active,
+  button:active:not(:disabled),
+  [role="button"]:active,
+  summary:active,
+  label[for]:active,
+  input[type="button"]:active:not(:disabled),
+  input[type="submit"]:active:not(:disabled),
+  input[type="reset"]:active:not(:disabled),
+  input[type="checkbox"]:active,
+  input[type="radio"]:active,
+  input[type="range"]:active,
+  .menu-toggle-btn:active,
+  .dd-nav .menu-toggle-btn:active,
+  .nav-menu-item:active,
+  .dd-nav .nav-menu-item:active,
+  .nav-menu-legal-link:active,
+  .dd-nav .nav-menu-legal-link:active {
+    filter: brightness(0.96);
+    transform: translateY(1px);
+  }
+
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):active,
+  select:active,
+  textarea:active {
+    background-color: color-mix(in srgb, var(--surface-container-low, #eff1f4) 88%, white);
+    box-shadow: inset 0 0 0 999px rgba(44, 47, 49, 0.03);
+  }
+}
