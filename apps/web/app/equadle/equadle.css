@@ -62,7 +62,7 @@
 .equadle-shell .game-meta-row {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
 }
 
 .equadle-shell .chip {
@@ -84,13 +84,31 @@
   white-space: nowrap;
 }
 
-.equadle-shell .rule-copy {
-  margin: 0;
-  border-radius: 0.8rem;
-  background: color-mix(in srgb, var(--brand-soft) 58%, white);
-  padding: 0.62rem 0.78rem;
+.equadle-shell .how-to-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand-strong) 28%, transparent);
+  background: transparent;
   color: var(--brand-strong);
-  font-weight: 700;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  padding: 0.45rem 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.equadle-shell .how-to-play-btn:hover {
+  border-color: color-mix(in srgb, var(--brand-strong) 42%, transparent);
+  background: color-mix(in srgb, var(--brand-soft) 34%, white);
+  transform: translateY(-1px);
 }
 
 .equadle-shell .board {
@@ -225,7 +243,7 @@
   font-size: 0.92rem;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 120ms ease, background-color 120ms ease;
+  transition: background-color 120ms ease;
 }
 
 .equadle-shell .equadle-key.wide {
@@ -253,8 +271,10 @@
   margin: 0 auto;
 }
 
-.equadle-shell .equadle-key:hover:not(:disabled) {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .equadle-shell .equadle-key:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
 }
 
 .equadle-shell .equadle-key:disabled {
@@ -413,6 +433,24 @@
   font-weight: 700;
 }
 
+.equadle-shell .how-to-play-modal-panel {
+  width: min(560px, 94vw);
+}
+
+.equadle-shell .how-to-play-title {
+  padding-right: 2.5rem;
+}
+
+.equadle-shell .how-to-play-list {
+  display: grid;
+  gap: 0.48rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .equadle-shell .admin-btn-like {
   background: #fff;
   color: var(--brand-strong);
@@ -512,6 +550,9 @@
   .equadle-shell .game-meta-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
+  }
+  .equadle-shell .how-to-play-btn {
+    grid-column: 1 / -1;
   }
   .equadle-shell .chip {
     min-width: 0;
