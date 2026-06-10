@@ -130,7 +130,7 @@ export default function Home() {
             const buttonBackground = isDoodle
                 ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white transition-colors hover:from-sky-700 hover:to-blue-900"
                 : isVerble
-                  ? "bg-gradient-to-r from-[#e6d900] to-[#cfbf00] text-white transition-colors hover:from-[#f2e500] hover:to-[#c1b100]"
+                  ? "bg-gradient-to-r from-[#e6d900] to-[#cfbf00] text-white transition-colors hover:from-[#d9cb00] hover:to-[#b8a900]"
                 : isYeardle
                   ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white transition-colors hover:from-violet-700 hover:to-indigo-900"
                   : isEquadle
