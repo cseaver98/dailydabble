@@ -990,23 +990,14 @@ export default function VerbleGameClient({
     );
   }
 
-  if (error) {
-    return (
-      <div className="verble-shell">
-        <MainNav label={navLabel} hideToday={hideToday} />
-        <main className="container"><section className="card"><p className="message" data-kind="lost">{error}</p></section></main>
-      </div>
-    );
-  }
-
-  if (!puzzle) {
+  if (error || !puzzle) {
     return (
       <div className="verble-shell">
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <DailydabbleUnavailable
-            title="No Verble puzzle yet"
-            message="There is no puzzle scheduled for this date yet."
+            title="Verble unavailable"
+            message={error || "No puzzle available right now."}
           />
         </main>
       </div>

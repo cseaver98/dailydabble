@@ -494,6 +494,34 @@ export default function Home() {
   const mutedTextClass = "text-[color:var(--outline)]";
   const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
 
+  if (loading) {
+    return (
+      <div className="agegaple-shell">
+        <main className={`${mainClass} flex flex-col`}>
+          <DailydabbleNav
+            subtitle="Agegaple"
+            subtitleHref="/agegaple"
+            homeHref="/"
+            rightContent={
+              <DailydabbleMenu
+                items={[
+                  { label: "DailyDabble", href: "/", brand: true },
+                  { label: "Archive games", href: "/agegaple/archive" },
+                ]}
+              />
+            }
+          />
+
+          <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
+            <section className={panelClass}>
+              <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="agegaple-shell">
     <main className={`${mainClass} flex flex-col`}>
@@ -512,8 +540,6 @@ export default function Home() {
       />
 
       <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
-        {loading && <p className={mutedTextClass}><LoadingLabel text="Loading puzzle" /></p>}
-
         {!loading && !puzzle && !error && (
           <DailydabbleUnavailable title="Agegaple unavailable" message="No puzzle available right now." />
         )}
