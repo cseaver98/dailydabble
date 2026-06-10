@@ -94,6 +94,7 @@ export default function Home() {
         <div id="games" className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
+            const isMobileActive = activeMobileCard === game.slug;
             const isDoodle = game.slug === "doodle";
             const isVerble = game.slug === "verble";
             const isYeardle = game.slug === "yeardle";
@@ -139,20 +140,28 @@ export default function Home() {
                     : isSportle
                       ? "bg-gradient-to-r from-amber-600 to-orange-800 text-white transition-colors hover:from-amber-700 hover:to-orange-900"
                   : "bg-gradient-to-r from-[#d87093] to-[#9e4e6d] text-white transition-colors hover:from-[#c45f81] hover:to-[#8a435f]";
+            const cardHoverClass = "hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(44,47,49,0.1)]";
+            const cardMobileActiveClass = isMobileActive
+              ? "max-md:-translate-y-1.5 max-md:scale-[1.05] max-md:shadow-[0_34px_62px_rgba(44,47,49,0.18)]"
+              : "";
+            const orbHoverClass = "group-hover:scale-150";
+            const orbMobileActiveClass = isMobileActive ? "max-md:scale-[1.55] max-md:opacity-100" : "max-md:opacity-85";
+            const buttonHoverClass = "group-hover:shadow-lg";
+            const buttonMobileActiveClass = isMobileActive ? "max-md:scale-[1.03] max-md:shadow-[0_18px_34px_rgba(44,47,49,0.18)]" : "";
 
             return (
               <a
                 key={game.slug}
                 href={game.href}
                 data-hub-card={game.slug}
-                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(44,47,49,0.1)] ${
-                  activeMobileCard === game.slug ? "max-md:-translate-y-1 max-md:shadow-[0_24px_44px_rgba(44,47,49,0.1)]" : ""
+                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-transform transition-shadow ${cardHoverClass} ${cardMobileActiveClass} ${
+                  isMobileActive ? "max-md:duration-500 max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)]" : "max-md:duration-300 max-md:ease-out"
                 } ${
                   index === 0 ? "md:-translate-y-2" : ""
                 }`}
               >
                 <div
-                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-transform duration-500 group-hover:scale-150 ${activeMobileCard === game.slug ? "max-md:scale-150" : ""} ${iconAccent}`}
+                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] ${orbHoverClass} ${orbMobileActiveClass} ${iconAccent}`}
                 />
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
@@ -228,7 +237,7 @@ export default function Home() {
 
                   <p className="mb-8 text-lg text-[#595c5e]">{game.description}</p>
                   <span
-                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition group-hover:shadow-lg ${activeMobileCard === game.slug ? "max-md:shadow-lg" : ""} ${buttonBackground}`}
+                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition ${isMobileActive ? "max-md:duration-500 max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)]" : "max-md:duration-300 max-md:ease-out"} ${buttonHoverClass} ${buttonMobileActiveClass} ${buttonBackground}`}
                   >
                     Play
                     <span
