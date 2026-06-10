@@ -42,6 +42,7 @@
 }
 
 .dd-brand-word {
+  font-family: var(--font-headline, "Plus Jakarta Sans"), "Manrope", sans-serif;
   font-size: clamp(1.25rem, 1rem + 1vw, 1.85rem);
   font-weight: 900;
   line-height: 1;
