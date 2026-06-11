@@ -21,9 +21,14 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Dailydabble",
+  title: "DailyDabble",
   description: "Daily trivia game hub",
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: "DailyDabble",
+    description: "The daily trivia game hub",
+    images: ["/opengraph-image"],
+  },
   icons: {
     icon: [
       { url: "/apple-icon.png", type: "image/png", sizes: "512x512" },

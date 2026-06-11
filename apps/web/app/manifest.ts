@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dailydabble",
-    short_name: "Dailydabble",
+    name: "DailyDabble",
+    short_name: "DailyDabble",
     description: "Daily trivia game hub",
     start_url: "/",
     display: "standalone",

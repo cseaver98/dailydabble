@@ -84,7 +84,7 @@ export default function Home() {
         const shadowAlpha = 0.05 + easedProximity * 0.09;
         const shadowBlur = 28 + easedProximity * 24;
         const shadowLift = 18 + easedProximity * 18;
-        const orbScale = 0.88 + easedProximity * 0.24;
+        const orbScale = 0.94 + easedProximity * 0.16;
         const orbOpacity = 0.72 + easedProximity * 0.28;
         const buttonScale = 0.975 + easedProximity * 0.025;
         const buttonShadowAlpha = 0.06 + easedProximity * 0.1;
@@ -221,7 +221,7 @@ export default function Home() {
               >
                 <div
                   style={mobileOrbStyle}
-                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] ${orbHoverClass} ${iconAccent}`}
+                  className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] max-md:transform-gpu max-md:will-change-transform max-md:duration-[120ms] max-md:ease-out ${orbHoverClass} ${iconAccent}`}
                 />
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
