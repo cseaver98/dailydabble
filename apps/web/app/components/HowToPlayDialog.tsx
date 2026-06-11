@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 type HowToPlayDialogProps = {
   title: string;
   subtitle: string;
-  steps: string[];
+  steps: ReactNode[];
   buttonClassName?: string;
   onClose: () => void;
 };
@@ -35,8 +37,8 @@ export default function HowToPlayDialog({
         </h2>
         <p className="how-to-play-subtitle">{subtitle}</p>
         <ul className="how-to-play-list">
-          {steps.map((step) => (
-            <li key={step}>{step}</li>
+          {steps.map((step, index) => (
+            <li key={typeof step === "string" ? step : index}>{step}</li>
           ))}
         </ul>
         <button className={buttonClassName} type="button" onClick={onClose}>

@@ -169,6 +169,13 @@
   --cell-color: #2c2f31;
 }
 
+.equadle-shell .equadle-operator-symbol {
+  display: inline-block;
+  font-size: 1.3em;
+  line-height: 0.9;
+  transform: translateY(-0.02em);
+}
+
 .equadle-shell .board-cell.reveal {
   --flip-start-bg: #fff;
   --flip-start-border: #d8dce2;
@@ -244,6 +251,10 @@
   font-weight: 800;
   cursor: pointer;
   transition: background-color 120ms ease;
+}
+
+.equadle-shell .equadle-key.has-operator-symbol {
+  font-size: 1.08rem;
 }
 
 .equadle-shell .equadle-key.wide {
@@ -466,6 +477,14 @@
   color: #000;
 }
 
+.equadle-shell .how-to-play-math-symbol {
+  display: inline-block;
+  font-family: "Arial", "Helvetica Neue", sans-serif;
+  font-size: 1.18em;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateY(-0.01em);
+}
 
 .equadle-shell .admin-btn-like {
   background: #fff;

@@ -17,6 +17,10 @@ const KEY_ROWS = [
   ["1", "2", "3", "-"],
   ["Enter", "0", "Backspace", "+"],
 ];
+const DISPLAY_OPERATORS: Record<string, string> = {
+  "*": "×",
+  "/": "÷",
+};
 const KEY_STRENGTH: Record<string, number> = {
   empty: 0,
   absent: 1,
@@ -46,8 +50,23 @@ type Attempt = {
   feedback: string[];
 };
 
-const sanitizeEquationInput = (value: string, maxLength: number) =>
+const normalizeEquationInput = (value: string) =>
   String(value || "")
+    .replace(/[xX×]/g, "*")
+    .replace(/÷/g, "/");
+
+const toDisplayEquationChar = (char: string) => DISPLAY_OPERATORS[char] || char;
+
+const isDisplayOperatorChar = (char: string) => ["+", "-", "×", "÷"].includes(char);
+
+const toDisplayEquation = (value: string) =>
+  String(value || "")
+    .split("")
+    .map(toDisplayEquationChar)
+    .join("");
+
+const sanitizeEquationInput = (value: string, maxLength: number) =>
+  normalizeEquationInput(value)
     .replace(/\s+/g, "")
     .replace(/[^0-9+\-*/]/g, "")
     .slice(0, maxLength);
@@ -318,7 +337,7 @@ export default function EquadleGameClient({
   const boardRows = useMemo(() => {
     const rows = attempts.map((attempt) =>
       attempt.guess.split("").map((char, index) => ({
-        char,
+        char: toDisplayEquationChar(char),
         state: index === equalsIndex ? "locked" : (attempt.feedback[index] || "absent"),
       })),
     );
@@ -332,7 +351,7 @@ export default function EquadleGameClient({
           continue;
         }
         const nextChar = guess[guessCursor] || "";
-        draft.push({ char: nextChar, state: nextChar ? "draft" : "empty" });
+        draft.push({ char: nextChar ? toDisplayEquationChar(nextChar) : "", state: nextChar ? "draft" : "empty" });
         guessCursor += 1;
       }
 
@@ -374,7 +393,7 @@ export default function EquadleGameClient({
     if (gameState !== "playing") {
       return;
     }
-    setGuess((current) => sanitizeEquationInput(`${current}${char}`, guessInputLength));
+    setGuess((current) => sanitizeEquationInput(`${current}${normalizeEquationInput(char)}`, guessInputLength));
   };
 
   const removeGuessChar = () => {
@@ -478,7 +497,7 @@ export default function EquadleGameClient({
         removeGuessChar();
         return;
       }
-      if (/^[0-9+\-*/]$/.test(key)) {
+      if (/^[0-9+\-*/xX×÷]$/.test(key)) {
         event.preventDefault();
         appendGuessChar(key);
       }
@@ -505,11 +524,12 @@ export default function EquadleGameClient({
   };
 
   const effectiveAnswer = resolvedAnswer || puzzle?.answer || "Unavailable";
+  const displayEffectiveAnswer = toDisplayEquation(effectiveAnswer);
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const shareText = [
     `Equadle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
     `${attempts.length}/${maxGuesses} tries`,
-    `Answer: ${effectiveAnswer}`,
+    `Answer: ${displayEffectiveAnswer}`,
     toPublicAppUrl("/equadle"),
   ].join("\n");
   const handleShareResult = async () => {
@@ -608,7 +628,11 @@ export default function EquadleGameClient({
                         : undefined
                     }
                   >
-                    {cell.char || " "}
+                    {cell.char ? (
+                      <span className={isDisplayOperatorChar(cell.char) ? "equadle-operator-symbol" : undefined}>
+                        {cell.char}
+                      </span>
+                    ) : " "}
                   </div>
                 ))}
               </div>
@@ -665,13 +689,15 @@ export default function EquadleGameClient({
                       <button
                         key={keyLabel}
                         type="button"
-                        className="equadle-key"
+                        className={`equadle-key ${isDisplayOperatorChar(toDisplayEquationChar(keyLabel)) ? "has-operator-symbol" : ""}`}
                         data-state={keyStates.get(keyLabel) || "empty"}
                         onClick={() => appendGuessChar(keyLabel)}
                         disabled={gameState !== "playing"}
-                        aria-label={`Type ${keyLabel}`}
+                        aria-label={`Type ${toDisplayEquationChar(keyLabel)}`}
                       >
-                        {keyLabel}
+                        <span className={isDisplayOperatorChar(toDisplayEquationChar(keyLabel)) ? "equadle-operator-symbol" : undefined}>
+                          {toDisplayEquationChar(keyLabel)}
+                        </span>
                       </button>
                     )
                   ))}
@@ -714,7 +740,16 @@ export default function EquadleGameClient({
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
             <p className="result-modal-copy">{performanceLabel}</p>
-            <p className="result-modal-answer">{effectiveAnswer}</p>
+            <p className="result-modal-answer">
+              {displayEffectiveAnswer.split("").map((char, index) => (
+                <span
+                  key={`${char}-${index}`}
+                  className={isDisplayOperatorChar(char) ? "equadle-operator-symbol" : undefined}
+                >
+                  {char}
+                </span>
+              ))}
+            </p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
@@ -730,11 +765,16 @@ export default function EquadleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Equadle"
-          subtitle="Guess the hidden arithemetic equation."
+          subtitle="Guess the hidden arithmetic equation."
           steps={[
-            "Build a true equation using digits and + - * /.",
+            <>
+              Build a true equation using digits, <span className="how-to-play-math-symbol">+</span>,{" "}
+              <span className="how-to-play-math-symbol">-</span>,{" "}
+              <span className="how-to-play-math-symbol">×</span>, and{" "}
+              <span className="how-to-play-math-symbol">÷</span>.
+            </>,
             `Your guess must fit the ${equationLength}-character board.`,
-            "Green tiles are correct. Yellow tiles are in the equation, but in another spot.",
+            "Green tiles are correct. Yellow tiles are in the equation, but in another spot. Grey tiles are not in the equation.",
             "Standard PEMDAS order applies.",
           ]}
           buttonClassName="admin-btn-like primary"

@@ -28,7 +28,7 @@ export const games: Game[] = [
     slug: "equadle",
     name: "Equadle",
     href: "/equadle",
-    description: "Guess the hidden arithemetic equation.",
+    description: "Guess the hidden arithmetic equation.",
   },
   {
     slug: "yeardle",

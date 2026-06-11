@@ -108,8 +108,13 @@ export const evaluateExpression = (expr: string): number => {
   return evalRpn(toRpn(tokens));
 };
 
+const normalizeEquationInput = (value: string): string =>
+  String(value || "")
+    .replace(/[xX×]/g, "*")
+    .replace(/÷/g, "/");
+
 export const validateEquation = (equation: string, expectedLength = 8): string => {
-  const value = String(equation || "").trim();
+  const value = normalizeEquationInput(equation).trim();
 
   if (value.length !== expectedLength) {
     throw new Error(`Guess must be ${expectedLength} characters`);
