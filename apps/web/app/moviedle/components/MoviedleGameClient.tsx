@@ -775,6 +775,7 @@ export default function MoviedleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Moviedle"
+          subtitle="Guess the movie from stills."
           steps={[
             "Guess the movie from the still image.",
             "Each wrong guess reveals another still.",

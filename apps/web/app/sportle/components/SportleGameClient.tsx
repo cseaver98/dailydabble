@@ -693,6 +693,7 @@ export default function SportleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Sportle"
+          subtitle="Guess the pro athlete."
           steps={[
             "Guess the mystery athlete.",
             "Each wrong guess reveals another clue.",

@@ -657,6 +657,7 @@ export default function ArchiveGamePage() {
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Agegaple"
+          subtitle="Guess the celebrity couple age gap."
           steps={[
             "Guess the age gap between the two people.",
             "After each guess, you will see whether the gap is higher or lower.",

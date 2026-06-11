@@ -440,10 +440,21 @@
 .equadle-shell .how-to-play-title {
   padding-right: 2.5rem;
   font-weight: 800;
+  font-size: clamp(1.45rem, 4.5vw, 2rem);
+  line-height: 1.08;
+}
+
+.equadle-shell .how-to-play-subtitle {
+  margin: -0.12rem 0 0.55rem;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .equadle-shell .how-to-play-list {
   display: grid;
+  list-style: disc;
+  list-style-position: outside;
   gap: 0.48rem;
   margin: 0;
   padding-left: 1.15rem;
@@ -451,6 +462,10 @@
   font-weight: 750;
   line-height: 1.45;
 }
+.equadle-shell .how-to-play-list li::marker {
+  color: #000;
+}
+
 
 .equadle-shell .admin-btn-like {
   background: #fff;

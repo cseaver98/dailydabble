@@ -1,5 +1,6 @@
 type HowToPlayDialogProps = {
   title: string;
+  subtitle: string;
   steps: string[];
   buttonClassName?: string;
   onClose: () => void;
@@ -7,6 +8,7 @@ type HowToPlayDialogProps = {
 
 export default function HowToPlayDialog({
   title,
+  subtitle,
   steps,
   buttonClassName = "guess-submit-btn",
   onClose,
@@ -31,6 +33,7 @@ export default function HowToPlayDialog({
         <h2 className="result-modal-title how-to-play-title" id="how-to-play-title">
           {title}
         </h2>
+        <p className="how-to-play-subtitle">{subtitle}</p>
         <ul className="how-to-play-list">
           {steps.map((step) => (
             <li key={step}>{step}</li>

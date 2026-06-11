@@ -633,6 +633,7 @@ export default function YeardleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Yeardle"
+          subtitle="Guess the year of the historic event."
           steps={[
             "Guess the year of the historical event.",
             "After each guess, you will see whether the answer is earlier or later.",

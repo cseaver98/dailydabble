@@ -979,6 +979,7 @@ export default function DoodleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Doodle"
+          subtitle="Guess the doodle as it is drawn."
           steps={[
             "Watch the drawing reveal one stage at a time.",
             "Type what you think the doodle is.",

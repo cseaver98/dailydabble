@@ -730,6 +730,7 @@ export default function EquadleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Equadle"
+          subtitle="Guess the hidden arithemetic equation."
           steps={[
             "Build a true equation using digits and + - * /.",
             `Your guess must fit the ${equationLength}-character board.`,

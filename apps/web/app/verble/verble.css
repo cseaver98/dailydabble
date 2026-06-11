@@ -599,10 +599,21 @@
 .verble-shell .how-to-play-title {
   padding-right: 2.5rem;
   font-weight: 800;
+  font-size: clamp(1.45rem, 4.5vw, 2rem);
+  line-height: 1.08;
+}
+
+.verble-shell .how-to-play-subtitle {
+  margin: -0.12rem 0 0.55rem;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .verble-shell .how-to-play-list {
   display: grid;
+  list-style: disc;
+  list-style-position: outside;
   gap: 0.48rem;
   margin: 0;
   padding-left: 1.15rem;
@@ -610,6 +621,10 @@
   font-weight: 750;
   line-height: 1.45;
 }
+.verble-shell .how-to-play-list li::marker {
+  color: #000;
+}
+
 
 .verble-shell .phrase-guess-modal-panel {
   width: min(540px, 94vw);

@@ -1417,6 +1417,7 @@ export default function VerbleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Verble"
+          subtitle="Guess the daily phrase one word at a time."
           steps={[
             "Pick one blank word in the phrase.",
             "Guess that word with the keyboard.",
