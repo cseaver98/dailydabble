@@ -105,6 +105,7 @@ export default function MoviedleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [lockedSuggestionQuery, setLockedSuggestionQuery] = useState("");
   const [selectedStillIndex, setSelectedStillIndex] = useState(0);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const contextChipLabel = isArchiveView
@@ -160,6 +161,7 @@ export default function MoviedleGameClient({
         setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
+        setLockedSuggestionQuery("");
         setSelectedStillIndex(0);
       } catch (loadError) {
         if (!active) {
@@ -293,7 +295,12 @@ export default function MoviedleGameClient({
     }
 
     const trimmed = guess.trim();
+    const normalizedQuery = normalizeGuess(trimmed);
     if (trimmed.length < 2) {
+      setSuggestions([]);
+      return () => {};
+    }
+    if (normalizedQuery && normalizedQuery === lockedSuggestionQuery) {
       setSuggestions([]);
       return () => {};
     }
@@ -322,7 +329,7 @@ export default function MoviedleGameClient({
       active = false;
       window.clearTimeout(timeout);
     };
-  }, [gameState, guess]);
+  }, [gameState, guess, lockedSuggestionQuery]);
 
   useEffect(() => {
     if (gameState === "playing") {
@@ -595,7 +602,13 @@ export default function MoviedleGameClient({
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
               value={guess}
-              onChange={(event) => setGuess(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setGuess(nextValue);
+                if (lockedSuggestionQuery && normalizeGuess(nextValue.trim()) !== lockedSuggestionQuery) {
+                  setLockedSuggestionQuery("");
+                }
+              }}
               className="guess-input"
               type="text"
               placeholder="Guess the movie title"
@@ -622,6 +635,7 @@ export default function MoviedleGameClient({
                   className="suggestion-item"
                   onClick={() => {
                     setGuess(item.title);
+                    setLockedSuggestionQuery(normalizeGuess(item.title));
                     setSuggestions([]);
                   }}
                 >
