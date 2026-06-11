@@ -113,7 +113,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, athleteRow: AthleteRow): Prom
   clues: [
     {
       label: /\bpresent\b/i.test(String(athleteRow.years_with_team || "")) ? "Current Team" : "Former Team",
-      value: athleteRow.team_name || "Team not revealed",
+      value: athleteRow.team_name || "",
       logoUrl: athleteRow.team_logo_url || null,
     },
     {
