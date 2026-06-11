@@ -326,7 +326,9 @@
   line-height: 1.35;
 }
 
-.agegaple-shell .guess-submit-btn {
+.agegaple-shell .guess-submit-btn,
+.agegaple-shell .admin-btn-like,
+.agegaple-shell .admin-btn-like.primary {
   border: 0;
   border-radius: 999px;
   padding: 0.66rem 1rem;
@@ -343,7 +345,8 @@
   cursor: pointer;
 }
 
-.agegaple-shell .guess-submit-btn:not(:disabled):hover {
+.agegaple-shell .guess-submit-btn:not(:disabled):hover,
+.agegaple-shell .admin-btn-like.primary:hover {
   background: linear-gradient(135deg, var(--primary-dim), var(--primary-dim));
 }
 
@@ -352,6 +355,16 @@
   color: var(--primary-dim);
   border: 1px solid var(--surface-container);
   box-shadow: none;
+}
+
+.agegaple-shell .admin-btn-like:hover {
+  background: color-mix(in srgb, var(--surface-container-low) 82%, white);
+}
+
+.agegaple-shell .result-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
 }
 
 .agegaple-shell .page-title {

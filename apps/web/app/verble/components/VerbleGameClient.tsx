@@ -1454,7 +1454,7 @@ export default function VerbleGameClient({
             <p className="result-modal-answer">{answerLine}</p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>
-                Copy Result
+                Share
               </button>
               <a className="admin-btn-like" href="/">DailyDabble</a>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>

@@ -414,7 +414,7 @@
 .verble-shell .guess-input:focus-visible { outline: 3px solid rgba(47, 51, 61, 0.2); outline-offset: 1px; }
 
 .verble-shell .guess-submit-btn,
-.verble-shell .admin-btn-like {
+.verble-shell .admin-btn-like.primary {
   border: 0;
   border-radius: 999px;
   padding: 0.66rem 1rem;
@@ -430,12 +430,33 @@
   justify-content: center;
   cursor: pointer;
 }
+
+.verble-shell .admin-btn-like {
+  border: 1px solid var(--outline-soft);
+  border-radius: 999px;
+  padding: 0.66rem 1rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--brand-strong);
+  background: #fff;
+  box-shadow: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 .verble-shell .guess-submit-btn.danger { background: linear-gradient(135deg, #7f1d1d, #450a0a); }
 .verble-shell .guess-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .verble-shell .guess-submit-btn:not(:disabled):hover,
 .verble-shell .admin-btn-like.primary:hover {
   background: linear-gradient(135deg, #d9cb00, #d9cb00);
+}
+
+.verble-shell .admin-btn-like:hover {
+  background: color-mix(in srgb, var(--surface-low) 82%, white);
 }
 
 .verble-shell .attempts { display: grid; gap: 0.35rem; }
@@ -583,6 +604,8 @@
 }
 
 .verble-shell .result-modal-actions {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;

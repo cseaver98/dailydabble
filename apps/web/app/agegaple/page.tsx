@@ -820,43 +820,23 @@ export default function Home() {
                 </span>
               </p>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className={`result-modal-actions mt-4 border-t pt-3 ${isDarkMode ? "border-zinc-700" : "border-[color:var(--surface-container)]"}`}>
               <button
                 type="button"
                 onClick={handleShareResult}
-                className={`inline-flex h-11 items-center justify-center rounded-full border px-5 font-bold transition ${
-                  isDarkMode
-                    ? "border-zinc-500 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
-                }`}
+                className="admin-btn-like"
               >
-                <span className="inline-flex items-center gap-1.5">
-                  Share
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="2" />
-                    <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-                    <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="2" />
-                    <path d="M8.7 10.7 15.3 6.3M8.7 13.3l6.6 4.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </span>
+                Share
               </button>
               <Link
                 href="/"
-                className={`inline-flex h-11 items-center justify-center rounded-full border px-5 font-bold transition ${
-                  isDarkMode
-                    ? "border-zinc-500 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                    : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] text-[color:var(--foreground)] hover:bg-[color:var(--surface-container-high)]"
-                }`}
+                className="admin-btn-like"
               >
                 DailyDabble
               </Link>
               <Link
                 href="/agegaple/archive"
-                className={`inline-flex h-11 items-center justify-center rounded-full px-5 font-extrabold text-white transition ${
-                  isDarkMode
-                    ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
-                    : "bg-[color:var(--primary)] hover:bg-[color:var(--primary-dim)]"
-                }`}
+                className="admin-btn-like primary"
               >
                 Play Archive Games
               </Link>

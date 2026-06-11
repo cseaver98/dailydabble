@@ -731,7 +731,6 @@ export default function MoviedleGameClient({
               <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
             </p>
             <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
-            <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {visibleStill ? (
               <div className="result-modal-image-wrap">
                 <AsyncImage
@@ -764,6 +763,7 @@ export default function MoviedleGameClient({
                 ) : null}
               </div>
             ) : null}
+            <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {Number.isFinite(revealedDetails?.releaseYear) ? (
               <p className="result-modal-copy"><strong>Year:</strong> {revealedDetails.releaseYear}</p>
             ) : null}

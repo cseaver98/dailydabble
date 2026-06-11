@@ -381,6 +381,7 @@
   font-size: 1.1rem;
   font-weight: 900;
   color: var(--brand-strong);
+  text-align: center;
 }
 
 .doodle-shell .result-modal-doodle-wrap  {
@@ -398,6 +399,8 @@
 }
 
 .doodle-shell .result-modal-actions  {
+  border-top: 1px solid var(--outline-soft);
+  padding-top: 0.75rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;

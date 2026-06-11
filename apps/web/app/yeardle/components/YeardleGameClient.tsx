@@ -612,7 +612,6 @@ export default function YeardleGameClient({
               <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
             </p>
             <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
-            <p className="result-modal-answer">{effectiveAnswer}</p>
             {imageSrc ? (
               <AsyncImage
                 src={imageSrc}
@@ -622,6 +621,7 @@ export default function YeardleGameClient({
                 onError={() => setImageFailed(true)}
               />
             ) : null}
+            <p className="result-modal-answer">{effectiveAnswer}</p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
