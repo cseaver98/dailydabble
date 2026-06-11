@@ -278,8 +278,10 @@
 
 .moviedle-shell .result-modal-title  {
   margin: 0 0 0.4rem;
+  padding-right: 2.5rem;
   font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 1.1rem;
+  font-weight: 800;
 }
 
 .moviedle-shell .result-modal-timer  {
@@ -315,9 +317,21 @@
   line-height: 1.4;
 }
 
+.moviedle-shell .result-modal-stat-value {
+  font-weight: 700;
+  color: var(--foreground, var(--text));
+}
+
+.moviedle-shell .result-modal-stat-line {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .moviedle-shell .result-modal-subtitle {
   font-size: 1.3rem;
   line-height: 1.4;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .moviedle-shell .how-to-play-modal-panel {

@@ -363,8 +363,10 @@
 
 .doodle-shell .result-modal-title  {
   margin: 0;
+  padding-right: 2.5rem;
   font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 1.1rem;
+  font-weight: 800;
 }
 
 .doodle-shell .result-modal-timer  {
@@ -405,6 +407,15 @@
   margin: 0;
   color: var(--muted);
   font-weight: 700;
+}
+
+.doodle-shell .result-modal-stat-line  {
+  font-weight: 400;
+}
+
+.doodle-shell .result-modal-stat-value  {
+  font-weight: 700;
+  color: var(--foreground, var(--text));
 }
 
 .doodle-shell .result-modal-subtitle {

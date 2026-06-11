@@ -607,6 +607,10 @@ export default function YeardleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
+            <p className="result-modal-copy result-modal-stat-line">
+              Guesses used:{" "}
+              <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
+            </p>
             <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             <p className="result-modal-answer">{effectiveAnswer}</p>
             {imageSrc ? (

@@ -774,7 +774,7 @@ export default function Home() {
             </div>
             <div className="space-y-2">
               <p className={mutedTextClass}>
-                Attempts used:{" "}
+                Guesses used:{" "}
                 <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
                   {attempts.length}/{maxGuesses}
                 </span>
