@@ -607,7 +607,7 @@ export default function YeardleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{performanceLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             <p className="result-modal-answer">{effectiveAnswer}</p>
             {imageSrc ? (
               <AsyncImage
@@ -635,10 +635,10 @@ export default function YeardleGameClient({
           title="How to play Yeardle"
           subtitle="Guess the year of the historic event."
           steps={[
-            "Guess the year of the historical event.",
-            "After each guess, you will see whether the answer is earlier or later.",
-            "Warm and cold hints show how close your guess was.",
-            "Find the exact year before you run out of attempts.",
+            "After each guess, warm and cold hints show how close your guess was.",
+            "Use the image, hints, and your prior guesses to narrow it down.",
+            "Read the editorial content to learn more about the event.",
+            `Find the exact year in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="admin-btn-like primary"
           onClose={() => setIsHowToPlayOpen(false)}

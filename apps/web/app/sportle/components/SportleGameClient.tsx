@@ -675,7 +675,7 @@ export default function SportleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{performanceLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             {answerImageUrl ? <img src={answerImageUrl} alt={effectiveAnswer} className="result-modal-image" /> : null}
             <p className="result-modal-answer">{effectiveAnswer}</p>
             <div className="result-modal-actions">
@@ -695,10 +695,9 @@ export default function SportleGameClient({
           title="How to play Sportle"
           subtitle="Guess the pro athlete."
           steps={[
-            "Guess the mystery athlete.",
             "Each wrong guess reveals another clue.",
             "Use the clue tiles to narrow down the player.",
-            "Solve it before you run out of attempts.",
+            `Find the athlete in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="admin-btn-like primary"
           onClose={() => setIsHowToPlayOpen(false)}

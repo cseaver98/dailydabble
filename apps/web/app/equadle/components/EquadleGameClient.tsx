@@ -739,7 +739,7 @@ export default function EquadleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{performanceLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             <p className="result-modal-answer">
               {displayEffectiveAnswer.split("").map((char, index) => (
                 <span
@@ -776,6 +776,7 @@ export default function EquadleGameClient({
             `Your guess must fit the ${equationLength}-character board.`,
             "Green tiles are correct. Yellow tiles are in the equation, but in another spot. Grey tiles are not in the equation.",
             "Standard PEMDAS order applies.",
+            `Solve the equation in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="admin-btn-like primary"
           onClose={() => setIsHowToPlayOpen(false)}

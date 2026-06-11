@@ -1419,10 +1419,13 @@ export default function VerbleGameClient({
           title="How to play Verble"
           subtitle="Guess the daily phrase one word at a time."
           steps={[
-            "Pick one blank word in the phrase.",
+            "Pick one word in the phrase.",
             "Guess that word with the keyboard.",
-            "Green letters are correct. Yellow letters are in the word, but in another spot.",
+            "Green letters are correct. Yellow letters are in the word, but in another spot. Gray letters are not in that word.",
+            "Green and yellow letters will fill every matching spot across the phrase.",
+            "The keyboard tracks the whole phrase, so a letter may show yellow if it appears in another word.",
             "You can guess the full phrase, but a miss ends the game.",
+            `Solve the phrase in ${maxGuesses} guesses.`,
           ]}
           onClose={() => setIsHowToPlayOpen(false)}
         />
@@ -1443,7 +1446,7 @@ export default function VerbleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{resultLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{resultLabel}</p>
             <p className="result-modal-answer">{answerLine}</p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>

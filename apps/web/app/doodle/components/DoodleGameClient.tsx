@@ -938,7 +938,7 @@ export default function DoodleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{performanceLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             <p className="result-modal-answer">{capitalizeFirstLetter(answerText)}</p>
             {finalStageSegments.length > 0 ? (
               <div className="result-modal-doodle-wrap">
@@ -984,7 +984,7 @@ export default function DoodleGameClient({
             "Watch the drawing reveal one stage at a time.",
             "Type what you think the doodle is.",
             "Each wrong guess reveals more of the drawing.",
-            "Solve it before you run out of attempts.",
+            `Guess the doodle in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="admin-btn-like primary"
           onClose={() => setIsHowToPlayOpen(false)}

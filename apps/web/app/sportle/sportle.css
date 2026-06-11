@@ -516,6 +516,11 @@
   font-weight: 700;
 }
 
+.sportle-shell .result-modal-subtitle {
+  font-size: 1.3rem;
+  line-height: 1.4;
+}
+
 .sportle-shell .how-to-play-modal-panel {
   width: min(560px, 94vw);
 }
@@ -529,6 +534,7 @@
 
 .sportle-shell .how-to-play-subtitle {
   margin: -0.12rem 0 0.55rem;
+  font-size: 1.2rem;
   color: var(--muted);
   font-weight: 600;
   line-height: 1.35;

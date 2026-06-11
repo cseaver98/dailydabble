@@ -291,6 +291,11 @@
   font-weight: 800;
 }
 
+.agegaple-shell .result-modal-subtitle {
+  font-size: 1.3rem;
+  line-height: 1.4;
+}
+
 .agegaple-shell .how-to-play-list {
   display: grid;
   list-style: disc;
@@ -314,6 +319,7 @@
 
 .agegaple-shell .how-to-play-subtitle {
   margin: -0.12rem 0 0.55rem;
+  font-size: 1.2rem;
   color: #595c5e;
   font-weight: 600;
   line-height: 1.35;

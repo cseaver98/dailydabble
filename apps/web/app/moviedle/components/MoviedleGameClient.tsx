@@ -712,7 +712,7 @@ export default function MoviedleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy">{performanceLabel}</p>
+            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
             <p className="result-modal-answer">{revealedAnswer || revealedDetails?.title || "Unknown title"}</p>
             {visibleStill ? (
               <div className="result-modal-image-wrap">
@@ -777,10 +777,10 @@ export default function MoviedleGameClient({
           title="How to play Moviedle"
           subtitle="Guess the movie from stills."
           steps={[
-            "Guess the movie from the still image.",
-            "Each wrong guess reveals another still.",
+            "Each wrong guess reveals another movie still.",
             "Use the suggestions to pick the exact movie title.",
-            "Solve it before you run out of attempts.",
+            "Reveal the editorial content for a hint and to learn more about the movie.",
+            `Find the movie in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="admin-btn-like primary"
           onClose={() => setIsHowToPlayOpen(false)}

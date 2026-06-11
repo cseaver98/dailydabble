@@ -659,10 +659,10 @@ export default function ArchiveGamePage() {
           title="How to play Agegaple"
           subtitle="Guess the celebrity couple age gap."
           steps={[
-            "Guess the age gap between the two people.",
-            "After each guess, you will see whether the gap is higher or lower.",
-            "Use the meter and prior guesses to narrow it down.",
-            "Find the exact rounded age gap before you run out of attempts.",
+            "After each guess, hot and cold hints show how close your guess was.",
+            "Use the picture, hot/cold hints, and your prior guesses to narrow it down.",
+            "Read the editorial content to learn more about the couple.",
+            `Find the exact rounded age gap in ${maxGuesses} guesses.`,
           ]}
           buttonClassName="guess-submit-btn"
           onClose={() => setIsHowToPlayOpen(false)}
@@ -712,7 +712,7 @@ export default function ArchiveGamePage() {
                   {attempts.length}/{maxGuesses}
                 </span>
               </p>
-              <p className={mutedTextClass}>{performanceLabel}</p>
+              <p className={`${mutedTextClass} result-modal-subtitle`}>{performanceLabel}</p>
               {activeImage && (
                 <div className="mb-2 h-48 overflow-hidden rounded-lg border border-zinc-600/40 bg-zinc-950/30 sm:h-52">
                   <AsyncImage
