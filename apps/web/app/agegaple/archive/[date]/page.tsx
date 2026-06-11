@@ -510,7 +510,7 @@ export default function ArchiveGamePage() {
           <section className={panelClass}>
             <div className="agegaple-meta-row">
               <span className="chip">{`ARCHIVE GAME #${puzzle.archiveGameNumber}`}</span>
-              <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+              <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
               <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
                 ? How to play
               </button>

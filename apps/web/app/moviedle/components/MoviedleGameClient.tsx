@@ -548,7 +548,7 @@ export default function MoviedleGameClient({
         <section className="card moviedle-card">
           <div className="game-meta-row">
             <span className="chip">{contextChipLabel}</span>
-            <span className="chip">Attempts: {attempts.length}/{maxGuesses}</span>
+            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
             </button>
