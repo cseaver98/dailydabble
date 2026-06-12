@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
@@ -22,6 +23,7 @@ type YeardleGameClientProps = {
   lockDailyCompletion?: boolean;
 };
 type Attempt = { guessYear: number; direction: string; distanceYears: number };
+type YeardleGameState = "playing" | "won" | "lost";
 type YeardlePuzzle = {
   puzzleId: string;
   puzzleDate: string;
@@ -35,8 +37,76 @@ type YeardlePuzzle = {
   editorialContext?: { description?: string | null };
   galleryImages?: Array<{ imageUrl?: string; imageAlt?: string }>;
 };
+type RestoredYeardleState = {
+  guess: string;
+  attempts: Attempt[];
+  gameState: YeardleGameState;
+  message: string;
+  resolvedAnswer: string;
+  isResultOpen: boolean;
+};
 
 const isValidYear = (value: string) => /^\d{4}$/.test(value.trim());
+const getDefaultRestoredYeardleState = (): RestoredYeardleState => ({
+  guess: "",
+  attempts: [],
+  gameState: "playing",
+  message: "",
+  resolvedAnswer: "",
+  isResultOpen: false,
+});
+const restoreYeardleState = ({
+  puzzleId,
+  progressKey,
+  completionKey,
+  lockDailyCompletion,
+}: {
+  puzzleId: string;
+  progressKey: string;
+  completionKey: string;
+  lockDailyCompletion: boolean;
+}): RestoredYeardleState => {
+  const parseStored = (raw: string, key: string): RestoredYeardleState => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.puzzleId && parsed.puzzleId !== puzzleId) {
+        return getDefaultRestoredYeardleState();
+      }
+      const parsedState = parsed.gameState;
+      const gameState = parsedState === "won" || parsedState === "lost" ? parsedState : "playing";
+      return {
+        guess: typeof parsed.guess === "string" ? parsed.guess : "",
+        attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+        gameState,
+        message: typeof parsed.message === "string" ? parsed.message : "",
+        resolvedAnswer: typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "",
+        isResultOpen: gameState !== "playing",
+      };
+    } catch {
+      window.localStorage.removeItem(key);
+      return getDefaultRestoredYeardleState();
+    }
+  };
+
+  if (lockDailyCompletion) {
+    const completionRaw = window.localStorage.getItem(completionKey);
+    if (completionRaw) {
+      return parseStored(completionRaw, completionKey);
+    }
+  }
+
+  const raw = window.localStorage.getItem(progressKey);
+  if (!raw) {
+    return getDefaultRestoredYeardleState();
+  }
+
+  const restored = parseStored(raw, progressKey);
+  if (!lockDailyCompletion && restored.gameState !== "playing") {
+    window.localStorage.removeItem(progressKey);
+    return getDefaultRestoredYeardleState();
+  }
+  return restored;
+};
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
@@ -95,7 +165,7 @@ export default function YeardleGameClient({
   const [puzzle, setPuzzle] = useState<YeardlePuzzle | null>(null);
   const [guess, setGuess] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [gameState, setGameState] = useState("playing");
+  const [gameState, setGameState] = useState<YeardleGameState>("playing");
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
@@ -147,15 +217,21 @@ export default function YeardleGameClient({
           return;
         }
 
+        const restoredState = restoreYeardleState({
+          puzzleId: payload.puzzleId,
+          progressKey: `${storagePrefix}:${payload.puzzleId}`,
+          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          lockDailyCompletion,
+        });
         setPuzzle(payload);
         setArchiveLock(null);
         setImageFailed(false);
-        setGuess("");
-        setAttempts([]);
-        setGameState("playing");
-        setMessage("");
-        setResolvedAnswer("");
-        setIsResultOpen(false);
+        setGuess(restoredState.guess);
+        setAttempts(restoredState.attempts);
+        setGameState(restoredState.gameState);
+        setMessage(restoredState.message);
+        setResolvedAnswer(restoredState.resolvedAnswer);
+        setIsResultOpen(restoredState.isResultOpen);
         setIsHowToPlayOpen(false);
         setCopyStatus("");
       } catch (loadError) {
@@ -176,73 +252,21 @@ export default function YeardleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   const progressKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${storagePrefix}:${puzzle.puzzleId}`;
-  }, [puzzle?.puzzleId, storagePrefix]);
+  }, [puzzle, storagePrefix]);
 
   const completionKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${completionPrefix}:${puzzle.puzzleId}`;
-  }, [completionPrefix, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (!progressKey) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(progressKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      const parsedState = parsed.gameState;
-      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
-        window.localStorage.removeItem(progressKey);
-        return;
-      }
-      setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-    } catch {
-      window.localStorage.removeItem(progressKey);
-    }
-  }, [lockDailyCompletion, progressKey]);
-
-  useEffect(() => {
-    if (!completionKey || !lockDailyCompletion) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(completionKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.puzzleId !== puzzle?.puzzleId) {
-        return;
-      }
-
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-    } catch {
-      window.localStorage.removeItem(completionKey);
-    }
-  }, [completionKey, lockDailyCompletion, puzzle?.puzzleId]);
+  }, [completionPrefix, puzzle]);
 
   useEffect(() => {
     if (!progressKey || !puzzle) {
@@ -252,15 +276,6 @@ export default function YeardleGameClient({
     const payload = { guess, attempts, gameState, message, resolvedAnswer };
     window.localStorage.setItem(progressKey, JSON.stringify(payload));
   }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
-
-  useEffect(() => {
-    if (gameState === "playing") {
-      setIsResultOpen(false);
-      return;
-    }
-    setIsResultOpen(true);
-  }, [gameState]);
-
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 5;
   const galleryImages = Array.isArray(puzzle?.galleryImages) && puzzle.galleryImages.length
@@ -313,6 +328,7 @@ export default function YeardleGameClient({
         setGameState("won");
         setMessage(finalMessage);
         setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
+        setIsResultOpen(true);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -333,6 +349,7 @@ export default function YeardleGameClient({
         setGameState("lost");
         setMessage(finalMessage);
         setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
+        setIsResultOpen(true);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -352,21 +369,6 @@ export default function YeardleGameClient({
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess.");
     }
-  };
-
-  const resetArchivePuzzle = () => {
-    if (!lockDailyCompletion) {
-      setGuess("");
-      setAttempts([]);
-      setGameState("playing");
-      setMessage("");
-      setResolvedAnswer("");
-      setIsResultOpen(false);
-      setCopyStatus("");
-      return;
-    }
-
-    setMessage("Today’s puzzle is locked after completion. Try archive games.");
   };
 
   const effectiveAnswer = resolvedAnswer || "Unavailable";
@@ -618,8 +620,8 @@ export default function YeardleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
-              <a className="admin-btn-like" href="/">DailyDabble</a>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+              <Link className="admin-btn-like" href="/">DailyDabble</Link>
+              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>

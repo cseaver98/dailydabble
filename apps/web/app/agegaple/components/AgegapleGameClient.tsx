@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
+import { useNextGameCountdown } from "@/lib/use-next-game-countdown";
 import AsyncImage from "../../components/AsyncImage";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -44,7 +45,99 @@ type StoredProgress = {
   attempts: GuessAttempt[];
 };
 
+type RestoredGameState = {
+  guess: string;
+  result: PuzzleAnswer | null;
+  attempts: GuessAttempt[];
+  isCompleted: boolean;
+  isResultOpen: boolean;
+};
+
 const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+const getPuzzleFingerprint = (target: PuzzlePublic) =>
+  `${target.puzzleDate}|${target.personAName}|${target.personBName}|${target.imageUrl}`;
+
+const getDefaultRestoredState = (): RestoredGameState => ({
+  guess: "10",
+  result: null,
+  attempts: [],
+  isCompleted: false,
+  isResultOpen: false,
+});
+
+const restoreAgegapleState = ({
+  puzzle,
+  completionPrefix,
+  storagePrefix,
+  lockDailyCompletion,
+}: {
+  puzzle: PuzzlePublic;
+  completionPrefix: string;
+  storagePrefix: string;
+  lockDailyCompletion: boolean;
+}): RestoredGameState => {
+  const progressKey = `${storagePrefix}${puzzle.puzzleId}`;
+  const storageKey = `${completionPrefix}${puzzle.puzzleId}`;
+  const raw = lockDailyCompletion ? window.localStorage.getItem(storageKey) : null;
+
+  if (!raw) {
+    const progressRaw = window.localStorage.getItem(progressKey);
+    if (!progressRaw) {
+      return getDefaultRestoredState();
+    }
+
+    try {
+      const parsedProgress = JSON.parse(progressRaw) as StoredProgress;
+      if (parsedProgress.puzzleId !== puzzle.puzzleId) {
+        window.localStorage.removeItem(progressKey);
+        return getDefaultRestoredState();
+      }
+
+      return {
+        ...getDefaultRestoredState(),
+        guess: parsedProgress.guess || "10",
+        attempts: Array.isArray(parsedProgress.attempts) ? parsedProgress.attempts : [],
+      };
+    } catch {
+      window.localStorage.removeItem(progressKey);
+      return getDefaultRestoredState();
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as StoredCompletion;
+    const expectedFingerprint = getPuzzleFingerprint(puzzle);
+    if (parsed.puzzleId !== puzzle.puzzleId || !parsed.result || parsed.fingerprint !== expectedFingerprint) {
+      window.localStorage.removeItem(storageKey);
+      return getDefaultRestoredState();
+    }
+
+    return {
+      guess: parsed.guess,
+      result: parsed.result,
+      attempts:
+        Array.isArray(parsed.attempts) && parsed.attempts.length
+          ? parsed.attempts
+          : [
+              {
+                guessYears: Number(parsed.guess),
+                absErrorYears: parsed.result.absErrorYears,
+                direction:
+                  Number(parsed.guess) === parsed.result.roundedAgeGapYears
+                    ? "exact"
+                    : Number(parsed.guess) > parsed.result.roundedAgeGapYears
+                      ? "higher"
+                      : "lower",
+              },
+            ],
+      isCompleted: true,
+      isResultOpen: true,
+    };
+  } catch {
+    return getDefaultRestoredState();
+  }
+};
+
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
     return "Better luck next time.";
@@ -170,8 +263,8 @@ export default function AgegapleGameClient({
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const isDarkMode = false;
-  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const hasHydratedProgressRef = useRef(false);
+  const nextGameCountdown = useNextGameCountdown(lockDailyCompletion && Boolean(result && puzzle));
 
   useEffect(() => {
     let active = true;
@@ -216,14 +309,21 @@ export default function AgegapleGameClient({
         if (!active) {
           return;
         }
+        const restoredState = restoreAgegapleState({
+          puzzle: payload,
+          completionPrefix,
+          storagePrefix,
+          lockDailyCompletion,
+        });
         setArchiveLock(null);
         setPuzzle(payload);
-        setGuess("10");
-        setResult(null);
-        setAttempts([]);
+        setGuess(restoredState.guess);
+        setResult(restoredState.result);
+        setAttempts(restoredState.attempts);
         setCopyStatus("");
-        setIsCompleted(false);
-        setIsResultOpen(false);
+        setIsCompleted(restoredState.isCompleted);
+        setIsResultOpen(restoredState.isResultOpen);
+        hasHydratedProgressRef.current = true;
       } catch (loadError) {
         if (!active) {
           return;
@@ -242,85 +342,7 @@ export default function AgegapleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
-
-  useEffect(() => {
-    if (!puzzle) {
-      return;
-    }
-
-    hasHydratedProgressRef.current = false;
-    const progressKey = `${storagePrefix}${puzzle.puzzleId}`;
-    const storageKey = `${completionPrefix}${puzzle.puzzleId}`;
-    const raw = lockDailyCompletion ? window.localStorage.getItem(storageKey) : null;
-    if (!raw) {
-      const progressRaw = window.localStorage.getItem(progressKey);
-      if (progressRaw) {
-        try {
-          const parsedProgress = JSON.parse(progressRaw) as StoredProgress;
-          if (parsedProgress.puzzleId === puzzle.puzzleId) {
-            setGuess(parsedProgress.guess || "10");
-            setAttempts(Array.isArray(parsedProgress.attempts) ? parsedProgress.attempts : []);
-          }
-        } catch {
-          window.localStorage.removeItem(progressKey);
-        }
-      } else {
-        setGuess("10");
-        setAttempts([]);
-      }
-      setIsCompleted(false);
-      setResult(null);
-      setIsResultOpen(false);
-      hasHydratedProgressRef.current = true;
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as StoredCompletion;
-      const expectedFingerprint = getPuzzleFingerprint(puzzle);
-      if (
-        parsed.puzzleId !== puzzle.puzzleId ||
-        !parsed.result ||
-        parsed.fingerprint !== expectedFingerprint
-      ) {
-        window.localStorage.removeItem(storageKey);
-        setIsCompleted(false);
-        setResult(null);
-        setAttempts([]);
-        setIsResultOpen(false);
-        return;
-      }
-
-      setGuess(parsed.guess);
-      setResult(parsed.result);
-      setAttempts(
-        Array.isArray(parsed.attempts) && parsed.attempts.length
-          ? parsed.attempts
-          : [
-              {
-                guessYears: Number(parsed.guess),
-                absErrorYears: parsed.result.absErrorYears,
-                direction:
-                  Number(parsed.guess) === parsed.result.roundedAgeGapYears
-                    ? "exact"
-                    : Number(parsed.guess) > parsed.result.roundedAgeGapYears
-                      ? "higher"
-                      : "lower",
-              },
-            ],
-      );
-      setIsCompleted(true);
-      setIsResultOpen(true);
-      hasHydratedProgressRef.current = true;
-    } catch {
-      setIsCompleted(false);
-      setResult(null);
-      setAttempts([]);
-      setIsResultOpen(false);
-      hasHydratedProgressRef.current = true;
-    }
-  }, [completionPrefix, lockDailyCompletion, puzzle, storagePrefix]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   useEffect(() => {
     if (!puzzle || !hasHydratedProgressRef.current) {
@@ -366,50 +388,12 @@ export default function AgegapleGameClient({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isCompleted, attempts, puzzle]);
 
-  useEffect(() => {
-    if (!result || !puzzle) {
-      setNextGameCountdown("");
-      return;
-    }
-
-    const getNextGameDate = () => {
-      const base = new Date(`${puzzle.puzzleDate}T00:00:00`);
-      base.setDate(base.getDate() + 1);
-      return base;
-    };
-
-    const formatCountdown = (millisecondsLeft: number) => {
-      const safeMs = Math.max(0, millisecondsLeft);
-      const totalSeconds = Math.floor(safeMs / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-
-      return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
-        .toString()
-        .padStart(2, "0")}`;
-    };
-
-    const tick = () => {
-      const nextGameAt = getNextGameDate().getTime();
-      const now = Date.now();
-      setNextGameCountdown(formatCountdown(nextGameAt - now));
-    };
-
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [result, puzzle]);
-
   const title = useMemo(() => {
     if (!puzzle) {
       return "Agegaple";
     }
     return `${puzzle.personAName} + ${puzzle.personBName}`;
   }, [puzzle]);
-
-  const getPuzzleFingerprint = (target: PuzzlePublic) =>
-    `${target.puzzleDate}|${target.personAName}|${target.personBName}|${target.imageUrl}`;
 
   const formatExactGap = (exactYears: number) => {
     const daysPerYear = 365.2425;

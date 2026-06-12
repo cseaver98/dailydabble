@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import type { SVGProps } from "react";
+import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
@@ -28,7 +29,45 @@ type DoodlePuzzle = {
   aliases?: string[];
   viewBox?: string;
   stageCount?: number;
-  stages?: any[][];
+  stages?: DoodleStageSegmentInput[][];
+};
+type DoodleGameState = "playing" | "won" | "lost";
+type DoodleStageSegmentInput =
+  | string
+  | {
+      id?: unknown;
+      d?: unknown;
+      to?: unknown;
+      style?: unknown;
+      fillOnly?: unknown;
+      complete?: unknown;
+      fullD?: unknown;
+    };
+type DoodleSegmentStyle = {
+  fill: string;
+  stroke: string;
+  strokeWidth: string;
+  strokeLinecap: SVGProps<SVGPathElement>["strokeLinecap"];
+  strokeLinejoin: SVGProps<SVGPathElement>["strokeLinejoin"];
+  opacity: string;
+  fillOpacity: string;
+  strokeOpacity: string;
+  fillRule: SVGProps<SVGPathElement>["fillRule"];
+};
+type NormalizedDoodleSegment = {
+  id?: string;
+  d: string;
+  to: number;
+  style: DoodleSegmentStyle;
+  fillOnly?: boolean;
+  complete?: boolean;
+  fullD?: string;
+};
+type RestoredDoodleState = {
+  guess: string;
+  attempts: Attempt[];
+  gameState: DoodleGameState;
+  message: string;
 };
 
 const normalizeGuess = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "");
@@ -39,7 +78,67 @@ const capitalizeFirstLetter = (value: string) => {
   }
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
-const getSegmentKey = (segment: any, index: number) => segment.id || segment.fullD || segment.d || `segment-${index}`;
+const getSegmentKey = (segment: NormalizedDoodleSegment, index: number) => segment.id || segment.fullD || segment.d || `segment-${index}`;
+const getDefaultRestoredDoodleState = (): RestoredDoodleState => ({
+  guess: "",
+  attempts: [],
+  gameState: "playing",
+  message: "",
+});
+const restoreDoodleState = ({
+  puzzleId,
+  storageKey,
+  completionKey,
+  lockDailyCompletion,
+}: {
+  puzzleId: string;
+  storageKey: string;
+  completionKey: string;
+  lockDailyCompletion: boolean;
+}): RestoredDoodleState => {
+  if (lockDailyCompletion) {
+    const completionRaw = window.localStorage.getItem(completionKey);
+    if (completionRaw) {
+      try {
+        const parsed = JSON.parse(completionRaw);
+        if (parsed?.puzzleId === puzzleId) {
+          return {
+            guess: "",
+            attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+            gameState: parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing",
+            message: typeof parsed.message === "string" ? parsed.message : "",
+          };
+        }
+      } catch {
+        window.localStorage.removeItem(completionKey);
+      }
+    }
+  }
+
+  const raw = window.localStorage.getItem(storageKey);
+  if (!raw) {
+    return getDefaultRestoredDoodleState();
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const savedState = parsed.gameState;
+    if (!lockDailyCompletion && (savedState === "won" || savedState === "lost")) {
+      window.localStorage.removeItem(storageKey);
+      return getDefaultRestoredDoodleState();
+    }
+
+    return {
+      guess: typeof parsed.guess === "string" ? parsed.guess : "",
+      attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+      gameState: savedState === "won" || savedState === "lost" || savedState === "playing" ? savedState : "playing",
+      message: typeof parsed.message === "string" ? parsed.message : "",
+    };
+  } catch {
+    window.localStorage.removeItem(storageKey);
+    return getDefaultRestoredDoodleState();
+  }
+};
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
     return "Better luck next time.";
@@ -96,8 +195,11 @@ const normalizeDoodleColor = (value: string, fallback = "none") => {
   }
   return value;
 };
-const normalizeStageSegment = (segment: any) => {
-  const emptySegment = {
+const getStringProperty = (source: Record<string, unknown>, key: string, fallback: string) =>
+  typeof source[key] === "string" ? source[key] : fallback;
+
+const normalizeStageSegment = (segment: unknown): NormalizedDoodleSegment => {
+  const emptySegment: NormalizedDoodleSegment = {
     id: undefined,
     d: "",
     to: 1,
@@ -131,32 +233,39 @@ const normalizeStageSegment = (segment: any) => {
     };
   }
 
-  if (!segment || typeof segment !== "object" || typeof segment.d !== "string") {
+  if (!segment || typeof segment !== "object") {
     return emptySegment;
   }
 
-  const to = Number(segment.to ?? 1);
+  const sourceSegment = segment as DoodleStageSegmentInput & Record<string, unknown>;
+  if (typeof sourceSegment.d !== "string") {
+    return emptySegment;
+  }
+
+  const to = Number(sourceSegment.to ?? 1);
   const safeTo = Number.isFinite(to) ? Math.max(0.001, Math.min(1, to)) : 1;
-  const sourceStyle = segment.style && typeof segment.style === "object" ? segment.style : {};
+  const sourceStyle = sourceSegment.style && typeof sourceSegment.style === "object"
+    ? (sourceSegment.style as Record<string, unknown>)
+    : {};
   const normalizedStyle = {
-    fill: normalizeDoodleColor(sourceStyle.fill, "none"),
-    stroke: normalizeDoodleColor(sourceStyle.stroke, "var(--brand-strong)"),
-    strokeWidth: typeof sourceStyle["stroke-width"] === "string" ? sourceStyle["stroke-width"] : "8",
-    strokeLinecap: typeof sourceStyle["stroke-linecap"] === "string" ? sourceStyle["stroke-linecap"] : "round",
-    strokeLinejoin: typeof sourceStyle["stroke-linejoin"] === "string" ? sourceStyle["stroke-linejoin"] : "round",
-    opacity: typeof sourceStyle.opacity === "string" ? sourceStyle.opacity : "1",
-    fillOpacity: typeof sourceStyle["fill-opacity"] === "string" ? sourceStyle["fill-opacity"] : "1",
-    strokeOpacity: typeof sourceStyle["stroke-opacity"] === "string" ? sourceStyle["stroke-opacity"] : "1",
-    fillRule: typeof sourceStyle["fill-rule"] === "string" ? sourceStyle["fill-rule"] : "evenodd",
-  };
+    fill: normalizeDoodleColor(getStringProperty(sourceStyle, "fill", "none"), "none"),
+    stroke: normalizeDoodleColor(getStringProperty(sourceStyle, "stroke", "var(--brand-strong)"), "var(--brand-strong)"),
+    strokeWidth: getStringProperty(sourceStyle, "stroke-width", "8"),
+    strokeLinecap: getStringProperty(sourceStyle, "stroke-linecap", "round") as DoodleSegmentStyle["strokeLinecap"],
+    strokeLinejoin: getStringProperty(sourceStyle, "stroke-linejoin", "round") as DoodleSegmentStyle["strokeLinejoin"],
+    opacity: getStringProperty(sourceStyle, "opacity", "1"),
+    fillOpacity: getStringProperty(sourceStyle, "fill-opacity", "1"),
+    strokeOpacity: getStringProperty(sourceStyle, "stroke-opacity", "1"),
+    fillRule: getStringProperty(sourceStyle, "fill-rule", "evenodd") as DoodleSegmentStyle["fillRule"],
+  } satisfies DoodleSegmentStyle;
   return {
-    id: typeof segment.id === "string" ? segment.id : undefined,
-    d: segment.d,
+    id: typeof sourceSegment.id === "string" ? sourceSegment.id : undefined,
+    d: sourceSegment.d,
     to: safeTo,
     style: normalizedStyle,
-    fillOnly: typeof segment.fillOnly === "boolean" ? segment.fillOnly : undefined,
-    complete: typeof segment.complete === "boolean" ? segment.complete : undefined,
-    fullD: typeof segment.fullD === "string" ? segment.fullD : undefined,
+    fillOnly: typeof sourceSegment.fillOnly === "boolean" ? sourceSegment.fillOnly : undefined,
+    complete: typeof sourceSegment.complete === "boolean" ? sourceSegment.complete : undefined,
+    fullD: typeof sourceSegment.fullD === "string" ? sourceSegment.fullD : undefined,
   };
 };
 
@@ -175,7 +284,7 @@ export default function DoodleGameClient({
   const [puzzle, setPuzzle] = useState<DoodlePuzzle | null>(null);
   const [guess, setGuess] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [gameState, setGameState] = useState("playing");
+  const [gameState, setGameState] = useState<DoodleGameState>("playing");
   const [message, setMessage] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -229,13 +338,19 @@ export default function DoodleGameClient({
           return;
         }
 
+        const restoredState = restoreDoodleState({
+          puzzleId: payload.puzzleId,
+          storageKey: `${storagePrefix}:${payload.puzzleId}`,
+          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          lockDailyCompletion,
+        });
         setPuzzle(payload);
         setArchiveLock(null);
-        setGuess("");
-        setAttempts([]);
-        setGameState("playing");
-        setMessage("");
-        setIsResultOpen(false);
+        setGuess(restoredState.guess);
+        setAttempts(restoredState.attempts);
+        setGameState(restoredState.gameState);
+        setMessage(restoredState.message);
+        setIsResultOpen(restoredState.gameState !== "playing");
         setIsHowToPlayOpen(false);
         setWinRevealStage(null);
         setShouldAnimateWinReveal(false);
@@ -259,76 +374,21 @@ export default function DoodleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   const storageKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${storagePrefix}:${puzzle.puzzleId}`;
-  }, [puzzle?.puzzleId, storagePrefix]);
+  }, [puzzle, storagePrefix]);
 
   const completionKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${completionPrefix}:${puzzle.puzzleId}`;
-  }, [completionPrefix, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (!storageKey) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      const savedState = parsed.gameState;
-      if (!lockDailyCompletion && (savedState === "won" || savedState === "lost")) {
-        window.localStorage.removeItem(storageKey);
-        return;
-      }
-      setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setShouldAnimateWinReveal(false);
-      setIsWinRevealAnimating(false);
-      if (savedState === "won" || savedState === "lost" || savedState === "playing") {
-        setGameState(savedState);
-      }
-      if (typeof parsed.message === "string") {
-        setMessage(parsed.message);
-      }
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
-  }, [lockDailyCompletion, storageKey]);
-
-  useEffect(() => {
-    if (!completionKey || !lockDailyCompletion) {
-      return;
-    }
-    const raw = window.localStorage.getItem(completionKey);
-    if (!raw) {
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.puzzleId !== puzzle?.puzzleId) {
-        return;
-      }
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setShouldAnimateWinReveal(false);
-      setIsWinRevealAnimating(false);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-    } catch {
-      window.localStorage.removeItem(completionKey);
-    }
-  }, [completionKey, lockDailyCompletion, puzzle?.puzzleId]);
+  }, [completionPrefix, puzzle]);
 
   useEffect(() => {
     if (!storageKey || !puzzle) {
@@ -345,22 +405,28 @@ export default function DoodleGameClient({
   }, [attempts, gameState, guess, message, puzzle, storageKey]);
 
   const maxGuesses = Number.isFinite(puzzle?.stageCount) && (puzzle?.stageCount ?? 0) > 0 ? (puzzle?.stageCount ?? 5) : 5;
-  const stageList: any[][] = Array.isArray(puzzle?.stages) ? (puzzle?.stages ?? []) : [];
+  const stageList = useMemo<DoodleStageSegmentInput[][]>(
+    () => (Array.isArray(puzzle?.stages) ? (puzzle.stages ?? []) : []),
+    [puzzle],
+  );
   const answerText = puzzle?.answer || "Unknown";
   const finalRevealStage = Math.max(1, stageList.length > 0 ? stageList.length : maxGuesses);
   const baseRevealedStages = Math.min(finalRevealStage, attempts.length + 1);
   const revealedStages = gameState === "won"
     ? (shouldAnimateWinReveal ? (winRevealStage ?? baseRevealedStages) : finalRevealStage)
     : baseRevealedStages;
-  const activeStageSegments = Array.isArray(stageList[revealedStages - 1])
-    ? stageList[revealedStages - 1]
-    : [];
-  const previousStageSegments = Array.isArray(stageList[revealedStages - 2])
-    ? stageList[revealedStages - 2]
-    : [];
-  const finalStageSegments = Array.isArray(stageList[finalRevealStage - 1])
-    ? stageList[finalRevealStage - 1]
-    : [];
+  const activeStageSegments = useMemo(
+    () => (Array.isArray(stageList[revealedStages - 1]) ? stageList[revealedStages - 1] : []),
+    [revealedStages, stageList],
+  );
+  const previousStageSegments = useMemo(
+    () => (Array.isArray(stageList[revealedStages - 2]) ? stageList[revealedStages - 2] : []),
+    [revealedStages, stageList],
+  );
+  const finalStageSegments = useMemo(
+    () => (Array.isArray(stageList[finalRevealStage - 1]) ? stageList[finalRevealStage - 1] : []),
+    [finalRevealStage, stageList],
+  );
   const isWinRevealInProgress = isWinRevealAnimating;
   const activeDrawStaggerMs = isWinRevealInProgress ? WIN_REVEAL_STAGGER_MS : DRAW_STAGGER_MS;
   const activeDrawDurationMs = isWinRevealInProgress ? WIN_REVEAL_DURATION_MS : DRAW_DURATION_MS;
@@ -368,33 +434,41 @@ export default function DoodleGameClient({
 
   useEffect(() => {
     if (gameState === "playing") {
-      setWinRevealStage(null);
-      setShouldAnimateWinReveal(false);
-      setIsWinRevealAnimating(false);
-      setIsResultOpen(false);
-      return;
+      const frameId = window.requestAnimationFrame(() => {
+        setWinRevealStage(null);
+        setShouldAnimateWinReveal(false);
+        setIsWinRevealAnimating(false);
+        setIsResultOpen(false);
+      });
+      return () => window.cancelAnimationFrame(frameId);
     }
 
     if (gameState === "lost") {
-      setWinRevealStage(null);
-      setShouldAnimateWinReveal(false);
-      setIsWinRevealAnimating(false);
-      setIsResultOpen(true);
-      return;
+      const frameId = window.requestAnimationFrame(() => {
+        setWinRevealStage(null);
+        setShouldAnimateWinReveal(false);
+        setIsWinRevealAnimating(false);
+        setIsResultOpen(true);
+      });
+      return () => window.cancelAnimationFrame(frameId);
     }
 
     if (!shouldAnimateWinReveal) {
-      setWinRevealStage(finalRevealStage);
-      setIsWinRevealAnimating(false);
-      setIsResultOpen(true);
-      return;
+      const frameId = window.requestAnimationFrame(() => {
+        setWinRevealStage(finalRevealStage);
+        setIsWinRevealAnimating(false);
+        setIsResultOpen(true);
+      });
+      return () => window.cancelAnimationFrame(frameId);
     }
 
     let cancelled = false;
     let timeoutId: number | undefined;
     const initialStage = Math.min(finalRevealStage, Math.max(1, attempts.length + 1));
-    setIsResultOpen(false);
-    setIsWinRevealAnimating(true);
+    const frameId = window.requestAnimationFrame(() => {
+      setIsResultOpen(false);
+      setIsWinRevealAnimating(true);
+    });
 
     const revealNextStage = (stage: number) => {
       if (cancelled) {
@@ -426,6 +500,9 @@ export default function DoodleGameClient({
 
     return () => {
       cancelled = true;
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
       if (timeoutId) {
         window.clearTimeout(timeoutId);
       }
@@ -550,22 +627,6 @@ export default function DoodleGameClient({
     setGuess("");
   };
 
-  const resetPuzzle = () => {
-    if (lockDailyCompletion && !isArchiveView) {
-      setMessage("Today’s puzzle is locked after completion. Try archive games.");
-      return;
-    }
-    setGuess("");
-    setAttempts([]);
-    setGameState("playing");
-    setMessage("");
-    setIsResultOpen(false);
-    setWinRevealStage(null);
-    setShouldAnimateWinReveal(false);
-    setIsWinRevealAnimating(false);
-    setCopyStatus("");
-  };
-
   const shareText = [
     `Doodle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
     `${attempts.length}/${maxGuesses} tries`,
@@ -622,11 +683,11 @@ export default function DoodleGameClient({
                         key={`path-static-final-${getSegmentKey(segment, pathIndex)}`}
                         d={segment.d}
                         fill={segment.style.fill}
-                        fillRule={(segment.style.fillRule || "evenodd") as any}
+                        fillRule={segment.style.fillRule || "evenodd"}
                         stroke={segment.style.stroke}
                         strokeWidth={segment.style.strokeWidth}
-                        strokeLinecap={segment.style.strokeLinecap as any}
-                        strokeLinejoin={segment.style.strokeLinejoin as any}
+                        strokeLinecap={segment.style.strokeLinecap}
+                        strokeLinejoin={segment.style.strokeLinejoin}
                         opacity={segment.style.opacity}
                         fillOpacity={segment.style.fillOpacity}
                         strokeOpacity={segment.style.strokeOpacity}
@@ -655,9 +716,9 @@ export default function DoodleGameClient({
                   const drawFill = isFillOnly ? segment.style.fill : "none";
                   const drawStroke = isFillOnly ? "none" : segment.style.stroke;
                   const drawStrokeWidth = isFillOnly ? "1.75" : segment.style.strokeWidth;
-                  const drawStrokeLinecap = (isFillOnly ? "round" : segment.style.strokeLinecap) as any;
-                  const drawStrokeLinejoin = (isFillOnly ? "round" : segment.style.strokeLinejoin) as any;
-                  const drawFillRule = (segment.style.fillRule || "evenodd") as any;
+                  const drawStrokeLinecap: DoodleSegmentStyle["strokeLinecap"] = isFillOnly ? "round" : segment.style.strokeLinecap;
+                  const drawStrokeLinejoin: DoodleSegmentStyle["strokeLinejoin"] = isFillOnly ? "round" : segment.style.strokeLinejoin;
+                  const drawFillRule = segment.style.fillRule || "evenodd";
                   const fullD = segment.fullD || segment.d;
                   const safeMaskKey = String(segmentKey).replace(/[^a-zA-Z0-9_-]/g, "_");
                   const baseMaskId = `doodle-mask-${safeMaskKey}`;
@@ -930,11 +991,11 @@ export default function DoodleGameClient({
                         key={`result-${index}`}
                         d={segment.d}
                         fill={segment.style.fill}
-                        fillRule={(segment.style.fillRule || "evenodd") as any}
+                        fillRule={segment.style.fillRule || "evenodd"}
                         stroke={segment.style.stroke}
                         strokeWidth={segment.style.strokeWidth}
-                        strokeLinecap={segment.style.strokeLinecap as any}
-                        strokeLinejoin={segment.style.strokeLinejoin as any}
+                        strokeLinecap={segment.style.strokeLinecap}
+                        strokeLinejoin={segment.style.strokeLinejoin}
                         opacity={segment.style.opacity}
                         fillOpacity={segment.style.fillOpacity}
                         strokeOpacity={segment.style.strokeOpacity}
@@ -948,7 +1009,7 @@ export default function DoodleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
-              <a className="admin-btn-like" href="/">DailyDabble</a>
+              <Link className="admin-btn-like" href="/">DailyDabble</Link>
               <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}

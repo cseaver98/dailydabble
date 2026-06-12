@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -50,6 +51,15 @@ type Attempt = {
   guess: string;
   feedback: string[];
 };
+type EquadleGameState = "playing" | "won" | "lost";
+type RestoredEquadleState = {
+  guess: string;
+  attempts: Attempt[];
+  gameState: EquadleGameState;
+  message: string;
+  resolvedAnswer: string;
+  isResultOpen: boolean;
+};
 
 const normalizeEquationInput = (value: string) =>
   String(value || "")
@@ -85,6 +95,75 @@ const buildFullGuess = (inputValue: string, equationLength: number, equalsIndex:
     inputIndex += 1;
   }
   return chars.join("");
+};
+
+const getDefaultRestoredEquadleState = (): RestoredEquadleState => ({
+  guess: "",
+  attempts: [],
+  gameState: "playing",
+  message: "",
+  resolvedAnswer: "",
+  isResultOpen: false,
+});
+
+const restoreEquadleState = ({
+  puzzleId,
+  progressKey,
+  completionKey,
+  lockDailyCompletion,
+}: {
+  puzzleId: string;
+  progressKey: string;
+  completionKey: string;
+  lockDailyCompletion: boolean;
+}): RestoredEquadleState => {
+  if (lockDailyCompletion) {
+    const completionRaw = window.localStorage.getItem(completionKey);
+    if (completionRaw) {
+      try {
+        const parsed = JSON.parse(completionRaw);
+        if (parsed?.puzzleId === puzzleId) {
+          const gameState = parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing";
+          return {
+            guess: "",
+            attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+            gameState,
+            message: typeof parsed.message === "string" ? parsed.message : "",
+            resolvedAnswer: typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "",
+            isResultOpen: gameState !== "playing",
+          };
+        }
+      } catch {
+        window.localStorage.removeItem(completionKey);
+      }
+    }
+  }
+
+  const raw = window.localStorage.getItem(progressKey);
+  if (!raw) {
+    return getDefaultRestoredEquadleState();
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const parsedState = parsed.gameState;
+    if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
+      window.localStorage.removeItem(progressKey);
+      return getDefaultRestoredEquadleState();
+    }
+    const gameState = parsedState === "won" || parsedState === "lost" ? parsedState : "playing";
+    return {
+      guess: typeof parsed.guess === "string" ? parsed.guess : "",
+      attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+      gameState,
+      message: typeof parsed.message === "string" ? parsed.message : "",
+      resolvedAnswer: typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "",
+      isResultOpen: gameState !== "playing",
+    };
+  } catch {
+    window.localStorage.removeItem(progressKey);
+    return getDefaultRestoredEquadleState();
+  }
 };
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
@@ -124,7 +203,7 @@ export default function EquadleGameClient({
   const [puzzle, setPuzzle] = useState<EquadlePuzzle | null>(null);
   const [guess, setGuess] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [gameState, setGameState] = useState("playing");
+  const [gameState, setGameState] = useState<EquadleGameState>("playing");
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -175,14 +254,20 @@ export default function EquadleGameClient({
           return;
         }
 
+        const restoredState = restoreEquadleState({
+          puzzleId: payload.puzzleId,
+          progressKey: `${storagePrefix}:${payload.puzzleId}`,
+          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          lockDailyCompletion,
+        });
         setPuzzle(payload);
         setArchiveLock(null);
-        setGuess("");
-        setAttempts([]);
-        setGameState("playing");
-        setMessage("");
-        setResolvedAnswer("");
-        setIsResultOpen(false);
+        setGuess(restoredState.guess);
+        setAttempts(restoredState.attempts);
+        setGameState(restoredState.gameState);
+        setMessage(restoredState.message);
+        setResolvedAnswer(restoredState.resolvedAnswer);
+        setIsResultOpen(restoredState.isResultOpen);
         setIsHowToPlayOpen(false);
         setRevealingRowIndex(null);
         setCopyStatus("");
@@ -204,73 +289,21 @@ export default function EquadleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   const progressKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${storagePrefix}:${puzzle.puzzleId}`;
-  }, [puzzle?.puzzleId, storagePrefix]);
+  }, [puzzle, storagePrefix]);
 
   const completionKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${completionPrefix}:${puzzle.puzzleId}`;
-  }, [completionPrefix, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (!progressKey) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(progressKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      const parsedState = parsed.gameState;
-      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
-        window.localStorage.removeItem(progressKey);
-        return;
-      }
-      setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-    } catch {
-      window.localStorage.removeItem(progressKey);
-    }
-  }, [lockDailyCompletion, progressKey]);
-
-  useEffect(() => {
-    if (!completionKey || !lockDailyCompletion) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(completionKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.puzzleId !== puzzle?.puzzleId) {
-        return;
-      }
-
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-    } catch {
-      window.localStorage.removeItem(completionKey);
-    }
-  }, [completionKey, lockDailyCompletion, puzzle?.puzzleId]);
+  }, [completionPrefix, puzzle]);
 
   useEffect(() => {
     if (!progressKey || !puzzle) {
@@ -284,13 +317,7 @@ export default function EquadleGameClient({
   }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
 
   useEffect(() => {
-    if (gameState === "playing") {
-      setIsResultOpen(false);
-      return;
-    }
-
-    if (revealingRowIndex === null) {
-      setIsResultOpen(true);
+    if (gameState === "playing" || revealingRowIndex === null) {
       return;
     }
 
@@ -363,21 +390,21 @@ export default function EquadleGameClient({
   const canSubmitGuess = gameState === "playing" && guess.length === guessInputLength;
   const canDeleteGuess = gameState === "playing" && guess.length > 0;
 
-  const appendGuessChar = (char: string) => {
+  const appendGuessChar = useCallback((char: string) => {
     if (gameState !== "playing") {
       return;
     }
     setGuess((current) => sanitizeEquationInput(`${current}${normalizeEquationInput(char)}`, guessInputLength));
-  };
+  }, [gameState, guessInputLength]);
 
-  const removeGuessChar = () => {
+  const removeGuessChar = useCallback(() => {
     if (gameState !== "playing") {
       return;
     }
     setGuess((current) => current.slice(0, -1));
-  };
+  }, [gameState]);
 
-  const onSubmit = async (event: { preventDefault: () => void }) => {
+  const onSubmit = useCallback(async (event: { preventDefault: () => void }) => {
     event.preventDefault();
 
     if (!puzzle || gameState !== "playing") {
@@ -408,6 +435,7 @@ export default function EquadleGameClient({
       setAttempts(nextAttempts);
       setRevealingRowIndex(nextAttempts.length - 1);
       setGuess("");
+      setIsResultOpen(false);
 
       if (payload.isCorrect) {
         setGameState("won");
@@ -450,7 +478,7 @@ export default function EquadleGameClient({
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Guess must be a valid equation");
     }
-  };
+  }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, lockDailyCompletion, maxGuesses, puzzle]);
 
   useEffect(() => {
     if (gameState !== "playing") {
@@ -479,23 +507,7 @@ export default function EquadleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canSubmitGuess, gameState, onSubmit]);
-
-  const resetArchivePuzzle = () => {
-    if (!lockDailyCompletion) {
-      setGuess("");
-      setAttempts([]);
-      setGameState("playing");
-      setMessage("");
-      setResolvedAnswer("");
-      setIsResultOpen(false);
-      setRevealingRowIndex(null);
-      setCopyStatus("");
-      return;
-    }
-
-    setMessage("");
-  };
+  }, [appendGuessChar, canSubmitGuess, gameState, onSubmit, removeGuessChar]);
 
   const answerEquation = resolvedAnswer || puzzle?.answer || "";
   const effectiveAnswer = answerEquation || "Unavailable";
@@ -751,8 +763,8 @@ export default function EquadleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
-              <a className="admin-btn-like" href="/">DailyDabble</a>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+              <Link className="admin-btn-like" href="/">DailyDabble</Link>
+              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>

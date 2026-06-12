@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
+import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -23,6 +24,7 @@ type SportleGameClientProps = {
   lockDailyCompletion?: boolean;
 };
 type Attempt = { guess: string; isCorrect?: boolean };
+type SportleGameState = "playing" | "won" | "lost";
 type SportlePuzzle = {
   puzzleId: string;
   puzzleDate: string;
@@ -30,7 +32,77 @@ type SportlePuzzle = {
   maxGuesses: number;
   clues: Array<{ label: string; value: string; logoUrl?: string | null; imageUrl?: string | null }>;
 };
+type RestoredSportleState = {
+  guess: string;
+  attempts: Attempt[];
+  gameState: SportleGameState;
+  message: string;
+  resolvedAnswer: string;
+  isResultOpen: boolean;
+};
 
+
+const getDefaultRestoredSportleState = (): RestoredSportleState => ({
+  guess: "",
+  attempts: [],
+  gameState: "playing",
+  message: "",
+  resolvedAnswer: "",
+  isResultOpen: false,
+});
+
+const restoreSportleState = ({
+  puzzleId,
+  progressKey,
+  completionKey,
+  lockDailyCompletion,
+}: {
+  puzzleId: string;
+  progressKey: string;
+  completionKey: string;
+  lockDailyCompletion: boolean;
+}): RestoredSportleState => {
+  const parseStored = (raw: string, key: string): RestoredSportleState => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.puzzleId && parsed.puzzleId !== puzzleId) {
+        return getDefaultRestoredSportleState();
+      }
+      const parsedState = parsed.gameState;
+      const gameState = parsedState === "won" || parsedState === "lost" ? parsedState : "playing";
+      return {
+        guess: typeof parsed.guess === "string" ? parsed.guess : "",
+        attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
+        gameState,
+        message: typeof parsed.message === "string" ? parsed.message : "",
+        resolvedAnswer: typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "",
+        isResultOpen: gameState !== "playing",
+      };
+    } catch {
+      window.localStorage.removeItem(key);
+      return getDefaultRestoredSportleState();
+    }
+  };
+
+  if (lockDailyCompletion) {
+    const completionRaw = window.localStorage.getItem(completionKey);
+    if (completionRaw) {
+      return parseStored(completionRaw, completionKey);
+    }
+  }
+
+  const raw = window.localStorage.getItem(progressKey);
+  if (!raw) {
+    return getDefaultRestoredSportleState();
+  }
+
+  const restored = parseStored(raw, progressKey);
+  if (!lockDailyCompletion && restored.gameState !== "playing") {
+    window.localStorage.removeItem(progressKey);
+    return getDefaultRestoredSportleState();
+  }
+  return restored;
+};
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
@@ -71,7 +143,7 @@ export default function SportleGameClient({
   const [puzzle, setPuzzle] = useState<SportlePuzzle | null>(null);
   const [guess, setGuess] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [gameState, setGameState] = useState("playing");
+  const [gameState, setGameState] = useState<SportleGameState>("playing");
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -80,7 +152,7 @@ export default function SportleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [animatingClueIndexes, setAnimatingClueIndexes] = useState<number[]>([]);
-  const [visibleClueCount, setVisibleClueCount] = useState(0);
+  const [visibleClueCountOverride, setVisibleClueCountOverride] = useState<number | null>(null);
   const clueAnimationTimeoutRef = useRef<number | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
@@ -125,19 +197,25 @@ export default function SportleGameClient({
           return;
         }
 
+        const restoredState = restoreSportleState({
+          puzzleId: payload.puzzleId,
+          progressKey: `${storagePrefix}:${payload.puzzleId}`,
+          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          lockDailyCompletion,
+        });
         setPuzzle(payload);
         setArchiveLock(null);
-        setGuess("");
-        setAttempts([]);
-        setGameState("playing");
-        setMessage("");
-        setResolvedAnswer("");
-        setIsResultOpen(false);
+        setGuess(restoredState.guess);
+        setAttempts(restoredState.attempts);
+        setGameState(restoredState.gameState);
+        setMessage(restoredState.message);
+        setResolvedAnswer(restoredState.resolvedAnswer);
+        setIsResultOpen(restoredState.isResultOpen);
         setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
         setAnimatingClueIndexes([]);
-        setVisibleClueCount(0);
+        setVisibleClueCountOverride(null);
       } catch (loadError) {
         if (!active) {
           return;
@@ -156,7 +234,7 @@ export default function SportleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   useEffect(() => () => {
     if (clueAnimationTimeoutRef.current) {
@@ -169,68 +247,14 @@ export default function SportleGameClient({
       return null;
     }
     return `${storagePrefix}:${puzzle.puzzleId}`;
-  }, [puzzle?.puzzleId, storagePrefix]);
+  }, [puzzle, storagePrefix]);
 
   const completionKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
       return null;
     }
     return `${completionPrefix}:${puzzle.puzzleId}`;
-  }, [completionPrefix, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (!progressKey) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(progressKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      const parsedState = parsed.gameState;
-      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
-        window.localStorage.removeItem(progressKey);
-        return;
-      }
-      setGuess(typeof parsed.guess === "string" ? parsed.guess : "");
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-      setIsHistoryOpen(false);
-    } catch {
-      window.localStorage.removeItem(progressKey);
-    }
-  }, [lockDailyCompletion, progressKey]);
-
-  useEffect(() => {
-    if (!completionKey || !lockDailyCompletion) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(completionKey);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.puzzleId !== puzzle?.puzzleId) {
-        return;
-      }
-
-      setAttempts(Array.isArray(parsed.attempts) ? parsed.attempts : []);
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setResolvedAnswer(typeof parsed.resolvedAnswer === "string" ? parsed.resolvedAnswer : "");
-      setIsHistoryOpen(false);
-    } catch {
-      window.localStorage.removeItem(completionKey);
-    }
-  }, [completionKey, lockDailyCompletion, puzzle?.puzzleId]);
+  }, [completionPrefix, puzzle]);
 
   useEffect(() => {
     if (!progressKey || !puzzle) {
@@ -240,39 +264,22 @@ export default function SportleGameClient({
     window.localStorage.setItem(progressKey, JSON.stringify({ guess, attempts, gameState, message, resolvedAnswer }));
   }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
 
-  useEffect(() => {
-    if (gameState === "playing") {
-      setIsResultOpen(false);
-      return;
-    }
-    if (gameState === "won" && animatingClueIndexes.length > 0) {
-      setIsResultOpen(false);
-      return;
-    }
-    setIsResultOpen(true);
-  }, [animatingClueIndexes.length, gameState]);
-
   const clues = Array.isArray(puzzle?.clues) ? (puzzle?.clues ?? []) : [];
   const targetVisibleClueCount =
     gameState === "won" ? clues.length : Math.min(clues.length, 1 + attempts.length);
-
-  useEffect(() => {
-    if (animatingClueIndexes.length > 0) {
-      return;
-    }
-    setVisibleClueCount(targetVisibleClueCount);
-  }, [animatingClueIndexes.length, targetVisibleClueCount]);
+  const visibleClueCount = visibleClueCountOverride ?? targetVisibleClueCount;
 
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
   const isClueAnimationActive = animatingClueIndexes.length > 0;
-  const queueClueFlip = (fromIndex: number, toIndexExclusive: number) => {
+  const queueClueFlip = (fromIndex: number, toIndexExclusive: number, openResultWhenDone = false) => {
     const nextIndexes = Array.from(
       { length: Math.max(0, toIndexExclusive - fromIndex) },
       (_, offset) => fromIndex + offset,
     ).filter((index) => index < clues.length);
 
     if (nextIndexes.length === 0) {
+      setVisibleClueCountOverride(null);
       return;
     }
 
@@ -280,10 +287,14 @@ export default function SportleGameClient({
       window.clearTimeout(clueAnimationTimeoutRef.current);
     }
 
-    setVisibleClueCount(toIndexExclusive);
+    setVisibleClueCountOverride(toIndexExclusive);
     setAnimatingClueIndexes(nextIndexes);
     clueAnimationTimeoutRef.current = window.setTimeout(() => {
       setAnimatingClueIndexes([]);
+      setVisibleClueCountOverride(null);
+      if (openResultWhenDone) {
+        setIsResultOpen(true);
+      }
       clueAnimationTimeoutRef.current = null;
     }, CLUE_FLIP_DURATION_MS + CLUE_FLIP_STAGGER_MS * Math.max(0, nextIndexes.length - 1) + 80);
   };
@@ -352,11 +363,12 @@ export default function SportleGameClient({
       setGuess("");
 
       if (payload.isCorrect) {
-        queueClueFlip(currentRevealedHintCount, clues.length);
+        queueClueFlip(currentRevealedHintCount, clues.length, true);
         const finalMessage = `Correct. Athlete: ${payload.answerName}`;
         setGameState("won");
         setMessage(finalMessage);
         setResolvedAnswer(payload.answerName || "");
+        setIsResultOpen(false);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -379,6 +391,7 @@ export default function SportleGameClient({
         setGameState("lost");
         setMessage(finalMessage);
         setResolvedAnswer(payload.answerName || "");
+        setIsResultOpen(true);
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -398,22 +411,6 @@ export default function SportleGameClient({
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess");
     }
-  };
-
-  const resetArchivePuzzle = () => {
-    if (!lockDailyCompletion) {
-      setGuess("");
-      setAttempts([]);
-      setGameState("playing");
-      setMessage("");
-      setResolvedAnswer("");
-      setIsResultOpen(false);
-      setIsHistoryOpen(false);
-      setCopyStatus("");
-      return;
-    }
-
-    setMessage("Today’s puzzle is locked after completion. Try archive games.");
   };
 
   const effectiveAnswer = resolvedAnswer || "Unavailable";
@@ -662,8 +659,8 @@ export default function SportleGameClient({
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share
               </button>
-              <a className="admin-btn-like" href="/">DailyDabble</a>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+              <Link className="admin-btn-like" href="/">DailyDabble</Link>
+              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>

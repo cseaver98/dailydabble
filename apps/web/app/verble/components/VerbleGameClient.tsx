@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -61,6 +62,19 @@ type GuessWordResponse = {
   isCorrect?: boolean;
   normalizedGuess?: string;
   error?: string;
+};
+
+type RestoredVerbleState = {
+  gameState: GameState;
+  message: string;
+  selectedSlot: number | null;
+  phraseGuess: string;
+  wordAttempts: WordAttempt[];
+  solvedWords: Record<number, string>;
+  slotDrafts: SlotDrafts;
+  slotLocks: SlotLocks;
+  slotMarks: SlotMarks;
+  guessesUsed: number;
 };
 
 const ALPHA_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
@@ -207,6 +221,85 @@ export default function VerbleGameClient({
   const createInitialSlotMarks = (slots: Slot[]): SlotMarks =>
     Object.fromEntries(slots.map((slot) => [slot.index, Array.from({ length: slot.length }, () => "empty")]));
 
+  const getDefaultRestoredState = (targetPuzzle: VerblePuzzle): RestoredVerbleState => ({
+    gameState: "playing",
+    message: "",
+    selectedSlot: null,
+    phraseGuess: "",
+    wordAttempts: [],
+    solvedWords: {},
+    slotDrafts: createInitialSlotDrafts(targetPuzzle.slots || []),
+    slotLocks: createInitialSlotLocks(targetPuzzle.slots || []),
+    slotMarks: createInitialSlotMarks(targetPuzzle.slots || []),
+    guessesUsed: 0,
+  });
+
+  const restoreVerbleState = ({
+    targetPuzzle,
+    progressKey,
+    completionKey,
+    lockDailyCompletion,
+  }: {
+    targetPuzzle: VerblePuzzle;
+    progressKey: string;
+    completionKey: string;
+    lockDailyCompletion: boolean;
+  }): RestoredVerbleState => {
+    const parseStored = (raw: string, key: string, includeDraftState: boolean) => {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.puzzleId && parsed.puzzleId !== targetPuzzle.puzzleId) {
+          return getDefaultRestoredState(targetPuzzle);
+        }
+
+        const parsedState = parsed.gameState;
+        return {
+          gameState: parsedState === "won" || parsedState === "lost" ? parsedState : "playing",
+          message: typeof parsed.message === "string" ? parsed.message : "",
+          selectedSlot: includeDraftState && typeof parsed.selectedSlot === "number" ? parsed.selectedSlot : null,
+          phraseGuess: includeDraftState && typeof parsed.phraseGuess === "string" ? parsed.phraseGuess : "",
+          wordAttempts: Array.isArray(parsed.wordAttempts) ? parsed.wordAttempts : [],
+          solvedWords: parsed.solvedWords && typeof parsed.solvedWords === "object" ? parsed.solvedWords : {},
+          slotDrafts:
+            includeDraftState && parsed.slotDrafts && typeof parsed.slotDrafts === "object"
+              ? parsed.slotDrafts
+              : createInitialSlotDrafts(targetPuzzle.slots || []),
+          slotLocks:
+            includeDraftState && parsed.slotLocks && typeof parsed.slotLocks === "object"
+              ? parsed.slotLocks
+              : createInitialSlotLocks(targetPuzzle.slots || []),
+          slotMarks:
+            includeDraftState && parsed.slotMarks && typeof parsed.slotMarks === "object"
+              ? parsed.slotMarks
+              : createInitialSlotMarks(targetPuzzle.slots || []),
+          guessesUsed: Number.isFinite(parsed.guessesUsed) ? Number(parsed.guessesUsed) : 0,
+        } satisfies RestoredVerbleState;
+      } catch {
+        window.localStorage.removeItem(key);
+        return getDefaultRestoredState(targetPuzzle);
+      }
+    };
+
+    if (lockDailyCompletion) {
+      const completionRaw = window.localStorage.getItem(completionKey);
+      if (completionRaw) {
+        return parseStored(completionRaw, completionKey, false);
+      }
+    }
+
+    const raw = window.localStorage.getItem(progressKey);
+    if (!raw) {
+      return getDefaultRestoredState(targetPuzzle);
+    }
+
+    const restored = parseStored(raw, progressKey, true);
+    if (!lockDailyCompletion && restored.gameState !== "playing") {
+      window.localStorage.removeItem(progressKey);
+      return getDefaultRestoredState(targetPuzzle);
+    }
+    return restored;
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -240,20 +333,26 @@ export default function VerbleGameClient({
         }
         if (!active) return;
 
+        const restoredState = restoreVerbleState({
+          targetPuzzle: payload,
+          progressKey: `${storagePrefix}:${payload.puzzleId}`,
+          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          lockDailyCompletion,
+        });
         setPuzzle(payload);
         setArchiveLock(null);
-        setGameState("playing");
-        setMessage("");
-        setPhraseGuess("");
-        setWordAttempts([]);
-        setSolvedWords({});
-        setSlotDrafts(createInitialSlotDrafts(payload.slots || []));
-        setSlotLocks(createInitialSlotLocks(payload.slots || []));
-        setSlotMarks(createInitialSlotMarks(payload.slots || []));
-        setGuessesUsed(0);
-        setSelectedSlot(null);
+        setGameState(restoredState.gameState);
+        setMessage(restoredState.message);
+        setPhraseGuess(restoredState.phraseGuess);
+        setWordAttempts(restoredState.wordAttempts);
+        setSolvedWords(restoredState.solvedWords);
+        setSlotDrafts(restoredState.slotDrafts);
+        setSlotLocks(restoredState.slotLocks);
+        setSlotMarks(restoredState.slotMarks);
+        setGuessesUsed(restoredState.guessesUsed);
+        setSelectedSlot(restoredState.selectedSlot);
         setCopyStatus("");
-        setIsResultOpen(false);
+        setIsResultOpen(restoredState.gameState !== "playing");
         setIsHowToPlayOpen(false);
         setIsPhraseDialogOpen(false);
         setPhraseGuessError("");
@@ -277,71 +376,17 @@ export default function VerbleGameClient({
     return () => {
       active = false;
     };
-  }, [apiUrl]);
+  }, [apiUrl, completionPrefix, lockDailyCompletion, storagePrefix]);
 
   const progressKey = useMemo(() => {
     if (!puzzle?.puzzleId) return null;
     return `${storagePrefix}:${puzzle.puzzleId}`;
-  }, [puzzle?.puzzleId, storagePrefix]);
+  }, [puzzle, storagePrefix]);
 
   const completionKey = useMemo(() => {
     if (!puzzle?.puzzleId) return null;
     return `${completionPrefix}:${puzzle.puzzleId}`;
-  }, [completionPrefix, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (!progressKey) return;
-    const raw = window.localStorage.getItem(progressKey);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      const parsedState = parsed.gameState;
-      if (!lockDailyCompletion && (parsedState === "won" || parsedState === "lost")) {
-        window.localStorage.removeItem(progressKey);
-        return;
-      }
-      setGameState(parsedState === "won" || parsedState === "lost" ? parsedState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setSelectedSlot(typeof parsed.selectedSlot === "number" ? parsed.selectedSlot : null);
-      setPhraseGuess(typeof parsed.phraseGuess === "string" ? parsed.phraseGuess : "");
-      setWordAttempts(Array.isArray(parsed.wordAttempts) ? parsed.wordAttempts : []);
-      setSolvedWords(parsed.solvedWords && typeof parsed.solvedWords === "object" ? parsed.solvedWords : {});
-      setSlotDrafts(parsed.slotDrafts && typeof parsed.slotDrafts === "object" ? parsed.slotDrafts : {});
-      setSlotLocks(parsed.slotLocks && typeof parsed.slotLocks === "object" ? parsed.slotLocks : {});
-      setSlotMarks(parsed.slotMarks && typeof parsed.slotMarks === "object" ? parsed.slotMarks : {});
-      setGuessesUsed(Number.isFinite(parsed.guessesUsed) ? Number(parsed.guessesUsed) : 0);
-    } catch {
-      window.localStorage.removeItem(progressKey);
-    }
-  }, [lockDailyCompletion, progressKey]);
-
-  useEffect(() => {
-    if (!completionKey || !lockDailyCompletion) return;
-    const raw = window.localStorage.getItem(completionKey);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.puzzleId !== puzzle?.puzzleId) return;
-      setGameState(parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing");
-      setMessage(typeof parsed.message === "string" ? parsed.message : "");
-      setWordAttempts(Array.isArray(parsed.wordAttempts) ? parsed.wordAttempts : []);
-      setSolvedWords(parsed.solvedWords && typeof parsed.solvedWords === "object" ? parsed.solvedWords : {});
-      setSlotDrafts(parsed.slotDrafts && typeof parsed.slotDrafts === "object" ? parsed.slotDrafts : {});
-      setSlotLocks(parsed.slotLocks && typeof parsed.slotLocks === "object" ? parsed.slotLocks : {});
-      setSlotMarks(parsed.slotMarks && typeof parsed.slotMarks === "object" ? parsed.slotMarks : {});
-      setGuessesUsed(Number.isFinite(parsed.guessesUsed) ? Number(parsed.guessesUsed) : 0);
-    } catch {
-      window.localStorage.removeItem(completionKey);
-    }
-  }, [completionKey, lockDailyCompletion, puzzle?.puzzleId]);
-
-  useEffect(() => {
-    if (gameState === "playing") {
-      setIsResultOpen(false);
-      return;
-    }
-    setIsResultOpen(true);
-  }, [gameState]);
+  }, [completionPrefix, puzzle]);
 
   useEffect(() => {
     if (!progressKey || !puzzle) return;
@@ -386,7 +431,6 @@ export default function VerbleGameClient({
   const selectedSlotMeta = puzzle?.slots.find((slot) => slot.index === selectedSlot);
   const selectedSlotDraft = selectedSlotMeta ? slotDrafts[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => "") : [];
   const selectedSlotLockState = selectedSlotMeta ? slotLocks[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => false) : [];
-  const selectedWordGuess = selectedSlotDraft.join("");
   const canSubmitWordGuess =
     gameState === "playing"
     && !isResolvingGuess
@@ -699,7 +743,7 @@ export default function VerbleGameClient({
     });
 
     const revealTotalMs = Math.max(0, (revealIndices.length - 1) * FLIP_STAGGER_MS + FLIP_DURATION_MS + GLOBAL_REVEAL_DELAY_MS);
-    const phaseTwoTotalMs = phaseTwoEntries.reduce((max, entry) => {
+    const phaseTwoTotalMs = phaseTwoEntries.reduce((max) => {
       const entryTotal = SLOW_FLIP_DURATION_MS + 120;
       return Math.max(max, entryTotal);
     }, 0);
@@ -718,12 +762,14 @@ export default function VerbleGameClient({
         if (solvedAll) {
           setGameState("won");
           setIsResolvingGuess(false);
+          setIsResultOpen(true);
           return;
         }
 
         if (nextGuessesUsed >= maxGuesses) {
           setGameState("lost");
           setIsResolvingGuess(false);
+          setIsResultOpen(true);
           return;
         }
 
@@ -838,6 +884,7 @@ export default function VerbleGameClient({
         setSlotMarks(solvedMarks);
         setGameState("won");
         setIsResolvingGuess(false);
+        setIsResultOpen(true);
       }, revealTotalMs);
       return;
     }
@@ -885,6 +932,7 @@ export default function VerbleGameClient({
       setGuessesUsed(maxGuesses);
       setGameState("lost");
       setIsResolvingGuess(false);
+      setIsResultOpen(true);
     }, revealTotalMs);
     setGuessesUsed(maxGuesses);
   };
@@ -1462,8 +1510,8 @@ export default function VerbleGameClient({
               <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>
                 Share
               </button>
-              <a className="admin-btn-like" href="/">DailyDabble</a>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
+              <Link className="admin-btn-like" href="/">DailyDabble</Link>
+              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
             </div>
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
