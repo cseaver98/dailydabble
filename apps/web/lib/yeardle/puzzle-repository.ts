@@ -41,6 +41,7 @@ export type YeardlePuzzle = {
   puzzleDate: string;
   archiveGameNumber: number;
   eventTitle: string;
+  eventYear: number;
   imageUrl: string;
   imageAlt: string;
   wikipediaUrl: string | null | undefined;
@@ -68,6 +69,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, eventRow: EventRow): Promise<
     puzzleDate: scheduleRow.puzzle_date,
     archiveGameNumber: await getArchiveGameNumber(scheduleRow.puzzle_date),
     eventTitle: eventRow.title,
+    eventYear: eventRow.event_year,
     imageUrl: eventRow.image_url,
     imageAlt: eventRow.image_alt || `Historical event image for ${eventRow.title}`,
     wikipediaUrl: eventRow.wikipedia_url,

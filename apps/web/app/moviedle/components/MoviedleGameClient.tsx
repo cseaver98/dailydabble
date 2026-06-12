@@ -107,6 +107,7 @@ export default function MoviedleGameClient({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [lockedSuggestionQuery, setLockedSuggestionQuery] = useState("");
   const [selectedStillIndex, setSelectedStillIndex] = useState(0);
+  const [resultStillIndex, setResultStillIndex] = useState(0);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
@@ -163,6 +164,7 @@ export default function MoviedleGameClient({
         setCopyStatus("");
         setLockedSuggestionQuery("");
         setSelectedStillIndex(0);
+        setResultStillIndex(0);
       } catch (loadError) {
         if (!active) {
           return;
@@ -358,6 +360,9 @@ export default function MoviedleGameClient({
   const boundedStillIndex = Math.min(Math.max(selectedStillIndex, 0), Math.max(visibleStills.length - 1, 0));
   const visibleStill = visibleStills[boundedStillIndex] || null;
   const canNavigateStills = visibleStills.length > 1;
+  const boundedResultStillIndex = Math.min(Math.max(resultStillIndex, 0), Math.max(visibleStills.length - 1, 0));
+  const resultStill = visibleStills[boundedResultStillIndex] || null;
+  const canNavigateResultStills = visibleStills.length > 1;
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const earlierAttempts = attempts.slice(0, -1).reverse();
 
@@ -368,6 +373,12 @@ export default function MoviedleGameClient({
     }
     setSelectedStillIndex(0);
   }, [gameState, revealedStillCount, puzzle?.puzzleId]);
+
+  useEffect(() => {
+    if (gameState !== "playing") {
+      setResultStillIndex(0);
+    }
+  }, [gameState, puzzle?.puzzleId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -733,31 +744,31 @@ export default function MoviedleGameClient({
                 <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
               </p>
             </div>
-            {visibleStill ? (
+            {resultStill ? (
               <div className="result-modal-image-wrap">
                 <AsyncImage
-                  src={visibleStill.url}
-                  alt={visibleStill.alt || "Movie still"}
+                  src={resultStill.url}
+                  alt={resultStill.alt || "Movie still"}
                   className="result-modal-image"
                   overlayClassName="bg-[color:var(--surface-low)]/88 text-[color:var(--brand-strong)]"
                 />
-                {canNavigateStills ? (
+                {canNavigateResultStills ? (
                   <>
                     <button
                       type="button"
                       className="still-nav-btn still-nav-btn-prev"
-                      onClick={() => setSelectedStillIndex((current) => Math.max(0, current - 1))}
+                      onClick={() => setResultStillIndex((current) => Math.max(0, current - 1))}
                       aria-label="Previous still"
-                      disabled={boundedStillIndex <= 0}
+                      disabled={boundedResultStillIndex <= 0}
                     >
                       ←
                     </button>
                     <button
                       type="button"
                       className="still-nav-btn still-nav-btn-next"
-                      onClick={() => setSelectedStillIndex((current) => Math.min(visibleStills.length - 1, current + 1))}
+                      onClick={() => setResultStillIndex((current) => Math.min(visibleStills.length - 1, current + 1))}
                       aria-label="Next still"
-                      disabled={boundedStillIndex >= visibleStills.length - 1}
+                      disabled={boundedResultStillIndex >= visibleStills.length - 1}
                     >
                       →
                     </button>

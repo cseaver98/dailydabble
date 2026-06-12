@@ -740,7 +740,7 @@ export default function Home() {
           onClick={() => setIsResultOpen(false)}
         >
           <div
-            className={`relative max-h-[88vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border p-4 shadow-xl sm:p-5 ${
+            className={`result-modal-panel relative max-h-[88vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border p-4 shadow-xl sm:p-5 ${
               isDarkMode ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-[color:var(--surface-container)] bg-white text-[color:var(--foreground)]"
             }`}
             style={{ position: "relative" }}
@@ -767,14 +767,14 @@ export default function Home() {
             >
               ×
             </button>
-            <div className="mb-3 space-y-2">
+            <div className="space-y-2">
               <h3 className="result-modal-title">Result</h3>
-              <p className={mutedTextClass}>Next game in {nextGameCountdown || "--:--:--"}</p>
+              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             </div>
             <div className="space-y-2">
               <div className="result-modal-summary">
-                <p className={`${mutedTextClass} result-modal-subtitle`}>{performanceLabel}</p>
-                <p className={`${mutedTextClass} result-modal-stat-line`}>
+                <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
+                <p className="result-modal-copy result-modal-stat-line">
                   Guesses used:{" "}
                   <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
                     {attempts.length}/{maxGuesses}

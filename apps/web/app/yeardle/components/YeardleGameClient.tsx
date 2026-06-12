@@ -27,6 +27,7 @@ type YeardlePuzzle = {
   archiveGameNumber?: number;
   maxGuesses: number;
   eventTitle: string;
+  eventYear?: number;
   imageUrl?: string;
   imageAlt?: string;
   wikipediaUrl?: string;
@@ -399,6 +400,16 @@ export default function YeardleGameClient({
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
   const earlierAttempts = attempts.length > 1 ? attempts.slice(0, -1).reverse() : [];
+  const eventTitleLabel = puzzle?.eventTitle || "";
+  const resultAnswerLabel = (() => {
+    if (gameState === "won" || gameState === "lost") {
+      const title = puzzle?.eventTitle || "";
+      if (title && Number.isFinite(puzzle?.eventYear)) {
+        return `${title} - ${puzzle?.eventYear}`;
+      }
+    }
+    return effectiveAnswer;
+  })();
   const hintHeat = latestAttempt && latestAttempt.direction !== "exact"
     ? getHeatLabel(Number(latestAttempt.distanceYears || 0))
     : null;
@@ -487,7 +498,7 @@ export default function YeardleGameClient({
             </button>
           </div>
 
-          {puzzle?.eventTitle ? <h2 className="puzzle-title">{puzzle.eventTitle}</h2> : null}
+          {eventTitleLabel ? <h2 className="puzzle-title">{eventTitleLabel}</h2> : null}
 
           <figure className="event-figure">
             <AsyncImage
@@ -623,7 +634,12 @@ export default function YeardleGameClient({
                 onError={() => setImageFailed(true)}
               />
             ) : null}
-            <p className="result-modal-answer">{effectiveAnswer}</p>
+            <p className="result-modal-answer">{resultAnswerLabel}</p>
+            {puzzle?.editorialContext?.description ? (
+              <p className="result-modal-copy result-modal-detail">
+                <strong>Description:</strong> {puzzle.editorialContext.description}
+              </p>
+            ) : null}
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share

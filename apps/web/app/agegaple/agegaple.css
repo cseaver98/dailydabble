@@ -269,7 +269,7 @@
 }
 
 .agegaple-shell .result-modal-panel {
-  width: min(560px, 94vw);
+  width: min(620px, 96vw);
   max-height: 88vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -294,6 +294,13 @@
   font-weight: 800;
 }
 
+.agegaple-shell .result-modal-timer {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--primary-dim);
+}
+
 .agegaple-shell .result-modal-subtitle {
   font-size: 1.3rem;
   line-height: 1.4;
@@ -310,6 +317,12 @@
 
 .agegaple-shell .result-modal-summary .result-modal-subtitle {
   margin-right: 0.1rem;
+}
+
+.agegaple-shell .result-modal-copy {
+  margin: 0;
+  color: #595c5e;
+  font-weight: 700;
 }
 
 .agegaple-shell .result-modal-stat-line {

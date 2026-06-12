@@ -523,8 +523,18 @@ export default function EquadleGameClient({
     setMessage("");
   };
 
-  const effectiveAnswer = resolvedAnswer || puzzle?.answer || "Unavailable";
+  const answerEquation = resolvedAnswer || puzzle?.answer || "";
+  const effectiveAnswer = answerEquation || "Unavailable";
   const displayEffectiveAnswer = toDisplayEquation(effectiveAnswer);
+  const resultEquationTiles = answerEquation
+    ? answerEquation.split("").map((char) => {
+        const displayChar = toDisplayEquationChar(char);
+        return {
+          char: displayChar,
+          state: char === "=" ? "locked" : "correct",
+        };
+      })
+    : [];
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const shareText = [
     `Equadle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
@@ -746,16 +756,23 @@ export default function EquadleGameClient({
                 <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
               </p>
             </div>
-            <p className="result-modal-answer">
-              {displayEffectiveAnswer.split("").map((char, index) => (
-                <span
-                  key={`${char}-${index}`}
-                  className={isDisplayOperatorChar(char) ? "equadle-operator-symbol" : undefined}
-                >
-                  {char}
-                </span>
-              ))}
-            </p>
+            {resultEquationTiles.length > 0 ? (
+              <div
+                className="result-equation-row"
+                aria-label={`Answer: ${displayEffectiveAnswer}`}
+                style={{ gridTemplateColumns: `repeat(${resultEquationTiles.length}, minmax(0, 1fr))` }}
+              >
+                {resultEquationTiles.map((cell, index) => (
+                  <span key={`${cell.char}-${index}`} className={`board-cell result-equation-cell ${cell.state}`}>
+                    <span className={isDisplayOperatorChar(cell.char) ? "equadle-operator-symbol" : undefined}>
+                      {cell.char}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="result-modal-answer">{displayEffectiveAnswer}</p>
+            )}
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>
                 Share

@@ -437,6 +437,18 @@
   color: var(--brand-strong);
 }
 
+.equadle-shell .result-equation-row {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.6rem 0;
+  width: 100%;
+}
+
+.equadle-shell .result-equation-cell {
+  min-height: 2.85rem;
+  font-size: 1.15rem;
+}
+
 .equadle-shell .result-modal-actions {
   border-top: 1px solid var(--outline-soft);
   padding-top: 0.75rem;

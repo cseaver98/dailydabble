@@ -1015,7 +1015,6 @@ export default function VerbleGameClient({
   }
 
   const resultLabel = getPerformanceLabel(gameState === "won", guessesUsed, maxGuesses);
-  const answerLine = puzzle.slots.map((slot) => `${slot.display}${slot.separator}`).join("").trimEnd();
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
@@ -1453,7 +1452,38 @@ export default function VerbleGameClient({
                 <span className="result-modal-stat-value">{guessesUsed}/{maxGuesses}</span>
               </p>
             </div>
-            <p className="result-modal-answer">{answerLine}</p>
+            <div className="result-modal-phrase phrase-layout" aria-label="Final phrase board">
+              {puzzle.slots.map((slot) => {
+                const letters = (puzzle.answerWords[slot.index] || "").split("");
+                const displayChars = buildDisplayedWordChars(slot, letters);
+
+                return (
+                  <div key={`result-${slot.index}`} className="slot-cluster result-slot-cluster">
+                    <span className="slot-tiles">
+                      {displayChars.map((item, index) => {
+                        return (
+                          <span key={`result-${slot.index}-${index}`} className="slot-char-group">
+                            <span
+                              className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && item.value ? "filled correct locked" : ""}`}
+                            >
+                              {item.value || ""}
+                            </span>
+                            {item.kind === "letter" && item.trailingFixed ? (
+                              <span
+                                className={`slot-inline-fixed ${item.trailingFixed.includes("'") ? "apostrophe" : ""} ${item.trailingFixed.includes("-") ? "hyphen" : ""} ${item.trailingFixed.includes(",") ? "comma" : ""} ${item.trailingFixed.includes(";") ? "semicolon" : ""}`}
+                                aria-hidden="true"
+                              >
+                                {item.trailingFixed}
+                              </span>
+                            ) : null}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>
                 Share

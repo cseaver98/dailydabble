@@ -517,12 +517,12 @@
 }
 
 .sportle-shell .result-modal-image {
-  width: min(200px, 100%);
+  width: min(280px, 100%);
   margin: 0 auto;
-  border-radius: 0.8rem;
-  border: 1px solid var(--outline-soft);
-  background: var(--surface-low);
-  padding: 0.4rem;
+  border-radius: 1rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .sportle-shell .result-modal-actions {
