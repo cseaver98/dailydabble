@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -38,25 +39,6 @@ const normalizeGuess = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-const getNextGameCountdown = () => {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
-  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
-  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
-  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
-  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
-};
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
@@ -103,7 +85,6 @@ export default function MoviedleGameClient({
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
-  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [lockedSuggestionQuery, setLockedSuggestionQuery] = useState("");
   const [selectedStillIndex, setSelectedStillIndex] = useState(0);
@@ -112,6 +93,8 @@ export default function MoviedleGameClient({
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
+  const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
+  const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
 
   useEffect(() => {
     let active = true;
@@ -341,15 +324,6 @@ export default function MoviedleGameClient({
     setIsResultOpen(true);
   }, [gameState]);
 
-  useEffect(() => {
-    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
-      setNextGameCountdown("");
-      return;
-    }
-    setNextGameCountdown(getNextGameCountdown());
-    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 5;
   const stills = Array.isArray(puzzle?.stillImages) ? (puzzle?.stillImages ?? []) : [];

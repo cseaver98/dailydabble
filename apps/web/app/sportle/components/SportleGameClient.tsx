@@ -7,6 +7,7 @@ import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
 const CLUE_TILE_COUNT = 6;
@@ -30,25 +31,6 @@ type SportlePuzzle = {
   clues: Array<{ label: string; value: string; logoUrl?: string | null; imageUrl?: string | null }>;
 };
 
-const getNextGameCountdown = () => {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
-  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
-  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
-  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
-  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
-};
 
 const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: number) => {
   if (!didWin) {
@@ -96,7 +78,6 @@ export default function SportleGameClient({
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
-  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [animatingClueIndexes, setAnimatingClueIndexes] = useState<number[]>([]);
   const [visibleClueCount, setVisibleClueCount] = useState(0);
@@ -104,6 +85,8 @@ export default function SportleGameClient({
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
+  const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
+  const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
 
   useEffect(() => {
     let active = true;
@@ -280,15 +263,6 @@ export default function SportleGameClient({
     setVisibleClueCount(targetVisibleClueCount);
   }, [animatingClueIndexes.length, targetVisibleClueCount]);
 
-  useEffect(() => {
-    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
-      setNextGameCountdown("");
-      return;
-    }
-    setNextGameCountdown(getNextGameCountdown());
-    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
   const isClueAnimationActive = animatingClueIndexes.length > 0;

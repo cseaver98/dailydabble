@@ -8,6 +8,7 @@ import HowToPlayDialog from "../../components/HowToPlayDialog";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
 type VerbleGameClientProps = {
@@ -126,25 +127,6 @@ const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: 
   return "Phew, close!";
 };
 
-const getNextGameCountdown = () => {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === "year")?.value || now.getUTCFullYear());
-  const month = Number(parts.find((part) => part.type === "month")?.value || now.getUTCMonth() + 1);
-  const day = Number(parts.find((part) => part.type === "day")?.value || now.getUTCDate());
-  const nextMidnightUtc = Date.UTC(year, month - 1, day + 1, 4, 0, 0);
-  const diffMs = Math.max(0, nextMidnightUtc - now.getTime());
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
-};
 
 export default function VerbleGameClient({
   apiUrl,
@@ -170,7 +152,6 @@ export default function VerbleGameClient({
   const [slotMarks, setSlotMarks] = useState<SlotMarks>({});
   const [guessesUsed, setGuessesUsed] = useState(0);
   const [copyStatus, setCopyStatus] = useState("");
-  const [nextGameCountdown, setNextGameCountdown] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isPhraseDialogOpen, setIsPhraseDialogOpen] = useState(false);
@@ -214,6 +195,8 @@ export default function VerbleGameClient({
     revealIndices: number[];
   } | null>(null);
   const [isResolvingGuess, setIsResolvingGuess] = useState(false);
+  const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
+  const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
 
   const createInitialSlotDrafts = (slots: Slot[]): SlotDrafts =>
     Object.fromEntries(slots.map((slot) => [slot.index, Array.from({ length: slot.length }, () => "")]));
@@ -387,15 +370,6 @@ export default function VerbleGameClient({
     );
   }, [completionKey, gameState, guessesUsed, lockDailyCompletion, message, puzzle, solvedWords, wordAttempts]);
 
-  useEffect(() => {
-    if (!lockDailyCompletion || isArchiveView || gameState === "playing") {
-      setNextGameCountdown("");
-      return;
-    }
-    setNextGameCountdown(getNextGameCountdown());
-    const intervalId = window.setInterval(() => setNextGameCountdown(getNextGameCountdown()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [gameState, isArchiveView, lockDailyCompletion]);
 
   useEffect(() => {
     if (!revealState) {
