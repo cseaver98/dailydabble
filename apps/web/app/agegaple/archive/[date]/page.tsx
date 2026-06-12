@@ -675,7 +675,7 @@ export default function ArchiveGamePage() {
           onClick={() => setIsResultOpen(false)}
         >
           <div
-            className={`relative w-full max-w-2xl rounded-2xl border p-4 shadow-xl sm:p-5 ${
+            className={`relative max-h-[88vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border p-4 shadow-xl sm:p-5 ${
               isDarkMode ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-[color:var(--surface-container)] bg-white text-[color:var(--foreground)]"
             }`}
             style={{ position: "relative" }}
@@ -706,20 +706,22 @@ export default function ArchiveGamePage() {
               <h3 className="result-modal-title">Result</h3>
             </div>
             <div className="space-y-2">
-              <p className={mutedTextClass}>
-                Guesses used:{" "}
-                <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
-                  {attempts.length}/{maxGuesses}
-                </span>
-              </p>
-              <p className={`${mutedTextClass} result-modal-subtitle`}>{performanceLabel}</p>
+              <div className="result-modal-summary">
+                <p className={`${mutedTextClass} result-modal-subtitle`}>{performanceLabel}</p>
+                <p className={`${mutedTextClass} result-modal-stat-line`}>
+                  Guesses used:{" "}
+                  <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
+                    {attempts.length}/{maxGuesses}
+                  </span>
+                </p>
+              </div>
               {activeImage && (
-                <div className="mb-2 h-48 overflow-hidden rounded-lg border border-zinc-600/40 bg-zinc-950/30 sm:h-52">
+                <div className="mb-2">
                   <AsyncImage
                     src={activeImage.imageUrl}
                     alt={activeImage.imageAlt || "Celebrity couple"}
-                    className="h-full w-full object-contain object-top"
-                    overlayClassName="bg-zinc-950/35 text-zinc-100"
+                    className="max-h-[260px] w-full rounded-lg border border-[color:var(--surface-container)] bg-[color:var(--surface-container-low)] object-contain object-center"
+                    overlayClassName="bg-[color:var(--surface-container-low)]/88 text-[color:var(--primary-dim)]"
                   />
                 </div>
               )}

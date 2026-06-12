@@ -938,11 +938,13 @@ export default function DoodleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy result-modal-stat-line">
-              Guesses used:{" "}
-              <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
-            </p>
-            <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
+            <div className="result-modal-summary">
+              <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
+              <p className="result-modal-copy result-modal-stat-line">
+                Guesses used:{" "}
+                <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
+              </p>
+            </div>
             {finalStageSegments.length > 0 ? (
               <div className="result-modal-doodle-wrap">
                 <svg className="result-modal-doodle" viewBox={puzzle?.viewBox || "0 0 340 340"} role="img" aria-label="Solved doodle">

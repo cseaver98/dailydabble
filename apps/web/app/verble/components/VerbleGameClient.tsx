@@ -1446,11 +1446,13 @@ export default function VerbleGameClient({
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
-            <p className="result-modal-copy result-modal-stat-line">
-              Guesses used:{" "}
-              <span className="result-modal-stat-value">{guessesUsed}/{maxGuesses}</span>
-            </p>
-            <p className="result-modal-copy result-modal-subtitle">{resultLabel}</p>
+            <div className="result-modal-summary">
+              <p className="result-modal-copy result-modal-subtitle">{resultLabel}</p>
+              <p className="result-modal-copy result-modal-stat-line">
+                Guesses used:{" "}
+                <span className="result-modal-stat-value">{guessesUsed}/{maxGuesses}</span>
+              </p>
+            </div>
             <p className="result-modal-answer">{answerLine}</p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>
