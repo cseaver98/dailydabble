@@ -129,7 +129,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, athleteRow: AthleteRow): Prom
       value: athleteRow.key_stat_1 || "Manual stat clue pending",
     },
     {
-      label: "Key stat #2 / accolade",
+      label: "Key stat #2 / fact",
       value: athleteRow.key_stat_2 || "Manual accolade clue pending",
     },
     {

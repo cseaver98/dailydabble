@@ -308,8 +308,8 @@
 }
 
 .sportle-shell .clue-tile.is-revealed {
-  --tile-bg: color-mix(in srgb, var(--surface-low) 84%, white);
-  --tile-border: transparent;
+  --tile-bg: color-mix(in srgb, var(--brand-soft) 30%, white);
+  --tile-border: color-mix(in srgb, var(--brand) 20%, white);
   --tile-color: var(--text);
 }
 
@@ -360,8 +360,8 @@
 }
 
 .sportle-shell .clue-tile-back {
-  background: color-mix(in srgb, var(--surface-low) 84%, white);
-  border: 1px solid transparent;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
   transform: rotateX(180deg);
 }
 
@@ -420,9 +420,39 @@
   height: 100%;
 }
 
-.sportle-shell .team-logo {
+.sportle-shell .clue-media-frame {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.sportle-shell .clue-logo-frame {
   width: min(100%, 88px);
   height: min(100%, 88px);
+}
+
+.sportle-shell .clue-headshot-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.sportle-shell .clue-image-loading-overlay {
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--brand-soft) 34%, white);
+  color: var(--brand);
+}
+
+.sportle-shell .clue-image-spinner {
+  height: 1.7rem;
+  width: 1.7rem;
+  border-width: 2px;
+}
+
+.sportle-shell .team-logo {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -516,12 +546,20 @@
   text-align: center;
 }
 
-.sportle-shell .result-modal-image {
+.sportle-shell .result-modal-image-frame {
   width: min(280px, 100%);
+  min-height: 180px;
   margin: 0 auto;
   border-radius: 1rem;
+  overflow: hidden;
+}
+
+.sportle-shell .result-modal-image {
+  width: 100%;
+  height: 100%;
   border: 0;
   background: transparent;
+  object-fit: contain;
   padding: 0;
 }
 

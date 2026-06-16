@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
+import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
@@ -518,15 +519,29 @@ export default function SportleGameClient({
                     <div className="clue-tile-face clue-tile-back">
                       {clue ? (
                         <>
-                          {index === 0 ? <span className="hint-label">TEAM</span> : clue.imageUrl ? null : <span className="hint-label">{clue.label}</span>}
+                          {index === 0 ? <span className="hint-label">TEAM</span> : clue.imageUrl ? <span className="hint-label">PHOTO</span> : <span className="hint-label">{clue.label}</span>}
                           {index === 0 && clue.logoUrl ? (
                             <div className="clue-team-row">
-                              <img src={clue.logoUrl} alt={clue.value || "Team logo"} className="team-logo" />
+                              <AsyncImage
+                                src={clue.logoUrl}
+                                alt={clue.value || "Team logo"}
+                                className="team-logo"
+                                wrapperClassName="clue-media-frame clue-logo-frame"
+                                overlayClassName="clue-image-loading-overlay"
+                                spinnerClassName="clue-image-spinner"
+                              />
                               <span className="clue-value">{clue.value}</span>
                             </div>
                           ) : clue.imageUrl ? (
                             <div className="clue-team-row clue-image-row">
-                              <img src={clue.imageUrl} alt={clue.value || "Athlete headshot"} className="team-logo headshot-logo" />
+                              <AsyncImage
+                                src={clue.imageUrl}
+                                alt={clue.value || "Athlete headshot"}
+                                className="team-logo headshot-logo"
+                                wrapperClassName="clue-media-frame clue-headshot-frame"
+                                overlayClassName="clue-image-loading-overlay"
+                                spinnerClassName="clue-image-spinner"
+                              />
                             </div>
                           ) : (
                             <span className="clue-value">{clue?.value}</span>
@@ -653,7 +668,16 @@ export default function SportleGameClient({
                 <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
               </p>
             </div>
-            {answerImageUrl ? <img src={answerImageUrl} alt={effectiveAnswer} className="result-modal-image" /> : null}
+            {answerImageUrl ? (
+              <AsyncImage
+                src={answerImageUrl}
+                alt={effectiveAnswer}
+                className="result-modal-image"
+                wrapperClassName="result-modal-image-frame"
+                overlayClassName="clue-image-loading-overlay"
+                spinnerClassName="clue-image-spinner"
+              />
+            ) : null}
             <p className="result-modal-answer">{effectiveAnswer}</p>
             <div className="result-modal-actions">
               <button className="admin-btn-like" type="button" onClick={handleShareResult}>

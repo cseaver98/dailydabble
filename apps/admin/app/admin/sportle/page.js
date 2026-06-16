@@ -527,7 +527,7 @@ export default function SportleAdminTab() {
                     <span>{previewItem.key_stat_1 || "Manual stat clue pending"}</span>
                   </li>
                   <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", position: "relative", display: "grid", placeItems: "center", textAlign: "center" }}>
-                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Key stat #2 / accolade</span>
+                    <span style={{ position: "absolute", top: ".45rem", left: ".4rem", right: ".4rem", fontSize: ".74rem", textTransform: "uppercase", letterSpacing: ".08em", color: "#a45508", fontWeight: 800 }}>Key stat #2 / fact</span>
                     <span>{previewItem.key_stat_2 || "Manual accolade clue pending"}</span>
                   </li>
                   <li style={{ borderRadius: ".7rem", background: "#eaf0f8", border: "1px solid rgba(137, 154, 177, 0.32)", padding: "1.45rem .6rem .6rem", display: "grid", placeItems: "center", textAlign: "center", overflow: "hidden" }}>
