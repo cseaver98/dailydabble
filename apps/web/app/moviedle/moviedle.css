@@ -166,25 +166,27 @@
   line-height: 1;
   transform: translateY(-50%);
   box-shadow: 0 10px 18px rgba(44, 47, 49, 0.16);
+  opacity: 0.74;
   cursor: pointer;
-  transition: background 160ms ease;
+  transition: background 160ms ease, opacity 160ms ease;
 }
 
 .moviedle-shell .still-nav-btn:hover:not(:disabled)  {
   background: #fff;
+  opacity: 0.96;
 }
 
 .moviedle-shell .still-nav-btn:disabled  {
-  opacity: 0.45;
+  opacity: 0.36;
   cursor: not-allowed;
 }
 
 .moviedle-shell .still-nav-btn-prev  {
-  left: 0.75rem;
+  left: 1.15rem;
 }
 
 .moviedle-shell .still-nav-btn-next  {
-  right: 0.75rem;
+  right: 1.15rem;
 }
 
 .moviedle-shell .image-modal-backdrop  {

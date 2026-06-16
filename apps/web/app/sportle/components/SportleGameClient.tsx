@@ -361,7 +361,6 @@ export default function SportleGameClient({
       const currentRevealedHintCount = visibleClueCount;
 
       setAttempts(nextAttempts);
-      setGuess("");
 
       if (payload.isCorrect) {
         queueClueFlip(currentRevealedHintCount, clues.length, true);
@@ -375,6 +374,7 @@ export default function SportleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess: trimmed,
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
@@ -398,6 +398,7 @@ export default function SportleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess: trimmed,
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
@@ -409,6 +410,7 @@ export default function SportleGameClient({
       }
 
       setMessage("Incorrect. Another clue unlocked.");
+      setGuess("");
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess");
     }
@@ -564,7 +566,7 @@ export default function SportleGameClient({
               autoCapitalize="words"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="Type an athlete name"
+              placeholder="Guess the athlete"
               aria-label="Guess athlete"
               disabled={gameState !== "playing"}
             />
@@ -584,9 +586,11 @@ export default function SportleGameClient({
             )}
           </form>
 
-          <p className="message" data-kind={gameState}>
-            {message || "Start with clue 1. Wrong guesses unlock more clues."}
-          </p>
+          {gameState === "playing" ? (
+            <p className="message" data-kind={gameState}>
+              {message || "Start with clue 1. Wrong guesses unlock more clues."}
+            </p>
+          ) : null}
 
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
             <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>

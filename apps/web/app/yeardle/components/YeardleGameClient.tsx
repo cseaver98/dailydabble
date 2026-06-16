@@ -321,7 +321,6 @@ export default function YeardleGameClient({
 
       const nextAttempts = [...attempts, attempt];
       setAttempts(nextAttempts);
-      setGuess("");
 
       if (payload.isCorrect) {
         const finalMessage = `Correct. The event happened in ${payload.answerYear}. ${payload.eventTitle}`;
@@ -334,6 +333,7 @@ export default function YeardleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess,
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
@@ -355,6 +355,7 @@ export default function YeardleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess,
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
@@ -366,6 +367,7 @@ export default function YeardleGameClient({
       }
 
       setMessage("");
+      setGuess("");
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess.");
     }
@@ -512,9 +514,11 @@ export default function YeardleGameClient({
             )}
           </form>
 
-          <p className="message" data-kind={gameState}>
-            {message || "Guess the year to get earlier/later feedback."}
-          </p>
+          {gameState === "playing" ? (
+            <p className="message" data-kind={gameState}>
+              {message || "Guess the year to get earlier/later feedback."}
+            </p>
+          ) : null}
 
           {gameState === "playing" && hintHeat ? (
             <div className="temperature-hint-wrap">

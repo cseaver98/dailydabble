@@ -103,7 +103,7 @@ const restoreDoodleState = ({
         const parsed = JSON.parse(completionRaw);
         if (parsed?.puzzleId === puzzleId) {
           return {
-            guess: "",
+            guess: typeof parsed.guess === "string" ? parsed.guess : "",
             attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
             gameState: parsed.gameState === "won" || parsed.gameState === "lost" ? parsed.gameState : "playing",
             message: typeof parsed.message === "string" ? parsed.message : "",
@@ -595,6 +595,7 @@ export default function DoodleGameClient({
           completionKey,
           JSON.stringify({
             puzzleId: puzzle.puzzleId,
+            guess,
             attempts: nextAttempts,
             gameState: "won",
             message: finalMessage,
@@ -613,6 +614,7 @@ export default function DoodleGameClient({
           completionKey,
           JSON.stringify({
             puzzleId: puzzle.puzzleId,
+            guess,
             attempts: nextAttempts,
             gameState: "lost",
             message: finalMessage,
@@ -881,7 +883,7 @@ export default function DoodleGameClient({
               onChange={(event) => setGuess(event.target.value)}
               className="guess-input"
               type="text"
-              placeholder="Type your guess..."
+              placeholder="Guess the doodle"
               aria-label="Guess the doodle"
               disabled={gameState !== "playing"}
             />
@@ -906,7 +908,9 @@ export default function DoodleGameClient({
             )}
           </form>
 
-          <p className="message" data-kind={gameState}>{message || "Start guessing to reveal the drawing."}</p>
+          {gameState === "playing" ? (
+            <p className="message" data-kind={gameState}>{message || "Start guessing to reveal the drawing."}</p>
+          ) : null}
 
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
             <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>

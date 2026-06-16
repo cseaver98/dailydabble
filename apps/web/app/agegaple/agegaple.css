@@ -155,6 +155,11 @@
   margin: 0;
 }
 
+.agegaple-shell .agegaple-guess-input:focus-visible {
+  outline: 3px solid rgba(158, 78, 109, 0.3);
+  outline-offset: 1px;
+}
+
 .agegaple-shell .guess-history-wrap {
   border-top: 1px solid var(--surface-container);
   padding-top: 0.75rem;

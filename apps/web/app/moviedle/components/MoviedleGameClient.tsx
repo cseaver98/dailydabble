@@ -397,7 +397,6 @@ export default function MoviedleGameClient({
       ];
 
       setAttempts(nextAttempts);
-      setGuess("");
       setSuggestions([]);
 
       if (payload.isCorrect) {
@@ -416,6 +415,7 @@ export default function MoviedleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess: trimmed,
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
@@ -443,6 +443,7 @@ export default function MoviedleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
+              guess: trimmed,
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
@@ -456,6 +457,7 @@ export default function MoviedleGameClient({
 
       setMessage("Not quite. Another still has been revealed.");
       setSelectedStillIndex(Math.max(0, Math.min(stills.length - 1, nextAttempts.length)));
+      setGuess("");
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Could not submit guess.");
     }
@@ -627,18 +629,14 @@ export default function MoviedleGameClient({
             </div>
           ) : null}
 
-          <p className="message" data-kind={gameState}>
-            {message || "Guess the movie. Wrong guesses reveal additional stills."}
-          </p>
+          {gameState === "playing" ? (
+            <p className="message" data-kind={gameState}>
+              {message || "Guess the movie. Wrong guesses reveal additional stills."}
+            </p>
+          ) : null}
 
           {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
             <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
-          {revealedAnswer ? (
-            <p className="answer-banner">
-              Answer: <strong>{revealedAnswer}</strong>
-            </p>
           ) : null}
 
           {attempts.length > 0 ? (

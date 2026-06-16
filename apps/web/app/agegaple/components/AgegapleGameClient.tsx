@@ -665,7 +665,7 @@ export default function AgegapleGameClient({
                     min={0}
                     max={80}
                     disabled={hasFinishedAttempts}
-                    className={`no-native-spinner h-11 w-24 rounded-full border-2 px-3 text-lg font-bold outline-none transition focus:border-[color:var(--primary)] ${
+                    className={`agegaple-guess-input no-native-spinner h-11 w-24 rounded-full border px-3 text-lg font-bold outline-none transition ${
                       isDarkMode
                         ? "border-zinc-600 bg-zinc-950 text-zinc-100"
                         : "border-[color:var(--surface-container)] bg-[color:var(--surface-container-lowest)] text-[color:var(--foreground)]"
