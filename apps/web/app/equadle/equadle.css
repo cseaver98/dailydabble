@@ -224,6 +224,9 @@
   position: relative;
   width: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
   justify-content: center;
 }
 
@@ -269,9 +272,7 @@
 }
 
 .equadle-shell .equadle-review-result-btn {
-  position: absolute;
-  right: 0;
-  top: 0;
+  width: 100%;
   white-space: nowrap;
 }
 
@@ -645,7 +646,8 @@
   .equadle-shell .guess-form,
   .equadle-shell .post-actions { grid-template-columns: 1fr; }
   .equadle-shell .archive-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .equadle-shell .result-modal-actions { grid-template-columns: 1fr; }
+  .equadle-shell .result-modal-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .equadle-shell .result-modal-actions .admin-btn-like.primary { grid-column: 1 / -1; }
   .equadle-shell .board-cell { min-height: 2.2rem; font-size: 0.95rem; }
 }
 

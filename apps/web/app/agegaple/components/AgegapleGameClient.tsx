@@ -697,14 +697,14 @@ export default function AgegapleGameClient({
                 <button
                   type="button"
                   onClick={() => setIsResultOpen(true)}
-                  className="rounded-full bg-[color:var(--primary)] px-5 py-2.5 font-extrabold text-white shadow-[0_10px_20px_rgba(158,78,109,0.28)] transition hover:bg-[color:var(--primary-dim)]"
+                  className="guess-submit-btn"
                 >
                   Review result
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="rounded-full bg-[color:var(--primary)] px-5 py-2.5 font-extrabold text-white shadow-[0_10px_20px_rgba(158,78,109,0.28)] transition hover:bg-[color:var(--primary-dim)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="guess-submit-btn"
                   disabled={hasFinishedAttempts}
                 >
                   Guess

@@ -636,6 +636,15 @@ export default function EquadleGameClient({
           </div>
 
           <div className="equadle-keyboard-wrap">
+            {gameState !== "playing" ? (
+              <button
+                type="button"
+                className="guess-submit-btn equadle-review-result-btn"
+                onClick={() => setIsResultOpen(true)}
+              >
+                Review result
+              </button>
+            ) : null}
             <div className="equadle-keyboard" aria-label="Equation keyboard">
               {KEY_ROWS.map((row, rowIndex) => (
                 <div key={`kb-row-${rowIndex}`} className="equadle-keyboard-row">
@@ -700,15 +709,6 @@ export default function EquadleGameClient({
                 </div>
               ))}
             </div>
-            {gameState !== "playing" ? (
-              <button
-                type="button"
-                className="guess-submit-btn equadle-review-result-btn"
-                onClick={() => setIsResultOpen(true)}
-              >
-                Review result
-              </button>
-            ) : null}
           </div>
 
           {gameState === "playing" && message ? <p className="message" data-kind={gameState}>{message}</p> : null}

@@ -957,7 +957,8 @@
   }
 .verble-shell .verble-actions { grid-template-columns: 1fr; }
 .verble-shell .phrase-submit-row { grid-template-columns: 1fr; }
-.verble-shell .result-modal-actions { grid-template-columns: 1fr; }
+.verble-shell .result-modal-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.verble-shell .result-modal-actions .admin-btn-like.primary { grid-column: 1 / -1; }
 .verble-shell .archive-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
