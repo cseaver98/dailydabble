@@ -517,9 +517,9 @@ export default function YeardleGameClient({
             )}
           </form>
 
-          {gameState === "playing" ? (
+          {gameState === "playing" && message ? (
             <p className="message" data-kind={gameState}>
-              {message || "Guess the year to get earlier/later feedback."}
+              {message}
             </p>
           ) : null}
 

@@ -704,9 +704,9 @@ export default function AgegapleGameClient({
               )}
             </form>
             {!isCompleted && lastAttempt && lastAttempt.direction !== "exact" && (
-              <div className="space-y-1 text-sm">
-                <p className={`font-semibold ${isDarkMode ? "text-zinc-200" : "text-[color:var(--foreground)]"}`}>{hintHeat}</p>
-                {hintTemperature && <p className={mutedTextClass}>{hintTemperature}</p>}
+              <div className="temperature-hint-wrap">
+                <p className="temperature-hint-heat">{hintHeat}</p>
+                {hintTemperature ? <p className="temperature-hint-trend">{hintTemperature}</p> : null}
               </div>
             )}
             {attempts.length > 0 && latestAttempt && (
