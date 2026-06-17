@@ -160,6 +160,9 @@ export default function SportleGameClient({
     : "TODAY'S GAME";
   const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
   const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   useEffect(() => {
     let active = true;
@@ -374,7 +377,7 @@ export default function SportleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
-              guess: trimmed,
+              guess: guessName,
               attempts: nextAttempts,
               gameState: "won",
               message: finalMessage,
@@ -398,7 +401,7 @@ export default function SportleGameClient({
             completionKey,
             JSON.stringify({
               puzzleId: puzzle.puzzleId,
-              guess: trimmed,
+              guess: guessName,
               attempts: nextAttempts,
               gameState: "lost",
               message: finalMessage,
@@ -491,7 +494,7 @@ export default function SportleGameClient({
       <main className="container">
         <section className="card sportle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
@@ -591,11 +594,6 @@ export default function SportleGameClient({
               {message || "Start with clue 1. Wrong guesses unlock more clues."}
             </p>
           ) : null}
-
-          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
-            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
           <div className="guess-history-wrap">
             <button
               type="button"

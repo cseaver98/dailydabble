@@ -147,6 +147,14 @@
   text-align: inherit;
 }
 
+.yeardle-shell .event-image-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 260px;
+}
+
 .yeardle-shell .event-image {
   width: 100%;
   display: block;

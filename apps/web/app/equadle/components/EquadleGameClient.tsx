@@ -216,6 +216,9 @@ export default function EquadleGameClient({
     : "TODAY'S GAME";
   const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
   const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   useEffect(() => {
     let active = true;
@@ -593,7 +596,7 @@ export default function EquadleGameClient({
       <main className="container">
         <section className="card equadle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
@@ -712,11 +715,6 @@ export default function EquadleGameClient({
           </div>
 
           {gameState === "playing" && message ? <p className="message" data-kind={gameState}>{message}</p> : null}
-
-          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
-            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
         </section>
       </main>
 

@@ -8,7 +8,13 @@ type EditorialContext = {
   leadActors?: string[];
 };
 
-export default function EditorialDrawer({ editorialContext }: { editorialContext?: EditorialContext | null }) {
+export default function EditorialDrawer({
+  editorialContext,
+  revealHint = false,
+}: {
+  editorialContext?: EditorialContext | null;
+  revealHint?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHintRevealed, setIsHintRevealed] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +54,7 @@ export default function EditorialDrawer({ editorialContext }: { editorialContext
     ? editorialContext.leadActors.map((value) => String(value || "").trim()).filter(Boolean)
     : [];
   const hasHintContent = Boolean(summary || director || leadActors.length);
+  const shouldRevealHint = revealHint || isHintRevealed;
 
   return (
     <div ref={containerRef} className="editorial-drawer">
@@ -83,22 +90,22 @@ export default function EditorialDrawer({ editorialContext }: { editorialContext
             {summary ? (
               <p>
                 <span className="editorial-field-label">Summary:</span>{" "}
-                <span className={isHintRevealed ? "" : "editorial-blurred"}>{summary}</span>
+                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{summary}</span>
               </p>
             ) : null}
             {director ? (
               <p>
                 <span className="editorial-field-label">Director:</span>{" "}
-                <span className={isHintRevealed ? "" : "editorial-blurred"}>{director}</span>
+                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{director}</span>
               </p>
             ) : null}
             {leadActors.length ? (
               <p>
                 <span className="editorial-field-label">Lead actors:</span>{" "}
-                <span className={isHintRevealed ? "" : "editorial-blurred"}>{leadActors.join(", ")}</span>
+                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{leadActors.join(", ")}</span>
               </p>
             ) : null}
-            {hasHintContent ? (
+            {hasHintContent && !revealHint ? (
               <button
                 type="button"
                 className="editorial-hint-toggle"

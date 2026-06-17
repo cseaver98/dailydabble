@@ -264,7 +264,6 @@ export default function AgegapleGameClient({
   const [loading, setLoading] = useState(true);
   const isDarkMode = false;
   const hasHydratedProgressRef = useRef(false);
-  const nextGameCountdown = useNextGameCountdown(lockDailyCompletion && Boolean(result && puzzle));
 
   useEffect(() => {
     let active = true;
@@ -487,6 +486,8 @@ export default function AgegapleGameClient({
   const earlierAttempts = attempts.slice(0, -1).reverse();
   const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
   const hasFinishedAttempts = isCompleted || attempts.length >= maxGuesses;
+  const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && hasFinishedAttempts;
+  const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
   const didWin = attempts[attempts.length - 1]?.direction === "exact";
   const performanceLabel = getPerformanceLabel(Boolean(didWin), attempts.length, maxGuesses);
   const hintHeat = lastAttempt
@@ -555,6 +556,9 @@ export default function AgegapleGameClient({
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   if (loading) {
     return (
@@ -606,20 +610,8 @@ export default function AgegapleGameClient({
 
         {!loading && !archiveLock && puzzle && (
           <section className={panelClass}>
-            {lockDailyCompletion && isCompleted && (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className={`text-sm font-semibold ${isDarkMode ? "text-zinc-300" : "text-[color:var(--outline)]"}`}>
-                  {attempts[attempts.length - 1]?.direction === "exact"
-                    ? "You completed today’s puzzle. Come back for the next one."
-                    : "You used all attempts for today. Come back for the next one."}
-                </p>
-                <p className="text-sm font-bold text-[color:var(--primary-dim)]">
-                  {nextGameCountdown || "--:--:--"}
-                </p>
-              </div>
-            )}
             <div className="agegaple-meta-row">
-              <span className="chip">{contextChipLabel}</span>
+              <span className="chip">{statusChipLabel}</span>
               <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
               <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
                 ? How to play
@@ -824,22 +816,20 @@ export default function AgegapleGameClient({
             >
               ×
             </button>
-            <div className="space-y-2">
-              <h3 className="result-modal-title">Result</h3>
-              {lockDailyCompletion ? (
-                <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
-              ) : null}
+            <h3 className="result-modal-title">Result</h3>
+            {lockDailyCompletion ? (
+              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
+            ) : null}
+            <div className="result-modal-summary">
+              <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
+              <p className="result-modal-copy result-modal-stat-line">
+                Guesses used:{" "}
+                <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
+                  {attempts.length}/{maxGuesses}
+                </span>
+              </p>
             </div>
             <div className="space-y-2">
-              <div className="result-modal-summary">
-                <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
-                <p className="result-modal-copy result-modal-stat-line">
-                  Guesses used:{" "}
-                  <span className={isDarkMode ? "font-bold text-zinc-100" : "font-bold text-[color:var(--foreground)]"}>
-                    {attempts.length}/{maxGuesses}
-                  </span>
-                </p>
-              </div>
               {activeImage && (
                 <div className="mb-2">
                   <AsyncImage

@@ -177,6 +177,9 @@ export default function MoviedleGameClient({
     : "TODAY'S GAME";
   const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
   const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   useEffect(() => {
     let active = true;
@@ -535,7 +538,7 @@ export default function MoviedleGameClient({
       <main className="container">
         <section className="card moviedle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
@@ -548,7 +551,7 @@ export default function MoviedleGameClient({
                 src={visibleStill.url}
                 alt={visibleStill.alt || "Movie still"}
                 className="still-image"
-                wrapperClassName="h-full w-full"
+                wrapperClassName="still-image-frame"
                 overlayClassName="bg-[#f6fffd]/88 text-[color:var(--brand-strong)]"
               />
             ) : (
@@ -578,7 +581,7 @@ export default function MoviedleGameClient({
             ) : null}
           </figure>
 
-          <EditorialDrawer editorialContext={puzzle?.editorialContext} />
+          <EditorialDrawer editorialContext={puzzle?.editorialContext} revealHint={gameState !== "playing"} />
 
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
@@ -634,11 +637,6 @@ export default function MoviedleGameClient({
               {message || "Guess the movie. Wrong guesses reveal additional stills."}
             </p>
           ) : null}
-
-          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
-            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
               <button

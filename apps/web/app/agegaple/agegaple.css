@@ -398,6 +398,13 @@
   background: color-mix(in srgb, var(--surface-container-low) 82%, white);
 }
 
+.agegaple-shell .next-game-copy {
+  margin: -0.15rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--primary-dim);
+}
+
 .agegaple-shell .result-modal-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

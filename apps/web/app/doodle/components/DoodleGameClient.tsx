@@ -299,6 +299,9 @@ export default function DoodleGameClient({
     : "TODAY'S GAME";
   const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
   const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   useEffect(() => {
     let active = true;
@@ -666,7 +669,7 @@ export default function DoodleGameClient({
       <main className="container">
         <section className="card doodle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
@@ -911,11 +914,6 @@ export default function DoodleGameClient({
           {gameState === "playing" ? (
             <p className="message" data-kind={gameState}>{message || "Start guessing to reveal the drawing."}</p>
           ) : null}
-
-          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
-            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
               <button

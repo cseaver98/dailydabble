@@ -253,25 +253,39 @@ export default function VerbleGameClient({
         }
 
         const parsedState = parsed.gameState;
+        const solvedWords = parsed.solvedWords && typeof parsed.solvedWords === "object" ? parsed.solvedWords : {};
+        const fallbackSlotDrafts = createInitialSlotDrafts(targetPuzzle.slots || []);
+        const fallbackSlotLocks = createInitialSlotLocks(targetPuzzle.slots || []);
+        const fallbackSlotMarks = createInitialSlotMarks(targetPuzzle.slots || []);
+        targetPuzzle.slots.forEach((slot) => {
+          const solvedWord = typeof solvedWords[slot.index] === "string" ? solvedWords[slot.index] : "";
+          if (!solvedWord) {
+            return;
+          }
+          fallbackSlotDrafts[slot.index] = solvedWord.split("");
+          fallbackSlotLocks[slot.index] = Array.from({ length: slot.length }, () => true);
+          fallbackSlotMarks[slot.index] = Array.from({ length: slot.length }, () => "correct");
+        });
+
         return {
           gameState: parsedState === "won" || parsedState === "lost" ? parsedState : "playing",
           message: typeof parsed.message === "string" ? parsed.message : "",
           selectedSlot: includeDraftState && typeof parsed.selectedSlot === "number" ? parsed.selectedSlot : null,
           phraseGuess: includeDraftState && typeof parsed.phraseGuess === "string" ? parsed.phraseGuess : "",
           wordAttempts: Array.isArray(parsed.wordAttempts) ? parsed.wordAttempts : [],
-          solvedWords: parsed.solvedWords && typeof parsed.solvedWords === "object" ? parsed.solvedWords : {},
+          solvedWords,
           slotDrafts:
             includeDraftState && parsed.slotDrafts && typeof parsed.slotDrafts === "object"
               ? parsed.slotDrafts
-              : createInitialSlotDrafts(targetPuzzle.slots || []),
+              : fallbackSlotDrafts,
           slotLocks:
             includeDraftState && parsed.slotLocks && typeof parsed.slotLocks === "object"
               ? parsed.slotLocks
-              : createInitialSlotLocks(targetPuzzle.slots || []),
+              : fallbackSlotLocks,
           slotMarks:
             includeDraftState && parsed.slotMarks && typeof parsed.slotMarks === "object"
               ? parsed.slotMarks
-              : createInitialSlotMarks(targetPuzzle.slots || []),
+              : fallbackSlotMarks,
           guessesUsed: Number.isFinite(parsed.guessesUsed) ? Number(parsed.guessesUsed) : 0,
         } satisfies RestoredVerbleState;
       } catch {
@@ -283,7 +297,7 @@ export default function VerbleGameClient({
     if (lockDailyCompletion) {
       const completionRaw = window.localStorage.getItem(completionKey);
       if (completionRaw) {
-        return parseStored(completionRaw, completionKey, false);
+        return parseStored(completionRaw, completionKey, true);
       }
     }
 
@@ -411,9 +425,19 @@ export default function VerbleGameClient({
     if (!completionKey || !lockDailyCompletion || gameState === "playing" || !puzzle) return;
     window.localStorage.setItem(
       completionKey,
-      JSON.stringify({ puzzleId: puzzle.puzzleId, gameState, message, wordAttempts, solvedWords, guessesUsed }),
+      JSON.stringify({
+        puzzleId: puzzle.puzzleId,
+        gameState,
+        message,
+        wordAttempts,
+        solvedWords,
+        slotDrafts,
+        slotLocks,
+        slotMarks,
+        guessesUsed,
+      }),
     );
-  }, [completionKey, gameState, guessesUsed, lockDailyCompletion, message, puzzle, solvedWords, wordAttempts]);
+  }, [completionKey, gameState, guessesUsed, lockDailyCompletion, message, puzzle, slotDrafts, slotLocks, slotMarks, solvedWords, wordAttempts]);
 
 
   useEffect(() => {
@@ -895,15 +919,21 @@ export default function VerbleGameClient({
     let animatedWordCount = 0;
     const revealEntries = puzzle.slots.map((slot) => {
       const word = puzzle.answerWords[slot.index] || "";
-      const revealIndices = word.split("").map((_, index) => index);
+      const letters = word.split("");
+      const currentLocks = slotLocks[slot.index] || Array.from({ length: slot.length }, () => false);
+      const currentMarks = slotMarks[slot.index] || Array.from({ length: slot.length }, () => "empty");
+      const feedback = letters.map((_, index): LetterFeedback => (
+        currentLocks[index] || currentMarks[index] === "correct" ? "correct" : "absent"
+      ));
+      const revealIndices = letters.flatMap((_, index) => (feedback[index] === "correct" ? [] : [index]));
       const wordDelayMs = revealIndices.length > 0 ? animatedWordCount++ * WORD_REVEAL_STAGGER_MS : 0;
-      revealedDrafts[slot.index] = word.split("");
-      revealedLocks[slot.index] = Array.from({ length: slot.length }, () => false);
-      revealedMarks[slot.index] = Array.from({ length: slot.length }, () => "absent");
+      revealedDrafts[slot.index] = letters;
+      revealedLocks[slot.index] = feedback.map((state) => state === "correct");
+      revealedMarks[slot.index] = feedback;
       return {
         slotIndex: slot.index,
-        letters: word.split(""),
-        feedback: Array.from({ length: slot.length }, () => "absent" as LetterFeedback),
+        letters,
+        feedback,
         wordDelayMs,
         revealIndices,
       };
@@ -1040,6 +1070,9 @@ export default function VerbleGameClient({
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   return (
     <div className="verble-shell">
@@ -1047,7 +1080,7 @@ export default function VerbleGameClient({
       <main className="container">
         <section className="card verble-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">{`Guesses ${guessesUsed}/${maxGuesses}`}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play

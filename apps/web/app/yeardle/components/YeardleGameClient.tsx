@@ -179,6 +179,9 @@ export default function YeardleGameClient({
     : "TODAY'S GAME";
   const shouldShowNextGameCountdown = lockDailyCompletion && !isArchiveView && gameState !== "playing";
   const nextGameCountdown = useNextGameCountdown(shouldShowNextGameCountdown);
+  const statusChipLabel = shouldShowNextGameCountdown
+    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    : contextChipLabel;
 
   useEffect(() => {
     let active = true;
@@ -469,7 +472,7 @@ export default function YeardleGameClient({
       <main className="container">
         <section className="card yeardle-card">
           <div className="game-meta-row">
-            <span className="chip">{contextChipLabel}</span>
+            <span className="chip">{statusChipLabel}</span>
             <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
             <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
               ? How to play
@@ -483,7 +486,7 @@ export default function YeardleGameClient({
               src={imageSrc}
               alt={puzzle.imageAlt || "Historical event"}
               className="event-image"
-              wrapperClassName="h-full w-full"
+              wrapperClassName="event-image-frame"
               overlayClassName="bg-[#faf9ff]/88 text-[color:var(--brand-strong)]"
               onError={() => setImageFailed(true)}
             />
@@ -526,11 +529,6 @@ export default function YeardleGameClient({
               {hintTemperature ? <p className="temperature-hint-trend">{hintTemperature}</p> : null}
             </div>
           ) : null}
-
-          {lockDailyCompletion && !isArchiveView && gameState !== "playing" ? (
-            <p className="next-game-copy">Next game in {nextGameCountdown || "--:--:--"}</p>
-          ) : null}
-
           {attempts.length > 0 ? (
             <div className="guess-history-wrap">
               <button
