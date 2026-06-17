@@ -26,12 +26,20 @@ export async function POST(request: Request) {
     }
 
     const mime = String(file.type || "").toLowerCase();
-    const allowedMimes = new Set(["image/jpeg", "image/jpg", "image/png", "image/avif"]);
+    const allowedMimes = new Set(["image/jpeg", "image/jpg", "image/png", "image/avif", "image/webp", "image/svg+xml"]);
     if (!allowedMimes.has(mime)) {
-      return NextResponse.json({ error: "Only JPG, PNG, and AVIF files are supported." }, { status: 400 });
+      return NextResponse.json({ error: "Only JPG, PNG, AVIF, WEBP, and SVG files are supported." }, { status: 400 });
     }
 
-    const ext = mime.includes("png") ? "png" : mime.includes("avif") ? "avif" : "jpg";
+    const ext = mime.includes("png")
+      ? "png"
+      : mime.includes("avif")
+        ? "avif"
+        : mime.includes("webp")
+          ? "webp"
+          : mime.includes("svg")
+            ? "svg"
+            : "jpg";
     const filePath = `couples/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
     const supabase = getSupabaseAgegapleAdmin();

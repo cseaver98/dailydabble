@@ -552,6 +552,19 @@
   margin: 0 auto;
   border-radius: 1rem;
   overflow: hidden;
+  background: color-mix(in srgb, var(--brand-soft) 24%, white);
+}
+
+.sportle-shell .result-modal-image-loading-overlay {
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--brand-soft) 42%, white);
+  color: var(--brand);
+}
+
+.sportle-shell .result-modal-image-spinner {
+  height: 2rem;
+  width: 2rem;
+  border-width: 2px;
 }
 
 .sportle-shell .result-modal-image {

@@ -678,8 +678,8 @@ export default function SportleGameClient({
                 alt={effectiveAnswer}
                 className="result-modal-image"
                 wrapperClassName="result-modal-image-frame"
-                overlayClassName="clue-image-loading-overlay"
-                spinnerClassName="clue-image-spinner"
+                overlayClassName="result-modal-image-loading-overlay"
+                spinnerClassName="result-modal-image-spinner"
               />
             ) : null}
             <p className="result-modal-answer">{effectiveAnswer}</p>

@@ -405,7 +405,7 @@ export default function SportleAdminTab() {
                 <input value={detailsForm.teamLogoUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, teamLogoUrl: event.target.value }))} placeholder="Team logo URL" style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/avif"
+                  accept="image/png,image/jpeg,image/jpg,image/avif,image/webp,image/svg+xml,.webp,.svg"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     void uploadImageForField("teamLogoUrl", file);
@@ -441,7 +441,7 @@ export default function SportleAdminTab() {
                 <input value={detailsForm.headshotUrl} onChange={(event) => setDetailsForm((current) => ({ ...current, headshotUrl: event.target.value }))} placeholder="Headshot URL" style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".45rem .55rem" }} />
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/avif"
+                  accept="image/png,image/jpeg,image/jpg,image/avif,image/webp,image/svg+xml,.webp,.svg"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     void uploadImageForField("headshotUrl", file);
