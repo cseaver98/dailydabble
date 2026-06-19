@@ -3,6 +3,16 @@ import { getOrCreatePlayerId } from "@/lib/player-id";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
+type GameResultStatus = "not_started" | "completed_won" | "completed_lost";
+
+type GameResultRow = {
+  game_slug: string;
+  is_win: boolean;
+  guesses_used: number;
+  max_guesses: number;
+  completed_at: string;
+};
+
 export async function GET() {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -13,7 +23,8 @@ export async function GET() {
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       const fallbackStatus = Object.fromEntries(games.map((game) => [game.slug, false]));
-      return NextResponse.json({ date: today, status: fallbackStatus, persisted: false });
+      const fallbackGameStatuses = Object.fromEntries(games.map((game) => [game.slug, { status: "not_started" as GameResultStatus }]));
+      return NextResponse.json({ date: today, status: fallbackStatus, gameStatuses: fallbackGameStatuses, persisted: false });
     }
 
     const playerId = await getOrCreatePlayerId();
@@ -21,10 +32,12 @@ export async function GET() {
 
     const { data, error } = await supabase
       .schema("core")
-      .from("completions")
-      .select("game_slug")
+      .from("game_results")
+      .select("game_slug,is_win,guesses_used,max_guesses,completed_at")
       .eq("player_id", playerId)
-      .eq("puzzle_date", today);
+      .eq("puzzle_date", today)
+      .eq("is_archive", false)
+      .returns<GameResultRow[]>();
 
     if (error) {
       return NextResponse.json(
@@ -33,10 +46,27 @@ export async function GET() {
       );
     }
 
-    const completed = new Set((data ?? []).map((row) => row.game_slug));
-    const status = Object.fromEntries(games.map((game) => [game.slug, completed.has(game.slug)]));
+    const resultsByGame = new Map((data ?? []).map((row) => [row.game_slug, row]));
+    const status = Object.fromEntries(games.map((game) => [game.slug, resultsByGame.has(game.slug)]));
+    const gameStatuses = Object.fromEntries(
+      games.map((game) => {
+        const result = resultsByGame.get(game.slug);
+        return [
+          game.slug,
+          result
+            ? {
+                status: result.is_win ? "completed_won" : "completed_lost",
+                isWin: result.is_win,
+                guessesUsed: result.guesses_used,
+                maxGuesses: result.max_guesses,
+                completedAt: result.completed_at,
+              }
+            : { status: "not_started" as GameResultStatus },
+        ];
+      }),
+    );
 
-    return NextResponse.json({ date: today, status, persisted: true });
+    return NextResponse.json({ date: today, status, gameStatuses, persisted: true, source: "game_results" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

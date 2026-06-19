@@ -3,11 +3,18 @@
 import { games } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 
 type StatusResponse = {
   date: string;
   status: Record<string, boolean>;
+  gameStatuses?: Record<string, {
+    status: "not_started" | "completed_won" | "completed_lost";
+    isWin?: boolean;
+    guessesUsed?: number;
+    maxGuesses?: number;
+    completedAt?: string;
+  }>;
 };
 
 type MobileCardMotion = {
@@ -23,6 +30,7 @@ type MobileCardMotion = {
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
+  const [gameStatuses, setGameStatuses] = useState<StatusResponse["gameStatuses"]>({});
   const [error, setError] = useState("");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
@@ -37,6 +45,7 @@ export default function Home() {
           throw new Error(payload.error ?? "Failed to load status");
         }
         setStatus(payload.status);
+        setGameStatuses(payload.gameStatuses ?? {});
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
@@ -140,6 +149,8 @@ export default function Home() {
         <div id="games" className="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2 md:gap-8">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
+            const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
+            const statusLabel = loading ? "Loading" : gameStatus === "completed_lost" ? "Missed" : complete ? "Completed" : "Not done";
             const isDoodle = game.slug === "doodle";
             const isVerble = game.slug === "verble";
             const isYeardle = game.slug === "yeardle";
@@ -291,7 +302,7 @@ export default function Home() {
                         complete ? "bg-[#b6f6ab] text-[#114c15]" : "bg-[#fbe276] text-[#4b3f00]"
                       }`}
                     >
-                      {loading ? "Loading" : complete ? "Completed" : "Not done"}
+                      {statusLabel}
                     </span>
                   </div>
 
