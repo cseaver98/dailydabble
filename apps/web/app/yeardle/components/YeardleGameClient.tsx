@@ -10,6 +10,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -135,6 +136,13 @@ const getHeatLabel = (distanceYears: number) => {
   if (distanceYears <= 15) return "Warm ☀️";
   if (distanceYears <= 40) return "Cold 🧊";
   return "Very cold 🥶";
+};
+
+const getShareHeatBlock = (attempt: Attempt) => {
+  if (attempt.direction === "exact" || Number(attempt.distanceYears || 0) <= 0) return "🟩";
+  if (Number(attempt.distanceYears || 0) <= 5) return "🟨";
+  if (Number(attempt.distanceYears || 0) <= 15) return "🟧";
+  return "🟥";
 };
 
 const isAttemptCorrect = (attempt: Attempt | null, gameState: string, resolvedAnswer: string) => {
@@ -401,33 +409,22 @@ export default function YeardleGameClient({
         ? "Colder than your previous guess."
         : "Same distance as your previous guess."
     : null;
-  const shareText = [
-    `Yeardle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
-    `${attempts.length}/${maxGuesses} tries`,
-    `Answer: ${effectiveAnswer}`,
-    toPublicAppUrl("/yeardle"),
-  ].join("\n");
+  const shareBlocks = attempts.map(getShareHeatBlock).join("");
+  const shareText = buildGameShareText({
+    gameName: "Yeardle",
+    isArchiveView,
+    puzzleDate: puzzle?.puzzleDate,
+    didWin: gameState === "won",
+    guessesUsed: attempts.length,
+    maxGuesses,
+    visualRows: shareBlocks ? [shareBlocks] : [],
+    url: toPublicAppUrl("/yeardle"),
+  });
   const handleShareResult = async () => {
-    if (!shareText) {
-      return;
-    }
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: "Yeardle", text: shareText });
-        setCopyStatus("Shared");
-        return;
-      } catch (shareError) {
-        if (shareError instanceof DOMException && shareError.name === "AbortError") {
-          return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopyStatus("Copied to clipboard");
-    } catch {
-      setCopyStatus("Share failed");
-    }
+    const shareResult = await shareResultText("Yeardle", shareText);
+    if (shareResult === "shared") setCopyStatus("Shared");
+    if (shareResult === "copied") setCopyStatus("Copied to clipboard");
+    if (shareResult === "failed") setCopyStatus("Share failed");
   };
 
   if (loading) {

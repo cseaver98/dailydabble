@@ -9,6 +9,7 @@ import HowToPlayDialog from "../../components/HowToPlayDialog";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -969,19 +970,19 @@ export default function VerbleGameClient({
 
   const shareResult = async () => {
     if (!puzzle || gameState === "playing") return;
-    const status = gameState === "won" ? `${guessesUsed}/${maxGuesses}` : "X";
-    const lines = [
-      `Verble ${puzzle.puzzleDate}`,
-      `Result: ${status}`,
-      toPublicAppUrl("/verble"),
-    ];
-    const text = lines.join("\n");
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyStatus("Copied result.");
-    } catch {
-      setCopyStatus("Could not copy.");
-    }
+    const text = buildGameShareText({
+      gameName: "Verble",
+      isArchiveView,
+      puzzleDate: puzzle.puzzleDate,
+      didWin: gameState === "won",
+      guessesUsed,
+      maxGuesses,
+      url: toPublicAppUrl("/verble"),
+    });
+    const result = await shareResultText("Verble", text);
+    if (result === "shared") setCopyStatus("Shared");
+    if (result === "copied") setCopyStatus("Copied to clipboard");
+    if (result === "failed") setCopyStatus("Share failed");
   };
 
   useEffect(() => {

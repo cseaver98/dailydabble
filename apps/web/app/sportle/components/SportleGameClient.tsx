@@ -9,6 +9,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -423,33 +424,20 @@ export default function SportleGameClient({
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const headshotClue = clues.find((clue) => typeof clue?.imageUrl === "string" && clue.imageUrl);
   const answerImageUrl = typeof headshotClue?.imageUrl === "string" ? headshotClue.imageUrl : "";
-  const shareText = [
-    `Sportle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
-    `${attempts.length}/${maxGuesses} tries`,
-    `Answer: ${effectiveAnswer}`,
-    toPublicAppUrl("/sportle"),
-  ].join("\n");
+  const shareText = buildGameShareText({
+    gameName: "Sportle",
+    isArchiveView,
+    puzzleDate: puzzle?.puzzleDate,
+    didWin: gameState === "won",
+    guessesUsed: attempts.length,
+    maxGuesses,
+    url: toPublicAppUrl("/sportle"),
+  });
   const handleShareResult = async () => {
-    if (!shareText) {
-      return;
-    }
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: "Sportle", text: shareText });
-        setCopyStatus("Shared");
-        return;
-      } catch (shareError) {
-        if (shareError instanceof DOMException && shareError.name === "AbortError") {
-          return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopyStatus("Copied to clipboard");
-    } catch {
-      setCopyStatus("Share failed");
-    }
+    const shareResult = await shareResultText("Sportle", shareText);
+    if (shareResult === "shared") setCopyStatus("Shared");
+    if (shareResult === "copied") setCopyStatus("Copied to clipboard");
+    if (shareResult === "failed") setCopyStatus("Share failed");
   };
 
   if (loading) {

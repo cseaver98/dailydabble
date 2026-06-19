@@ -9,6 +9,7 @@ import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 
 const FLIP_DURATION_MS = 260;
@@ -75,6 +76,21 @@ const toDisplayEquation = (value: string) =>
     .split("")
     .map(toDisplayEquationChar)
     .join("");
+
+const toShareEquationBlock = (char: string, feedback: string) => {
+  if (char === "=") return "=";
+  if (feedback === "correct") return "🟩";
+  if (feedback === "present") return "🟨";
+  return "⬛";
+};
+
+const buildEquationShareRows = (attempts: Attempt[]) =>
+  attempts.map((attempt) =>
+    attempt.guess
+      .split("")
+      .map((char, index) => toShareEquationBlock(char, attempt.feedback[index] || "absent"))
+      .join(""),
+  );
 
 const sanitizeEquationInput = (value: string, maxLength: number) =>
   normalizeEquationInput(value)
@@ -525,33 +541,21 @@ export default function EquadleGameClient({
       })
     : [];
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
-  const shareText = [
-    `Equadle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
-    `${attempts.length}/${maxGuesses} tries`,
-    `Answer: ${displayEffectiveAnswer}`,
-    toPublicAppUrl("/equadle"),
-  ].join("\n");
+  const shareText = buildGameShareText({
+    gameName: "Equadle",
+    isArchiveView,
+    puzzleDate: puzzle?.puzzleDate,
+    didWin: gameState === "won",
+    guessesUsed: attempts.length,
+    maxGuesses,
+    visualRows: buildEquationShareRows(attempts),
+    url: toPublicAppUrl("/equadle"),
+  });
   const handleShareResult = async () => {
-    if (!shareText) {
-      return;
-    }
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: "Equadle", text: shareText });
-        setCopyStatus("Shared");
-        return;
-      } catch (shareError) {
-        if (shareError instanceof DOMException && shareError.name === "AbortError") {
-          return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopyStatus("Copied to clipboard");
-    } catch {
-      setCopyStatus("Share failed");
-    }
+    const shareResult = await shareResultText("Equadle", shareText);
+    if (shareResult === "shared") setCopyStatus("Shared");
+    if (shareResult === "copied") setCopyStatus("Copied to clipboard");
+    if (shareResult === "failed") setCopyStatus("Share failed");
   };
 
   if (loading) {

@@ -5,6 +5,7 @@ import type { SVGProps } from "react";
 import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -632,34 +633,21 @@ export default function DoodleGameClient({
     setGuess("");
   };
 
-  const shareText = [
-    `Doodle ${isArchiveView ? `(Archive ${puzzle?.puzzleDate || ""})` : `(Today ${puzzle?.puzzleDate || ""})`}`.trim(),
-    `${attempts.length}/${maxGuesses} tries`,
-    `Answer: ${answerText}`,
-    toPublicAppUrl("/doodle"),
-  ].join("\n");
+  const shareText = buildGameShareText({
+    gameName: "Doodle",
+    isArchiveView,
+    puzzleDate: puzzle?.puzzleDate,
+    didWin: gameState === "won",
+    guessesUsed: attempts.length,
+    maxGuesses,
+    url: toPublicAppUrl("/doodle"),
+  });
   const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
   const handleShareResult = async () => {
-    if (!shareText) {
-      return;
-    }
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: "Doodle", text: shareText });
-        setCopyStatus("Shared");
-        return;
-      } catch (shareError) {
-        if (shareError instanceof DOMException && shareError.name === "AbortError") {
-          return;
-        }
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopyStatus("Copied to clipboard");
-    } catch {
-      setCopyStatus("Share failed");
-    }
+    const shareResult = await shareResultText("Doodle", shareText);
+    if (shareResult === "shared") setCopyStatus("Shared");
+    if (shareResult === "copied") setCopyStatus("Copied to clipboard");
+    if (shareResult === "failed") setCopyStatus("Share failed");
   };
 
   return (

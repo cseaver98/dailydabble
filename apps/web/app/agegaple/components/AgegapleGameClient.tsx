@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
+import { buildGameShareText, shareResultText } from "@/lib/share-results";
 import { useNextGameCountdown } from "@/lib/use-next-game-countdown";
 import AsyncImage from "../../components/AsyncImage";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -513,36 +514,23 @@ export default function AgegapleGameClient({
     return "🟥";
   }).join("");
   const shareText = puzzle
-    ? [
-        `${puzzle.personAName} + ${puzzle.personBName}`,
-        `${attempts.length}/${maxGuesses} tries`,
-        shareBlocks,
-        toPublicAppUrl("/agegaple"),
-      ].join("\n")
+    ? buildGameShareText({
+        gameName: "Agegaple",
+        isArchiveView,
+        puzzleDate: puzzle.puzzleDate,
+        didWin: Boolean(didWin),
+        guessesUsed: attempts.length,
+        maxGuesses,
+        visualRows: shareBlocks ? [shareBlocks] : [],
+        url: toPublicAppUrl("/agegaple"),
+      })
     : "";
   const handleShareResult = async () => {
     if (!shareText) return;
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          title: "Agegaple",
-          text: shareText,
-        });
-        setCopyStatus("Shared");
-        return;
-      } catch (shareError) {
-        if (shareError instanceof DOMException && shareError.name === "AbortError") {
-          return;
-        }
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopyStatus("Copied to clipboard");
-    } catch {
-      setCopyStatus("Share failed");
-    }
+    const shareResult = await shareResultText("Agegaple", shareText);
+    if (shareResult === "shared") setCopyStatus("Shared");
+    if (shareResult === "copied") setCopyStatus("Copied to clipboard");
+    if (shareResult === "failed") setCopyStatus("Share failed");
   };
 
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
