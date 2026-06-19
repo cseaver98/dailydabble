@@ -878,7 +878,7 @@ export default function AgegapleGameClient({
                 Play Archive Games
               </Link>
             </div>
-            {copyStatus && <p className={`mt-2 text-sm font-semibold ${mutedTextClass}`}>{copyStatus}</p>}
+            {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </div>
         </div>
       )}
