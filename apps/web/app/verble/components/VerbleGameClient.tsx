@@ -9,6 +9,7 @@ import HowToPlayDialog from "../../components/HowToPlayDialog";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
@@ -788,6 +789,16 @@ export default function VerbleGameClient({
           setGameState("won");
           setIsResolvingGuess(false);
           setIsResultOpen(true);
+          recordGameCompletionQuietly({
+            gameSlug: "verble",
+            puzzleId: puzzle.puzzleId,
+            puzzleDate: puzzle.puzzleDate,
+            isArchive: isArchiveView,
+            isWin: true,
+            guessesUsed: nextGuessesUsed,
+            maxGuesses,
+            resultPayload: { wordAttempts: nextAttempts },
+          });
           return;
         }
 
@@ -795,6 +806,16 @@ export default function VerbleGameClient({
           setGameState("lost");
           setIsResolvingGuess(false);
           setIsResultOpen(true);
+          recordGameCompletionQuietly({
+            gameSlug: "verble",
+            puzzleId: puzzle.puzzleId,
+            puzzleDate: puzzle.puzzleDate,
+            isArchive: isArchiveView,
+            isWin: false,
+            guessesUsed: nextGuessesUsed,
+            maxGuesses,
+            resultPayload: { wordAttempts: nextAttempts },
+          });
           return;
         }
 
@@ -910,6 +931,16 @@ export default function VerbleGameClient({
         setGameState("won");
         setIsResolvingGuess(false);
         setIsResultOpen(true);
+        recordGameCompletionQuietly({
+          gameSlug: "verble",
+          puzzleId: puzzle.puzzleId,
+          puzzleDate: puzzle.puzzleDate,
+          isArchive: isArchiveView,
+          isWin: true,
+          guessesUsed,
+          maxGuesses,
+          resultPayload: { phraseGuess: normalized },
+        });
       }, revealTotalMs);
       return;
     }
@@ -964,6 +995,16 @@ export default function VerbleGameClient({
       setGameState("lost");
       setIsResolvingGuess(false);
       setIsResultOpen(true);
+      recordGameCompletionQuietly({
+        gameSlug: "verble",
+        puzzleId: puzzle.puzzleId,
+        puzzleDate: puzzle.puzzleDate,
+        isArchive: isArchiveView,
+        isWin: false,
+        guessesUsed: maxGuesses,
+        maxGuesses,
+        resultPayload: { phraseGuess: normalized },
+      });
     }, revealTotalMs);
     setGuessesUsed(maxGuesses);
   };

@@ -9,6 +9,7 @@ import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 
@@ -460,6 +461,16 @@ export default function EquadleGameClient({
         setGameState("won");
         setMessage("");
         setResolvedAnswer(payload.answer || "");
+        recordGameCompletionQuietly({
+          gameSlug: "equadle",
+          puzzleId: puzzle.puzzleId,
+          puzzleDate: puzzle.puzzleDate,
+          isArchive: isArchiveView,
+          isWin: true,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+          resultPayload: { attempts: nextAttempts },
+        });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -479,6 +490,16 @@ export default function EquadleGameClient({
         setGameState("lost");
         setMessage("");
         setResolvedAnswer(payload.answer || "");
+        recordGameCompletionQuietly({
+          gameSlug: "equadle",
+          puzzleId: puzzle.puzzleId,
+          puzzleDate: puzzle.puzzleDate,
+          isArchive: isArchiveView,
+          isWin: false,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+          resultPayload: { attempts: nextAttempts },
+        });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -497,7 +518,7 @@ export default function EquadleGameClient({
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Guess must be a valid equation");
     }
-  }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, lockDailyCompletion, maxGuesses, puzzle]);
+  }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, isArchiveView, lockDailyCompletion, maxGuesses, puzzle]);
 
   useEffect(() => {
     if (gameState !== "playing") {

@@ -1,4 +1,5 @@
 import { allowedGameSlugs } from "@/lib/games";
+import { recordGameResult } from "@/lib/account-results";
 import { getOrCreatePlayerId } from "@/lib/player-id";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -28,6 +29,12 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as {
       gameSlug?: string;
       puzzleDate?: string;
+      puzzleId?: string;
+      isArchive?: boolean;
+      isWin?: boolean;
+      guessesUsed?: number;
+      maxGuesses?: number;
+      resultPayload?: Record<string, unknown>;
       metadata?: Record<string, unknown>;
     };
 
@@ -38,6 +45,26 @@ export async function POST(req: NextRequest) {
     const date = body.puzzleDate ?? new Date().toISOString().slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ error: "Invalid puzzleDate" }, { status: 400, headers });
+    }
+
+    if (
+      body.puzzleId &&
+      typeof body.isWin === "boolean" &&
+      Number.isInteger(body.guessesUsed) &&
+      Number.isInteger(body.maxGuesses)
+    ) {
+      await recordGameResult({
+        gameSlug: body.gameSlug,
+        puzzleId: body.puzzleId,
+        puzzleDate: date,
+        isArchive: Boolean(body.isArchive),
+        isWin: body.isWin,
+        guessesUsed: Number(body.guessesUsed),
+        maxGuesses: Number(body.maxGuesses),
+        resultPayload: body.resultPayload ?? body.metadata ?? {},
+      });
+
+      return NextResponse.json({ ok: true, persisted: "game_results" }, { headers });
     }
 
     const playerId = await getOrCreatePlayerId();

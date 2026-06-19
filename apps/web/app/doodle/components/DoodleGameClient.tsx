@@ -5,6 +5,7 @@ import type { SVGProps } from "react";
 import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -594,6 +595,16 @@ export default function DoodleGameClient({
       setShouldAnimateWinReveal(true);
       setGameState("won");
       setMessage(finalMessage);
+      recordGameCompletionQuietly({
+        gameSlug: "doodle",
+        puzzleId: puzzle.puzzleId,
+        puzzleDate: puzzle.puzzleDate,
+        isArchive: isArchiveView,
+        isWin: true,
+        guessesUsed: nextAttempts.length,
+        maxGuesses,
+        resultPayload: { attempts: nextAttempts },
+      });
       if (completionKey && lockDailyCompletion) {
         window.localStorage.setItem(
           completionKey,
@@ -613,6 +624,16 @@ export default function DoodleGameClient({
       const finalMessage = `Out of guesses. The doodle was ${answerText}.`;
       setGameState("lost");
       setMessage(finalMessage);
+      recordGameCompletionQuietly({
+        gameSlug: "doodle",
+        puzzleId: puzzle.puzzleId,
+        puzzleDate: puzzle.puzzleDate,
+        isArchive: isArchiveView,
+        isWin: false,
+        guessesUsed: nextAttempts.length,
+        maxGuesses,
+        resultPayload: { attempts: nextAttempts },
+      });
       if (completionKey && lockDailyCompletion) {
         window.localStorage.setItem(
           completionKey,

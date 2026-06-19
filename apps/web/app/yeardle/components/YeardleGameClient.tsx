@@ -10,6 +10,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
+import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
@@ -339,6 +340,16 @@ export default function YeardleGameClient({
         setMessage(finalMessage);
         setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
         setIsResultOpen(true);
+        recordGameCompletionQuietly({
+          gameSlug: "yeardle",
+          puzzleId: puzzle.puzzleId,
+          puzzleDate: puzzle.puzzleDate,
+          isArchive: isArchiveView,
+          isWin: true,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+          resultPayload: { attempts: nextAttempts },
+        });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
@@ -361,6 +372,16 @@ export default function YeardleGameClient({
         setMessage(finalMessage);
         setResolvedAnswer(`${payload.answerYear} — ${payload.eventTitle}`);
         setIsResultOpen(true);
+        recordGameCompletionQuietly({
+          gameSlug: "yeardle",
+          puzzleId: puzzle.puzzleId,
+          puzzleDate: puzzle.puzzleDate,
+          isArchive: isArchiveView,
+          isWin: false,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+          resultPayload: { attempts: nextAttempts },
+        });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
             completionKey,
