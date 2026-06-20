@@ -1,6 +1,6 @@
 import { DailydabbleNav } from "@dailydabble/ui";
 
-const legalContactEmail = process.env.LEGAL_CONTACT_EMAIL ?? "legal@dailydabble.app";
+const legalContactEmail = "support@dailydabble.app";
 
 export default function TermsPage() {
   return (
@@ -13,37 +13,42 @@ export default function TermsPage() {
 
           <div className="mt-6 space-y-4 text-[15px] leading-7 text-[#3e4245]">
             <p>
-              Dailydabble and its games are provided for entertainment and educational use. By using any Dailydabble site,
-              you agree not to misuse the service, interfere with operations, or attempt abusive scraping or automated abuse.
+              DailyDabble and its games are provided for entertainment and informational use. By using any
+              DailyDabble site, you agree not to misuse the service, interfere with operations, or attempt abusive
+              scraping, automation, or other disruptive behavior.
             </p>
             <p>
-              We may add, remove, or change puzzles, schedules, and features at any time. Optional account features may be
-              introduced later; if they are, these terms and the privacy policy will be updated before launch.
+              We may add, remove, or change puzzles, schedules, game mechanics, and features at any time. Some account,
+              login, or cross-device features may be available now or introduced over time, and continued use of the
+              service remains subject to these terms and our privacy policy.
             </p>
             <p>
-              Dailydabble content includes original game logic, curation, and editorial writing. Third-party images, names,
+              DailyDabble includes original game logic, curation, and editorial content. Third-party names, images,
               and references remain the property of their respective rights holders.
             </p>
 
-            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Game-Specific Notes</h2>
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Use Of The Service</h2>
             <ul className="list-disc space-y-2 pl-5">
-              <li>
-                Agegaple includes editorial and commentary context around public figures and relationships. Some limited use of
-                third-party material may rely on fair-use and related legal doctrines where applicable.
-              </li>
-              <li>Doodle, Equadle, Sportle, Moviedle, and Yeardle are daily challenge games provided on an as-is basis.</li>
-              <li>Archive modes may expose past scheduled puzzles and may differ from the current day experience.</li>
+              <li>Daily games, archive games, and account-related features may differ from one another and may change over time.</li>
+              <li>Some parts of the service may rely on curated editorial context, reference material, and third-party source material.</li>
+              <li>Archive access, unlock flows, and past scheduled content may not match the current day experience.</li>
             </ul>
+
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Accounts And Access</h2>
+            <p>
+              If login or account features are offered, you are responsible for your access methods and for using those
+              features lawfully. We may suspend or restrict access to protect the service, users, or our systems.
+            </p>
 
             <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Intellectual Property And Claims</h2>
             <p>
-              If you believe content on Dailydabble infringes your rights, contact {legalContactEmail} with the URL,
+              If you believe content on DailyDabble infringes your rights, contact {legalContactEmail} with the URL,
               ownership claim, and requested action.
             </p>
 
             <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Disclaimer</h2>
             <p>
-              Dailydabble is provided as-is and as-available, without warranties of uninterrupted availability,
+              DailyDabble is provided as-is and as-available, without warranties of uninterrupted availability,
               accuracy, or fitness for a specific purpose.
             </p>
           </div>

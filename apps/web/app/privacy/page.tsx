@@ -1,6 +1,6 @@
 import { DailydabbleNav } from "@dailydabble/ui";
 
-const legalContactEmail = process.env.LEGAL_CONTACT_EMAIL ?? "legal@dailydabble.app";
+const legalContactEmail = "support@dailydabble.app";
 
 export default function PrivacyPage() {
   return (
@@ -13,30 +13,46 @@ export default function PrivacyPage() {
 
           <div className="mt-6 space-y-4 text-[15px] leading-7 text-[#3e4245]">
             <p>
-              Dailydabble currently stores most game progress locally in your browser (for example guesses, completion
-              state, and in-progress puzzle state).
+              DailyDabble stores some game data locally in your browser and some operational game data on our servers.
+              This can include in-progress puzzle state, guesses, completion status, and related records needed to run
+              the games and show your current progress.
             </p>
             <p>
-              We may store puzzle content, scheduling, and basic operational records in Supabase-backed databases. Our
-              infrastructure providers may process standard technical logs such as IP address, request metadata, and
-              browser details for security, reliability, and abuse prevention.
+              We store puzzle content, scheduling data, player identifiers, and basic operational records in
+              Supabase-backed systems and related infrastructure. Our service providers may also process standard
+              technical logs such as IP address, browser details, device information, and request metadata for
+              security, reliability, and abuse prevention.
             </p>
             <p>
-              We do not currently sell personal data. If optional sign-in, analytics, or cross-device history are introduced,
-              this policy will be updated before those features go live.
+              We do not sell personal data. If we materially change what personal data we collect or how we use it, we
+              will update this policy.
             </p>
 
-            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Game-Specific Notes</h2>
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Cookies And Local Storage</h2>
+            <p>
+              DailyDabble uses browser storage and cookies to keep the games working. This may include local storage for
+              active game sessions and completion state, a persistent player identifier cookie, and limited access
+              cookies used for features like archive unlocking.
+            </p>
+
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Accounts And Authentication</h2>
+            <p>
+              Some account, sign-in, or cross-device features may be available now or expanded over time. When you use
+              those features, we may process account identifiers, authentication state, and related records needed to
+              provide access and keep your account secure.
+            </p>
+
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Game And Editorial Content</h2>
             <ul className="list-disc space-y-2 pl-5">
-              <li>Agegaple includes editorial metadata and curation records for puzzle operations.</li>
-              <li>Doodle, Equadle, Sportle, Moviedle, and Yeardle use local game-state storage for active play sessions.</li>
-              <li>Hub completion status reflects your game results and may be persisted server-side when enabled.</li>
+              <li>Games may use curated puzzle records, scheduling data, and editorial context to power gameplay and results.</li>
+              <li>Some games may display images, descriptions, or other reference material as part of the play experience.</li>
+              <li>Hub and game completion status may be stored server-side to reflect your results across DailyDabble.</li>
             </ul>
 
             <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Your Choices</h2>
             <p>
-              You can clear local game data at any time by clearing site storage in your browser. For privacy requests,
-              contact {legalContactEmail}.
+              You can clear local game data at any time by clearing site storage in your browser. If you have privacy
+              questions or requests, contact {legalContactEmail}.
             </p>
           </div>
         </section>
