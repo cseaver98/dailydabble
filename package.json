@@ -12,7 +12,11 @@
     "dev:all": "concurrently -n web,admin -c green,cyan \"npm run dev:web\" \"npm run dev:admin\"",
     "seed:moviedle-titles": "node scripts/seed-moviedle-title-library.mjs",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "deploy:prod:web": "npx vercel link --yes --project dailydabble-web --scope cseaver98-4771s-projects && npx vercel --prod --yes --scope cseaver98-4771s-projects",
+    "deploy:prod:admin": "npx vercel link --yes --project dailydabble-admin --scope cseaver98-4771s-projects && npx vercel --prod --yes --scope cseaver98-4771s-projects",
+    "deploy:staging:web": "npx vercel link --yes --project dailydabble-web-staging --scope cseaver98-4771s-projects && npx vercel --prod --yes --scope cseaver98-4771s-projects",
+    "deploy:staging:admin": "npx vercel link --yes --project dailydabble-admin-staging --scope cseaver98-4771s-projects && npx vercel --prod --yes --scope cseaver98-4771s-projects"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

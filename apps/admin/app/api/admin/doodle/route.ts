@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 
 import { NextResponse } from "next/server";
@@ -323,6 +323,51 @@ const listStorageSvgs = async (): Promise<StorageSvgItem[]> => {
     });
 };
 
+const listLocalRawSvgs = (): StorageSvgItem[] => {
+  const rawDir = getRawDir();
+  if (!existsSync(rawDir)) {
+    return [];
+  }
+
+  return readdirSync(rawDir)
+    .filter((filename) => filename.toLowerCase().endsWith(".svg"))
+    .map((filename) => {
+      const slug = basename(filename, ".svg");
+      const fullPath = resolve(rawDir, filename);
+      const stats = statSync(fullPath);
+
+      return {
+        slug,
+        filename,
+        updatedAt: stats.mtime.toISOString(),
+      };
+    });
+};
+
+const listAvailableSvgs = async (): Promise<StorageSvgItem[]> => {
+  const merged = new Map<string, StorageSvgItem>();
+
+  for (const item of listLocalRawSvgs()) {
+    merged.set(item.slug, item);
+  }
+
+  for (const item of await listStorageSvgs()) {
+    const existing = merged.get(item.slug);
+    if (!existing) {
+      merged.set(item.slug, item);
+      continue;
+    }
+
+    merged.set(item.slug, {
+      slug: item.slug,
+      filename: item.filename || existing.filename,
+      updatedAt: item.updatedAt || existing.updatedAt,
+    });
+  }
+
+  return Array.from(merged.values());
+};
+
 const downloadStorageSvg = async (slug: string): Promise<string | null> => {
   const supabase = getDoodleSupabaseAdmin();
   const { data, error } = await supabase.storage.from(DOODLE_STORAGE_BUCKET).download(storagePathForSlug(slug));
@@ -372,7 +417,7 @@ const buildOverview = async () => {
   const manifestSlugs = readManifestSlugs();
   const previewDir = getPreviewDir();
   const nowIso = new Date().toISOString();
-  const storageFiles = await listStorageSvgs();
+  const storageFiles = await listAvailableSvgs();
   const today = getDateInTimeZone(process.env.PUZZLE_TIMEZONE || "America/New_York");
 
   const { data: puzzleRows, error: puzzleRowsError } = await supabase
@@ -652,7 +697,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const rawSvg = await downloadStorageSvg(normalizedSlug);
+    let rawSvg = await downloadStorageSvg(normalizedSlug);
+    if (!rawSvg) {
+      const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
+      if (existsSync(localPath)) {
+        rawSvg = readFileSync(localPath, "utf8");
+      }
+    }
+
     if (!rawSvg) {
       return NextResponse.json({ error: "Doodle file not found" }, { status: 404 });
     }
@@ -681,7 +733,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing slug" }, { status: 400 });
     }
 
-    const rawSvg = await downloadStorageSvg(normalizedSlug);
+    let rawSvg = await downloadStorageSvg(normalizedSlug);
+    if (!rawSvg) {
+      const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
+      if (existsSync(localPath)) {
+        rawSvg = readFileSync(localPath, "utf8");
+      }
+    }
+
     if (!rawSvg) {
       return NextResponse.json({ error: "Doodle file not found" }, { status: 404 });
     }

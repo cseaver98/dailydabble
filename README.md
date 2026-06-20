@@ -34,6 +34,15 @@ npm run lint
 npm run build
 ```
 
+Deploy shortcuts:
+
+```bash
+npm run deploy:staging:web
+npm run deploy:staging:admin
+npm run deploy:prod:web
+npm run deploy:prod:admin
+```
+
 ## App Docs
 
 - Web app details: `apps/web/README.md`

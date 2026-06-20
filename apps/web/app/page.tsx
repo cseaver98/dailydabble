@@ -4,6 +4,7 @@ import { games } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import { CSSProperties, useEffect, useState } from "react";
+import AccountNav from "./components/AccountNav";
 
 type StatusResponse = {
   date: string;
@@ -130,14 +131,7 @@ export default function Home() {
     <>
       <DailydabbleNav
         headerClassName="hub-nav"
-        rightContent={
-          <a
-            href="#"
-            className="font-headline inline-flex h-[36px] items-center justify-center rounded-full bg-[#2f672d] px-5 text-sm font-bold text-[#d1ffc7] transition hover:opacity-90"
-          >
-            Login
-          </a>
-        }
+        rightContent={<AccountNav />}
       />
 
       <main className="min-h-screen bg-transparent px-5 pb-12 text-[#2c2f31] sm:px-8">

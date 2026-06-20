@@ -1,0 +1,4 @@
+-- Local development seed placeholder.
+-- Run `node scripts/sync-local-prod-support-data.mjs` after `supabase db reset`
+-- to copy the first two production games per game plus production support data
+-- into the local Supabase database.

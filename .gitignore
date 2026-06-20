@@ -43,6 +43,8 @@ next-env.d.ts
 # Supabase local state
 supabase/.temp/
 **/supabase/.temp/
+supabase/.branches/
+**/supabase/.branches/
 
 # Doodle local pipeline artifacts
 apps/web/content/doodle/admin/review-state.json
