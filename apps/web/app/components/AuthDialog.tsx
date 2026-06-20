@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import type { AuthError } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
 
 type AuthDialogProps = {
@@ -13,6 +14,14 @@ type AuthDialogProps = {
 const getRedirectTo = () => {
   const next = `${window.location.pathname}${window.location.search}`;
   return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+};
+
+const formatAuthError = (error: AuthError) => {
+  if (error.code === "over_email_send_rate_limit" || error.status === 429) {
+    return "Login links are temporarily limited. Check your inbox, or try again in a few minutes.";
+  }
+
+  return error.message;
 };
 
 export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDialogProps) {
@@ -49,7 +58,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(formatAuthError(signInError));
       setLoadingProvider(null);
     }
   };
@@ -74,7 +83,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
     });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(formatAuthError(signInError));
     } else {
       setMessage("Check your email for a secure login link.");
     }
