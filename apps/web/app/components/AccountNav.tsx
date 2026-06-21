@@ -95,9 +95,16 @@ export default function AccountNav() {
           <Link
             href="/account"
             onClick={() => setIsMenuOpen(false)}
+            className="block w-full rounded-xl px-3 py-2 text-left text-sm font-bold text-[#2c2f31] transition hover:bg-[#eff1f4]"
+          >
+            Account
+          </Link>
+          <Link
+            href="/account/stats"
+            onClick={() => setIsMenuOpen(false)}
             className="mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-bold text-[#2c2f31] transition hover:bg-[#eff1f4]"
           >
-            Account & stats
+            Stats
           </Link>
           <button
             type="button"
