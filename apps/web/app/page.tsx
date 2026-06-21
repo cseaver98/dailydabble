@@ -371,8 +371,8 @@ export default function Home() {
         </div>
         <section className="glass-nav mx-auto mt-12 max-w-3xl rounded-[2rem] p-8 text-center sm:p-10">
           <p className="font-headline inline-flex items-center justify-center gap-2 text-2xl font-extrabold text-[#2c2f31]">
-            <span>{isLoggedIn ? "Check Your Stats" : "Become a Dabbler"}</span>
-            {isLoggedIn ? (
+            <span>{loading ? <LoadingLabel text="Loading" /> : isLoggedIn ? "Check Your Stats" : "Become a Dabbler"}</span>
+            {isLoggedIn && !loading ? (
               <svg
                 aria-hidden="true"
                 className="h-6 w-6 text-[#2c2f31]"
@@ -397,27 +397,31 @@ export default function Home() {
               </svg>
             ) : null}
           </p>
-          <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
-            {isLoggedIn
-              ? "See your win rates, streaks, guesses, and progress across every DailyDabble game."
-              : "Track streaks, compare times with friends, and unlock account-level progress across every game."}
-          </p>
-          {isLoggedIn ? (
-            <Link
-              href="/account/stats"
-              className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
-            >
-              View Stats
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsAuthOpen(true)}
-              className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
-            >
-              Create Free Account
-            </button>
-          )}
+          {!loading ? (
+            <>
+              <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
+                {isLoggedIn
+                  ? "See your win rates, streaks, guesses, and progress across every DailyDabble game."
+                  : "Track streaks, compare times with friends, and unlock account-level progress across every game."}
+              </p>
+              {isLoggedIn ? (
+                <Link
+                  href="/account/stats"
+                  className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
+                >
+                  View Stats
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAuthOpen(true)}
+                  className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
+                >
+                  Create Free Account
+                </button>
+              )}
+            </>
+          ) : null}
         </section>
         <section className="mx-auto mt-6 max-w-3xl text-center">
           <p className="text-sm text-[#595c5e]">
