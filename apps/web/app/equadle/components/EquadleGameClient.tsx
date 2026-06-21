@@ -10,6 +10,7 @@ import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
+import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 
@@ -469,7 +470,14 @@ export default function EquadleGameClient({
           isWin: true,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { equation: toDisplayEquation(payload.answer || "") },
+            final: { guess: toDisplayEquation(payload.guess || ""), feedback: nextAttempts.at(-1)?.feedback ?? [] },
+            isWin: true,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
@@ -498,7 +506,14 @@ export default function EquadleGameClient({
           isWin: false,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { equation: toDisplayEquation(payload.answer || "") },
+            final: { guess: toDisplayEquation(payload.guess || ""), feedback: nextAttempts.at(-1)?.feedback ?? [] },
+            isWin: false,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
+import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -603,7 +604,14 @@ export default function DoodleGameClient({
         isWin: true,
         guessesUsed: nextAttempts.length,
         maxGuesses,
-        resultPayload: { attempts: nextAttempts },
+        resultPayload: buildResultPayload({
+          attempts: nextAttempts,
+          answer: { value: answerText, aliases: puzzle.aliases ?? [] },
+          final: { guess: normalized, isCorrect: true },
+          isWin: true,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+        }),
       });
       if (completionKey && lockDailyCompletion) {
         window.localStorage.setItem(
@@ -632,7 +640,14 @@ export default function DoodleGameClient({
         isWin: false,
         guessesUsed: nextAttempts.length,
         maxGuesses,
-        resultPayload: { attempts: nextAttempts },
+        resultPayload: buildResultPayload({
+          attempts: nextAttempts,
+          answer: { value: answerText, aliases: puzzle.aliases ?? [] },
+          final: { guess: normalized, isCorrect: false },
+          isWin: false,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+        }),
       });
       if (completionKey && lockDailyCompletion) {
         window.localStorage.setItem(

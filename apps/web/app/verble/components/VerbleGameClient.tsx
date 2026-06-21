@@ -10,6 +10,7 @@ import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
+import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
@@ -797,7 +798,14 @@ export default function VerbleGameClient({
             isWin: true,
             guessesUsed: nextGuessesUsed,
             maxGuesses,
-            resultPayload: { wordAttempts: nextAttempts },
+            resultPayload: buildResultPayload({
+              attempts: nextAttempts,
+              answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+              final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
+              isWin: true,
+              guessesUsed: nextGuessesUsed,
+              maxGuesses,
+            }),
           });
           return;
         }
@@ -814,7 +822,14 @@ export default function VerbleGameClient({
             isWin: false,
             guessesUsed: nextGuessesUsed,
             maxGuesses,
-            resultPayload: { wordAttempts: nextAttempts },
+            resultPayload: buildResultPayload({
+              attempts: nextAttempts,
+              answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+              final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
+              isWin: false,
+              guessesUsed: nextGuessesUsed,
+              maxGuesses,
+            }),
           });
           return;
         }
@@ -939,7 +954,16 @@ export default function VerbleGameClient({
           isWin: true,
           guessesUsed,
           maxGuesses,
-          resultPayload: { phraseGuess: normalized },
+          resultPayload: buildResultPayload({
+            attempts: wordAttempts,
+            answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+            final: { type: "phrase", guess: normalized, isCorrect: true },
+            isWin: true,
+            guessesUsed,
+            maxGuesses,
+            submittedGuesses: wordAttempts.length + 1,
+            stats: { usedFullPhraseGuess: true },
+          }),
         });
       }, revealTotalMs);
       return;
@@ -1003,7 +1027,16 @@ export default function VerbleGameClient({
         isWin: false,
         guessesUsed: maxGuesses,
         maxGuesses,
-        resultPayload: { phraseGuess: normalized },
+        resultPayload: buildResultPayload({
+          attempts: wordAttempts,
+          answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+          final: { type: "phrase", guess: normalized, isCorrect: false },
+          isWin: false,
+          guessesUsed: maxGuesses,
+          maxGuesses,
+          submittedGuesses: wordAttempts.length + 1,
+          stats: { usedFullPhraseGuess: true },
+        }),
       });
     }, revealTotalMs);
     setGuessesUsed(maxGuesses);

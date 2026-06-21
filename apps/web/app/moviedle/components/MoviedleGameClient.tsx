@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
+import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -422,7 +423,14 @@ export default function MoviedleGameClient({
           isWin: true,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { title, details: normalizeRevealedDetails(payload.answerDetails) },
+            final: { guess: trimmed, normalizedGuess: normalizeGuess(trimmed), isCorrect: true },
+            isWin: true,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
 
         if (completionKey && lockDailyCompletion) {
@@ -460,7 +468,14 @@ export default function MoviedleGameClient({
           isWin: false,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { title, details: normalizeRevealedDetails(payload.answerDetails) },
+            final: { guess: trimmed, normalizedGuess: normalizeGuess(trimmed), isCorrect: false },
+            isWin: false,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
 
         if (completionKey && lockDailyCompletion) {

@@ -5,6 +5,7 @@ import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailyd
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toPublicAppUrl } from "@/lib/app-url";
 import { recordGameCompletionQuietly } from "@/lib/record-game-completion";
+import { buildResultPayload } from "@/lib/result-payload";
 import { buildGameShareText, shareResultText } from "@/lib/share-results";
 import { useNextGameCountdown } from "@/lib/use-next-game-countdown";
 import AsyncImage from "../../components/AsyncImage";
@@ -472,12 +473,18 @@ export default function AgegapleGameClient({
         isWin: didWin,
         guessesUsed: nextAttempts.length,
         maxGuesses,
-        resultPayload: {
+        resultPayload: buildResultPayload({
           attempts: nextAttempts,
-          guessYears: data.guessYears,
-          roundedAgeGapYears: data.roundedAgeGapYears,
-          absErrorYears: data.absErrorYears,
-        },
+          answer: { roundedAgeGapYears: data.roundedAgeGapYears },
+          final: {
+            guessYears: data.guessYears,
+            absErrorYears: data.absErrorYears,
+            direction: attempt.direction,
+          },
+          isWin: didWin,
+          guessesUsed: nextAttempts.length,
+          maxGuesses,
+        }),
       });
       if (lockDailyCompletion) {
         const completion: StoredCompletion = {

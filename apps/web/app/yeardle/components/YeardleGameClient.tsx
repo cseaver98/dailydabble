@@ -11,6 +11,7 @@ import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
+import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
@@ -348,7 +349,14 @@ export default function YeardleGameClient({
           isWin: true,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { year: payload.answerYear, eventTitle: payload.eventTitle },
+            final: { guessYear: numericGuess, distanceYears: attempt.distanceYears, direction: attempt.direction },
+            isWin: true,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
@@ -380,7 +388,14 @@ export default function YeardleGameClient({
           isWin: false,
           guessesUsed: nextAttempts.length,
           maxGuesses,
-          resultPayload: { attempts: nextAttempts },
+          resultPayload: buildResultPayload({
+            attempts: nextAttempts,
+            answer: { year: payload.answerYear, eventTitle: payload.eventTitle },
+            final: { guessYear: numericGuess, distanceYears: attempt.distanceYears, direction: attempt.direction },
+            isWin: false,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
         });
         if (completionKey && lockDailyCompletion) {
           window.localStorage.setItem(
