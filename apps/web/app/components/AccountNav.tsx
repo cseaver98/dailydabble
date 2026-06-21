@@ -40,9 +40,11 @@ export default function AccountNav() {
     const { data: subscription } = supabase.auth.onAuthStateChange(() => {
       void loadUser();
     });
+    window.addEventListener("dailydabble:profile-updated", loadUser);
 
     return () => {
       isMounted = false;
+      window.removeEventListener("dailydabble:profile-updated", loadUser);
       subscription.subscription.unsubscribe();
     };
   }, [supabase]);

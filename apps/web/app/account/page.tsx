@@ -3,6 +3,8 @@ import Link from "next/link";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../components/AccountNav";
 import AccountLoginPanel from "./AccountLoginPanel";
+import ProfileForm from "./ProfileForm";
+import { getProfile } from "@/lib/account-profile";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
 export const metadata: Metadata = {
@@ -30,7 +32,8 @@ export default async function AccountPage() {
     );
   }
 
-  const displayName = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Dabbler";
+  const profile = await getProfile(user.id);
+  const displayName = profile?.displayName ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Dabbler";
   const email = user.email ?? "Private email";
   const provider = formatProvider(user.app_metadata?.provider);
   const createdAt = user.created_at ? new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(user.created_at)) : "Unknown";
@@ -72,10 +75,7 @@ export default async function AccountPage() {
             <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
               <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Profile</p>
               <div className="mt-5 grid gap-3">
-                <div className="rounded-2xl bg-[#f5f6f9] px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Display name</p>
-                  <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{displayName}</p>
-                </div>
+                <ProfileForm initialDisplayName={displayName} />
                 <div className="rounded-2xl bg-[#f5f6f9] px-4 py-3">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Email</p>
                   <p className="mt-1 break-words text-base font-extrabold text-[#2c2f31]">{email}</p>
