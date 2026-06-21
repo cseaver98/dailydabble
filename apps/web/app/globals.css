@@ -88,18 +88,109 @@ body {
 
 .archive-complete-badge {
   position: absolute;
-  right: 0.85rem;
   top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
   border-radius: 999px;
   background: #b6f6ab;
   color: #114c15;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--font-plus-jakarta-sans), sans-serif;
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   line-height: 1;
   padding: 0.34rem 0.48rem;
   text-transform: uppercase;
+}
+
+.archive-not-done-badge {
+  align-items: center;
+  background: #fbe276;
+  border-radius: 999px;
+  color: #4b3f00;
+  display: inline-flex;
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 0.34rem 0.48rem;
+  position: absolute;
+  left: 50%;
+  top: 0.75rem;
+  transform: translateX(-50%);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.archive-lock-badge {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 0.34rem 0.48rem;
+  position: absolute;
+  left: 50%;
+  top: 0.75rem;
+  transform: translateX(-50%);
+  text-transform: uppercase;
+}
+
+.archive-complete-check {
+  border-bottom: 0.16rem solid #114c15;
+  border-left: 0.16rem solid #114c15;
+  display: inline-block;
+  height: 0.5rem;
+  transform: translateY(-0.125rem) rotate(-45deg);
+  width: 0.875rem;
+}
+
+.archive-tile-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.archive-tile-date {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 1.2rem);
+  transform: translateX(-50%);
+}
+
+.archive-tile-date-hidden {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .archive-complete-badge,
+  .archive-not-done-badge,
+  .archive-lock-badge {
+    gap: 0.25rem;
+    font-size: 0.52rem;
+    letter-spacing: 0.055em;
+    padding: 0.28rem 0.34rem;
+  }
+
+  .archive-complete-check {
+    border-bottom-width: 0.13rem;
+    border-left-width: 0.13rem;
+    height: 0.42rem;
+    width: 0.72rem;
+  }
 }
 
 @media (hover: none) and (pointer: coarse) {

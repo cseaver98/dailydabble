@@ -48,12 +48,24 @@ export default function LockedArchiveTile({
     return stepIndex > 0 ? `Secret pattern progress ${stepIndex} of ${CLICK_PATTERN.length}` : "Locked archive tile";
   }, [isLocked, stepIndex]);
 
+  const completedBadge = isCompleted ? (
+    <span className="archive-complete-badge">
+      <span>Completed</span>
+      <span
+        aria-hidden
+        className="archive-complete-check"
+      />
+    </span>
+  ) : null;
+  const notDoneBadge = !isCompleted && !isLocked ? <span className="archive-not-done-badge">Not done</span> : null;
+
   if (!isLocked) {
     return (
       <Link className="archive-tile" href={href}>
-        {isCompleted ? <span className="archive-complete-badge">Done</span> : null}
+        {completedBadge}
+        {notDoneBadge}
         <span className="archive-tile-title">{tileLabel}</span>
-        {hideDate ? null : <span className="archive-tile-date">{dateLabel}</span>}
+        <span className={`archive-tile-date ${hideDate ? "archive-tile-date-hidden" : ""}`}>{dateLabel}</span>
       </Link>
     );
   }
@@ -85,9 +97,9 @@ export default function LockedArchiveTile({
       title={lockHint}
     >
       <span className="archive-lock-badge">Locked</span>
-      {isCompleted ? <span className="archive-complete-badge">Done</span> : null}
+      {completedBadge}
       <span className="archive-tile-title">{tileLabel}</span>
-      {hideDate ? null : <span className="archive-tile-date">{dateLabel}</span>}
+      <span className={`archive-tile-date ${hideDate ? "archive-tile-date-hidden" : ""}`}>{dateLabel}</span>
     </button>
   );
 }

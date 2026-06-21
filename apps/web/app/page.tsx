@@ -325,7 +325,7 @@ export default function Home() {
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <h2 className="font-headline text-3xl font-bold text-[#2c2f31]">{game.name}</h2>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
                         complete
                           ? "bg-[#b6f6ab] text-[#114c15]"
                           : lockedFromStarting
@@ -333,7 +333,13 @@ export default function Home() {
                             : "bg-[#fbe276] text-[#4b3f00]"
                       }`}
                     >
-                      {statusLabel}
+                      <span>{statusLabel}</span>
+                      {complete ? (
+                        <span
+                          aria-hidden
+                          className="inline-block h-2 w-3.5 -translate-y-0.5 rotate-[-45deg] border-b-[0.16rem] border-l-[0.16rem] border-[#114c15]"
+                        />
+                      ) : null}
                     </span>
                   </div>
 
