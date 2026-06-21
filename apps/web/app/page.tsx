@@ -7,6 +7,7 @@ import Link from "next/link";
 import { CSSProperties, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
+import LoadingLabel from "./components/LoadingLabel";
 
 type StatusResponse = {
   date: string;
@@ -327,15 +328,19 @@ export default function Home() {
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <h2 className="font-headline text-3xl font-bold text-[#2c2f31]">{game.name}</h2>
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-                        complete
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wider ${
+                        loading ? "normal-case" : "uppercase"
+                      } ${
+                        loading
+                          ? "bg-[#eff1f4] text-[#595c5e]"
+                          : complete
                           ? "bg-[#d1ffc7] text-[#114c15]"
                           : lockedFromStarting
                             ? "bg-[#eff1f4] text-[#595c5e]"
                             : "bg-[#fff2a6] text-[#4b3f00]"
                       }`}
                     >
-                      <span>{statusLabel}</span>
+                      <span>{loading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
                       {complete ? (
                         <span
                           aria-hidden

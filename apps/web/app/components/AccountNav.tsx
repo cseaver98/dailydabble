@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AuthDialog from "./AuthDialog";
+import LoadingLabel from "./LoadingLabel";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
 
 type AccountUser = {
@@ -14,6 +15,7 @@ type AccountUser = {
 
 export default function AccountNav() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -49,6 +51,25 @@ export default function AccountNav() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setIsMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isMenuOpen]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -61,7 +82,7 @@ export default function AccountNav() {
   if (loading) {
     return (
       <span className="font-headline inline-flex h-[36px] items-center justify-center rounded-full bg-[#eff1f4] px-5 text-sm font-bold text-[#75777a]">
-        Loading
+        <LoadingLabel text="Loading" />
       </span>
     );
   }
@@ -84,7 +105,7 @@ export default function AccountNav() {
   const label = user.displayName || user.email || "Account";
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         type="button"
         onClick={() => setIsMenuOpen((current) => !current)}
