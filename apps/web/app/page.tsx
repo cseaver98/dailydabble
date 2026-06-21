@@ -329,10 +329,10 @@ export default function Home() {
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
                         complete
-                          ? "bg-[#b6f6ab] text-[#114c15]"
+                          ? "bg-[#d1ffc7] text-[#114c15]"
                           : lockedFromStarting
                             ? "bg-[#eff1f4] text-[#595c5e]"
-                            : "bg-[#fbe276] text-[#4b3f00]"
+                            : "bg-[#fff2a6] text-[#4b3f00]"
                       }`}
                     >
                       <span>{statusLabel}</span>

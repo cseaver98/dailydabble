@@ -92,7 +92,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   border-radius: 999px;
-  background: #b6f6ab;
+  background: #d1ffc7;
   color: #114c15;
   display: inline-flex;
   align-items: center;
@@ -108,7 +108,7 @@ body {
 
 .archive-not-done-badge {
   align-items: center;
-  background: #fbe276;
+  background: #fff2a6;
   border-radius: 999px;
   color: #4b3f00;
   display: inline-flex;
