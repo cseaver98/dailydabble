@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import AuthDialog from "./AuthDialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
 
@@ -91,6 +92,13 @@ export default function AccountNav() {
         <div className="absolute right-0 top-11 z-[80] w-56 rounded-2xl border border-[#d8dce2] bg-white p-2 shadow-[0_18px_50px_rgba(44,47,49,0.16)]">
           <p className="px-3 py-2 text-xs font-bold text-[#75777a]">Signed in as</p>
           <p className="truncate px-3 pb-2 text-sm font-extrabold text-[#2c2f31]">{label}</p>
+          <Link
+            href="/account"
+            onClick={() => setIsMenuOpen(false)}
+            className="mb-1 block w-full rounded-xl px-3 py-2 text-left text-sm font-bold text-[#2c2f31] transition hover:bg-[#eff1f4]"
+          >
+            Account & stats
+          </Link>
           <button
             type="button"
             onClick={() => void signOut()}
