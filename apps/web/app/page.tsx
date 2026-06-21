@@ -3,6 +3,7 @@
 import { games } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
+import Link from "next/link";
 import { CSSProperties, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
@@ -76,6 +77,7 @@ export default function Home() {
   }, []);
 
   const isGuestLocked = Boolean(access?.locked);
+  const isLoggedIn = Boolean(access?.loggedIn);
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
@@ -363,17 +365,54 @@ export default function Home() {
 
         </div>
         <section className="glass-nav mx-auto mt-12 max-w-3xl rounded-[2rem] p-8 text-center sm:p-10">
-          <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Become a Dabbler</p>
-          <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
-            Track streaks, compare times with friends, and unlock account-level progress across every game.
+          <p className="font-headline inline-flex items-center justify-center gap-2 text-2xl font-extrabold text-[#2c2f31]">
+            <span>{isLoggedIn ? "Check Your Stats" : "Become a Dabbler"}</span>
+            {isLoggedIn ? (
+              <svg
+                aria-hidden="true"
+                className="h-6 w-6 text-[#2c2f31]"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M4 20V4"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M4 20H20"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                />
+                <rect x="7" y="12" width="3" height="5.5" rx="1" fill="currentColor" />
+                <rect x="11" y="8" width="3" height="9.5" rx="1" fill="currentColor" />
+                <rect x="15" y="5" width="3" height="12.5" rx="1" fill="currentColor" />
+              </svg>
+            ) : null}
           </p>
-          <button
-            type="button"
-            onClick={() => setIsAuthOpen(true)}
-            className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
-          >
-            Create Free Account
-          </button>
+          <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
+            {isLoggedIn
+              ? "See your win rates, streaks, guesses, and progress across every DailyDabble game."
+              : "Track streaks, compare times with friends, and unlock account-level progress across every game."}
+          </p>
+          {isLoggedIn ? (
+            <Link
+              href="/account/stats"
+              className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
+            >
+              View Stats
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAuthOpen(true)}
+              className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
+            >
+              Create Free Account
+            </button>
+          )}
         </section>
         <section className="mx-auto mt-6 max-w-3xl text-center">
           <p className="text-sm text-[#595c5e]">
