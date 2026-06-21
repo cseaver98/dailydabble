@@ -370,14 +370,17 @@
   inset: 0;
   z-index: 95;
   background: rgba(0, 0, 0, 0.7);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  overflow: hidden;
   padding: 1rem;
 }
 
 .equadle-shell .result-modal-panel {
   width: min(620px, 96vw);
-  max-height: 88vh;
+  max-height: min(88vh, calc(100dvh - 2rem));
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;

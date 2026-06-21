@@ -796,7 +796,7 @@ export default function AgegapleGameClient({
 
       {result && isResultOpen && (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4"
+          className="result-modal-backdrop fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4"
           onClick={() => setIsResultOpen(false)}
         >
           <div
