@@ -75,7 +75,7 @@ export default async function AccountStatsPage() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Games played", stats.overall.played.toString()],
+              ["Daily games", stats.overall.played.toString()],
               ["Wins", stats.overall.wins.toString()],
               ["Win rate", formatPercent(stats.overall.winRate)],
               ["DailyDabble streak", stats.overall.currentDailyDabbleStreak.toString()],
@@ -125,7 +125,11 @@ export default async function AccountStatsPage() {
                     <div>
                       <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.gameName}</p>
                       <p className="mt-1 text-sm font-semibold text-[#75777a]">
-                        {gameStat.played ? `${gameStat.played} played • ${formatPercent(gameStat.winRate)} wins` : "No games played yet"}
+                        {gameStat.played
+                          ? `${gameStat.played} daily played • ${formatPercent(gameStat.winRate)} wins`
+                          : gameStat.archivePlayed
+                            ? `${gameStat.archivePlayed} archive played`
+                            : "No daily games played yet"}
                       </p>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center sm:w-72">

@@ -82,6 +82,26 @@ body {
   white-space: nowrap;
 }
 
+.archive-tile {
+  position: relative;
+}
+
+.archive-complete-badge {
+  position: absolute;
+  right: 0.85rem;
+  top: 0.75rem;
+  border-radius: 999px;
+  background: #b6f6ab;
+  color: #114c15;
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 0.34rem 0.48rem;
+  text-transform: uppercase;
+}
+
 @media (hover: none) and (pointer: coarse) {
   a[href],
   button,

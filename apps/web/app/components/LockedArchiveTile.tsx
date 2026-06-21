@@ -9,6 +9,8 @@ type LockedArchiveTileProps = {
   tileLabel: string;
   dateLabel: string;
   isLocked: boolean;
+  isCompleted?: boolean;
+  hideDate?: boolean;
 };
 
 const CLICK_PATTERN = ["top-left", "top-right", "bottom-left", "bottom-right", "center"] as const;
@@ -33,6 +35,8 @@ export default function LockedArchiveTile({
   tileLabel,
   dateLabel,
   isLocked,
+  isCompleted = false,
+  hideDate = false,
 }: LockedArchiveTileProps) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
@@ -47,8 +51,9 @@ export default function LockedArchiveTile({
   if (!isLocked) {
     return (
       <Link className="archive-tile" href={href}>
+        {isCompleted ? <span className="archive-complete-badge">Done</span> : null}
         <span className="archive-tile-title">{tileLabel}</span>
-        <span className="archive-tile-date">{dateLabel}</span>
+        {hideDate ? null : <span className="archive-tile-date">{dateLabel}</span>}
       </Link>
     );
   }
@@ -80,8 +85,9 @@ export default function LockedArchiveTile({
       title={lockHint}
     >
       <span className="archive-lock-badge">Locked</span>
+      {isCompleted ? <span className="archive-complete-badge">Done</span> : null}
       <span className="archive-tile-title">{tileLabel}</span>
-      <span className="archive-tile-date">{dateLabel}</span>
+      {hideDate ? null : <span className="archive-tile-date">{dateLabel}</span>}
     </button>
   );
 }

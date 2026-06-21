@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LockedArchiveTile from "../../components/LockedArchiveTile";
+import useArchiveCompletionStatus from "../../components/useArchiveCompletionStatus";
 import LoadingLabel from "../../components/LoadingLabel";
 import MainNav from "../components/MainNav";
 
@@ -22,6 +23,7 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const completedDates = useArchiveCompletionStatus("equadle", items.map((item) => item.puzzleDate));
 
   useEffect(() => {
     let active = true;
@@ -73,11 +75,13 @@ export default function ArchivePage() {
         ...item,
         archiveGameNumber,
         isLocked: lockEnabled && archiveGameNumber === 1,
+        isCompleted: completedDates.has(item.puzzleDate),
         dateLabel: formatDateLabel(item.puzzleDate),
-        tileLabel: `#${archiveGameNumber}`,
+        hideDate: lockEnabled && archiveGameNumber === 1,
+        tileLabel: lockEnabled && archiveGameNumber === 1 ? "?" : `#${lockEnabled ? archiveGameNumber - 1 : archiveGameNumber}`,
       };
     });
-  }, [items, lockEnabled]);
+  }, [completedDates, items, lockEnabled]);
   const totalPages = Math.max(1, Math.ceil(rows.length / archivePageSize));
 
   useEffect(() => {
@@ -109,6 +113,8 @@ export default function ArchivePage() {
                   tileLabel={item.tileLabel}
                   dateLabel={item.dateLabel}
                   isLocked={item.isLocked}
+                  isCompleted={item.isCompleted}
+                  hideDate={item.hideDate}
                 />
               ))}
             </div>

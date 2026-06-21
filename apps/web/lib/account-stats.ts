@@ -113,11 +113,12 @@ const calculateDailyDabbleStreak = (rows: GameResultRow[]) => {
 };
 
 const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]): GameStats => {
-  const played = rows.length;
-  const wins = rows.filter((row) => row.is_win).length;
-  const losses = played - wins;
-  const guesses = rows.map((row) => row.guesses_used);
   const dailyRows = rows.filter((row) => !row.is_archive);
+  const archiveRows = rows.filter((row) => row.is_archive);
+  const played = dailyRows.length;
+  const wins = dailyRows.filter((row) => row.is_win).length;
+  const losses = played - wins;
+  const guesses = dailyRows.map((row) => row.guesses_used);
   const lastPlayedAt = rows.reduce<string | null>((latest, row) => {
     if (!latest || row.completed_at > latest) {
       return row.completed_at;
@@ -130,7 +131,7 @@ const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]
     gameName,
     played,
     dailyPlayed: dailyRows.length,
-    archivePlayed: played - dailyRows.length,
+    archivePlayed: archiveRows.length,
     wins,
     losses,
     winRate: played ? roundRate(wins / played) : null,
@@ -164,10 +165,12 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
   }
 
   const gameStats = games.map((game) => summarizeGame(game.slug, game.name, statsByGame.get(game.slug) ?? []));
-  const played = rows.length;
-  const wins = rows.filter((row) => row.is_win).length;
-  const dailyPlayed = rows.filter((row) => !row.is_archive).length;
-  const guesses = rows.map((row) => row.guesses_used);
+  const dailyRows = rows.filter((row) => !row.is_archive);
+  const archiveRows = rows.filter((row) => row.is_archive);
+  const played = dailyRows.length;
+  const wins = dailyRows.filter((row) => row.is_win).length;
+  const dailyPlayed = dailyRows.length;
+  const guesses = dailyRows.map((row) => row.guesses_used);
   const today = getTodayPuzzleDate();
   const completedTodayCount = new Set(
     rows
@@ -181,7 +184,7 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
     overall: {
       played,
       dailyPlayed,
-      archivePlayed: played - dailyPlayed,
+      archivePlayed: archiveRows.length,
       wins,
       losses: played - wins,
       winRate: played ? roundRate(wins / played) : null,
