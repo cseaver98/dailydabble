@@ -1,5 +1,12 @@
 import EquadleGameClient from "./components/EquadleGameClient";
+import GameAccountGate from "../components/GameAccountGate";
+import { getAccountAccess } from "@/lib/account-access";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const access = await getAccountAccess("equadle");
+  if (access.locked) {
+    return <GameAccountGate gameName="Equadle" />;
+  }
+
   return <EquadleGameClient apiUrl="/api/equadle/puzzle/today" navLabel="" hideToday lockDailyCompletion />;
 }

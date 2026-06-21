@@ -5,6 +5,7 @@ import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import { CSSProperties, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
+import AuthDialog from "./components/AuthDialog";
 
 type StatusResponse = {
   date: string;
@@ -16,6 +17,13 @@ type StatusResponse = {
     maxGuesses?: number;
     completedAt?: string;
   }>;
+};
+
+type AccessResponse = {
+  loggedIn: boolean;
+  guestCount: number;
+  guestLimit: number;
+  locked: boolean;
 };
 
 type MobileCardMotion = {
@@ -32,21 +40,30 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [gameStatuses, setGameStatuses] = useState<StatusResponse["gameStatuses"]>({});
+  const [access, setAccess] = useState<AccessResponse | null>(null);
   const [error, setError] = useState("");
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
 
   useEffect(() => {
     const load = async () => {
       try {
-        await fetch("/api/player", { method: "POST" });
-        const res = await fetch("/api/completions/today", { method: "GET" });
-        const payload = (await res.json()) as StatusResponse & { error?: string };
-        if (!res.ok || payload.error) {
+        const accessRes = await fetch("/api/account/access", { method: "GET" });
+        const accessPayload = (await accessRes.json()) as AccessResponse & { error?: string };
+        if (!accessRes.ok || accessPayload.error) {
+          throw new Error(accessPayload.error ?? "Failed to load account access");
+        }
+
+        const statusRes = await fetch("/api/completions/today", { method: "GET" });
+        const payload = (await statusRes.json()) as StatusResponse & { error?: string };
+        if (!statusRes.ok || payload.error) {
           throw new Error(payload.error ?? "Failed to load status");
         }
+
         setStatus(payload.status);
         setGameStatuses(payload.gameStatuses ?? {});
+        setAccess(accessPayload);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
@@ -57,6 +74,8 @@ export default function Home() {
 
     void load();
   }, []);
+
+  const isGuestLocked = Boolean(access?.locked);
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
@@ -143,8 +162,17 @@ export default function Home() {
         <div id="games" className="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2 md:gap-8">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
+            const lockedFromStarting = isGuestLocked && !complete;
             const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
-            const statusLabel = loading ? "Loading" : gameStatus === "completed_lost" ? "Missed" : complete ? "Completed" : "Not done";
+            const statusLabel = loading
+              ? "Loading"
+              : lockedFromStarting
+                ? "Login"
+                : gameStatus === "completed_lost"
+                  ? "Missed"
+                  : complete
+                    ? "Completed"
+                    : "Not done";
             const isDoodle = game.slug === "doodle";
             const isVerble = game.slug === "verble";
             const isYeardle = game.slug === "yeardle";
@@ -218,6 +246,11 @@ export default function Home() {
               <a
                 key={game.slug}
                 href={game.href}
+                onClick={(event) => {
+                  if (!lockedFromStarting) return;
+                  event.preventDefault();
+                  setIsAuthOpen(true);
+                }}
                 data-hub-card={game.slug}
                 style={mobileCardStyle}
                 className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${cardHoverClass} ${
@@ -293,7 +326,11 @@ export default function Home() {
                     <h2 className="font-headline text-3xl font-bold text-[#2c2f31]">{game.name}</h2>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-                        complete ? "bg-[#b6f6ab] text-[#114c15]" : "bg-[#fbe276] text-[#4b3f00]"
+                        complete
+                          ? "bg-[#b6f6ab] text-[#114c15]"
+                          : lockedFromStarting
+                            ? "bg-[#eff1f4] text-[#595c5e]"
+                            : "bg-[#fbe276] text-[#4b3f00]"
                       }`}
                     >
                       {statusLabel}
@@ -303,9 +340,11 @@ export default function Home() {
                   <p className="mb-8 text-lg text-[#595c5e]">{game.description}</p>
                   <span
                     style={mobileButtonStyle}
-                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${buttonBackground}`}
+                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${
+                      lockedFromStarting ? "bg-[#2c2f31] text-white hover:bg-[#111315]" : buttonBackground
+                    }`}
                   >
-                    Play
+                    {lockedFromStarting ? "Sign in to play" : "Play"}
                     <span
                       aria-hidden
                       className="inline-block h-0 w-0 border-y-[0.38rem] border-l-[0.62rem] border-y-transparent border-l-current"
@@ -322,12 +361,13 @@ export default function Home() {
           <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
             Track streaks, compare times with friends, and unlock account-level progress across every game.
           </p>
-          <a
-            href="#"
+          <button
+            type="button"
+            onClick={() => setIsAuthOpen(true)}
             className="font-headline mt-4 inline-block font-bold text-[#2f672d] underline decoration-2 underline-offset-4 transition hover:opacity-75"
           >
             Create Free Account
-          </a>
+          </button>
         </section>
         <section className="mx-auto mt-6 max-w-3xl text-center">
           <p className="text-sm text-[#595c5e]">
@@ -342,6 +382,7 @@ export default function Home() {
         </section>
         </section>
       </main>
+      <AuthDialog isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} mode={isGuestLocked ? "gate" : "login"} />
     </>
   );
 }
