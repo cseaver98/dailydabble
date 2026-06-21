@@ -1,6 +1,7 @@
 import { allowedGameSlugs } from "@/lib/games";
 import { recordGameResult } from "@/lib/account-results";
-import { getOrCreatePlayerId } from "@/lib/player-id";
+import { getExistingPlayerId, getOrCreatePlayerId } from "@/lib/player-id";
+import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
       Number.isInteger(body.guessesUsed) &&
       Number.isInteger(body.maxGuesses)
     ) {
+      const authClient = await createSupabaseServerClient();
+      const { data: { user } } = await authClient.auth.getUser();
+      const playerId = user ? await getExistingPlayerId() : await getOrCreatePlayerId();
+
       await recordGameResult({
         gameSlug: body.gameSlug,
         puzzleId: body.puzzleId,
@@ -62,6 +67,8 @@ export async function POST(req: NextRequest) {
         guessesUsed: Number(body.guessesUsed),
         maxGuesses: Number(body.maxGuesses),
         resultPayload: body.resultPayload ?? body.metadata ?? {},
+        userId: user?.id ?? null,
+        playerId,
       });
 
       return NextResponse.json({ ok: true, persisted: "game_results" }, { headers });

@@ -1,5 +1,7 @@
 import { games } from "@/lib/games";
 import { getOrCreatePlayerId } from "@/lib/player-id";
+import { getTodayPuzzleDate } from "@/lib/puzzle-date";
+import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
@@ -15,7 +17,7 @@ type GameResultRow = {
 
 export async function GET() {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayPuzzleDate();
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceRoleKey =
@@ -27,17 +29,28 @@ export async function GET() {
       return NextResponse.json({ date: today, status: fallbackStatus, gameStatuses: fallbackGameStatuses, persisted: false });
     }
 
-    const playerId = await getOrCreatePlayerId();
+    const authClient = await createSupabaseServerClient();
+    const { data: { user } } = await authClient.auth.getUser();
+    const playerId = user ? null : await getOrCreatePlayerId();
     const supabase = getSupabaseAdmin();
 
-    const { data, error } = await supabase
-      .schema("core")
-      .from("game_results")
-      .select("game_slug,is_win,guesses_used,max_guesses,completed_at")
-      .eq("player_id", playerId)
-      .eq("puzzle_date", today)
-      .eq("is_archive", false)
-      .returns<GameResultRow[]>();
+    const { data, error } = user
+      ? await supabase
+        .schema("core")
+        .from("game_results")
+        .select("game_slug,is_win,guesses_used,max_guesses,completed_at")
+        .eq("user_id", user.id)
+        .eq("puzzle_date", today)
+        .eq("is_archive", false)
+        .returns<GameResultRow[]>()
+      : await supabase
+        .schema("core")
+        .from("game_results")
+        .select("game_slug,is_win,guesses_used,max_guesses,completed_at")
+        .eq("player_id", playerId)
+        .eq("puzzle_date", today)
+        .eq("is_archive", false)
+        .returns<GameResultRow[]>();
 
     if (error) {
       return NextResponse.json(

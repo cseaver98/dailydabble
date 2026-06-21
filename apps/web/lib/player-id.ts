@@ -25,3 +25,8 @@ export async function getOrCreatePlayerId() {
   });
   return created;
 }
+
+export async function getExistingPlayerId() {
+  const cookieStore = await cookies();
+  return cookieStore.get(PLAYER_COOKIE_NAME)?.value ?? null;
+}

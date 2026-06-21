@@ -1,4 +1,5 @@
-import { getAccountSupabaseAdmin } from "@/lib/account-results";
+import { claimGuestResultsForUser, getAccountSupabaseAdmin } from "@/lib/account-results";
+import { getExistingPlayerId } from "@/lib/player-id";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const admin = getAccountSupabaseAdmin();
-    await admin
+    const { error: profileError } = await admin
       .schema("core")
       .from("profiles")
       .upsert(
@@ -43,6 +44,19 @@ export async function GET(request: NextRequest) {
         { onConflict: "id" },
       );
 
+    if (profileError) {
+      redirectUrl.searchParams.set("auth_warning", "profile_sync_failed");
+    }
+
+    const playerId = await getExistingPlayerId();
+    if (playerId) {
+      try {
+        await claimGuestResultsForUser({ playerId, userId: user.id });
+      } catch (claimError) {
+        console.warn(claimError instanceof Error ? claimError.message : "Failed to claim guest results");
+        redirectUrl.searchParams.set("auth_warning", "guest_claim_failed");
+      }
+    }
   }
 
   return NextResponse.redirect(redirectUrl);
