@@ -53,6 +53,9 @@ export default function AccountNav() {
     await supabase.auth.signOut();
     setUser(null);
     setIsMenuOpen(false);
+    if (window.location.pathname.startsWith("/account")) {
+      window.location.href = "/";
+    }
   };
 
   if (loading) {

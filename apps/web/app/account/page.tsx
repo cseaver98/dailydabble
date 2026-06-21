@@ -4,6 +4,7 @@ import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../components/AccountNav";
 import AccountLoginPanel from "./AccountLoginPanel";
 import ProfileForm from "./ProfileForm";
+import SignOutButton from "./SignOutButton";
 import { getProfile } from "@/lib/account-profile";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
@@ -95,10 +96,25 @@ export default async function AccountPage() {
                   <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{createdAt}</p>
                 </div>
                 <div className="rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Profile editing</p>
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Stats</p>
                   <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
-                    Display-name editing is next, then subscriptions and connected-provider controls can slot in here.
+                    View your basic stats now. Advanced stats and subscriber features can slot in later.
                   </p>
+                  <Link
+                    href="/account/stats"
+                    className="font-headline mt-3 inline-flex h-10 items-center justify-center rounded-full bg-[#eff1f4] px-4 text-sm font-extrabold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
+                  >
+                    Open stats
+                  </Link>
+                </div>
+                <div className="rounded-2xl border border-[#ffd2c7] bg-[#fff8f6] px-4 py-4">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#b02500]">Session</p>
+                  <p className="mt-1 text-sm font-semibold leading-relaxed text-[#7a4a3e]">
+                    Log out on this device. Your saved progress stays connected to your account.
+                  </p>
+                  <div className="mt-3">
+                    <SignOutButton />
+                  </div>
                 </div>
               </div>
             </section>
