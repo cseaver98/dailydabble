@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { allowedGameSlugs } from "@/lib/games";
 import { getOrCreatePlayerId } from "@/lib/player-id";
+import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const GUEST_COMPLETION_LIMIT = 3;
@@ -190,17 +191,40 @@ export const recordGameResult = async (input: GameResultInput) => {
 export const getGuestCompletionCount = async (playerId?: string | null) => {
   const supabase = getAccountSupabaseAdmin();
   const resolvedPlayerId = playerId || await ensureGuestPlayer({ supabase });
-  const { count, error } = await supabase
+  const today = getTodayPuzzleDate();
+
+  const { data: resultRows, error } = await supabase
     .schema("core")
     .from("game_results")
-    .select("id", { count: "exact", head: true })
-    .eq("player_id", resolvedPlayerId);
+    .select("game_slug")
+    .eq("player_id", resolvedPlayerId)
+    .eq("puzzle_date", today)
+    .eq("is_archive", false)
+    .returns<Array<{ game_slug: string }>>();
 
   if (error) {
     throw new Error(`Failed to count guest completions: ${error.message}`);
   }
 
-  return { playerId: resolvedPlayerId, count: count ?? 0, limit: GUEST_COMPLETION_LIMIT, locked: (count ?? 0) >= GUEST_COMPLETION_LIMIT };
+  const { data: legacyRows, error: legacyError } = await supabase
+    .schema("core")
+    .from("completions")
+    .select("game_slug")
+    .eq("player_id", resolvedPlayerId)
+    .eq("puzzle_date", today)
+    .returns<Array<{ game_slug: string }>>();
+
+  if (legacyError) {
+    throw new Error(`Failed to count legacy guest completions: ${legacyError.message}`);
+  }
+
+  const completedGameSlugs = new Set([
+    ...(resultRows ?? []).map((row) => row.game_slug),
+    ...(legacyRows ?? []).map((row) => row.game_slug),
+  ].filter((gameSlug) => allowedGameSlugs.has(gameSlug)));
+  const count = completedGameSlugs.size;
+
+  return { playerId: resolvedPlayerId, count, limit: GUEST_COMPLETION_LIMIT, locked: count >= GUEST_COMPLETION_LIMIT };
 };
 
 export const hasGuestTodayCompletion = async ({
