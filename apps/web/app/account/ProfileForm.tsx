@@ -73,7 +73,7 @@ export default function ProfileForm({ initialDisplayName }: ProfileFormProps) {
           {saving ? "Saving..." : "Save"}
         </button>
       </div>
-      <p className="mt-2 text-xs font-semibold text-[#75777a]">2-32 characters. This is what you will see in your account menu.</p>
+      <p className="mt-2 text-xs font-semibold text-[#75777a]">2-32 characters.</p>
       {status ? <p className="mt-3 text-sm font-bold text-[#2f672d]">{status}</p> : null}
       {error ? <p className="mt-3 text-sm font-bold text-[#b02500]">{error}</p> : null}
     </form>

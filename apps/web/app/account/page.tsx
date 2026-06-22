@@ -45,17 +45,20 @@ export default async function AccountPage() {
       <main className="min-h-screen bg-transparent px-5 pb-12 pt-8 text-[#2c2f31] sm:px-8">
         <section className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-[2.25rem] bg-white p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
-            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#b6f6ab]/55 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-28 left-12 h-56 w-56 rounded-full bg-[#fbe276]/45 blur-2xl" />
-            <div className="relative">
-              <p className="font-headline text-xs font-extrabold uppercase tracking-[0.18em] text-[#2f672d]">DailyDabble Account</p>
-              <h1 className="font-headline mt-3 text-4xl font-extrabold leading-tight text-[#2c2f31] sm:text-6xl">
-                {displayName}
-              </h1>
-              <p className="mt-3 max-w-2xl text-base font-semibold text-[#595c5e] sm:text-lg">
-                Manage your account basics here. Stats now live on their own page so this stays nice and tidy.
-              </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex flex-col gap-6">
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="font-headline text-4xl font-extrabold leading-tight text-[#2c2f31] sm:text-6xl">
+                  {displayName}
+                </h1>
+                <div className="relative shrink-0 overflow-hidden rounded-2xl border border-[#cfd5dc] bg-[linear-gradient(135deg,#ffffff_0%,#d9dee4_34%,#f8fafc_54%,#b8c0ca_100%)] px-4 py-3 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(44,47,49,0.08)]">
+                  <div className="pointer-events-none absolute inset-y-0 left-1/4 w-8 rotate-12 bg-white/45 blur-md" />
+                  <div className="relative">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Member since</p>
+                  <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{createdAt}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/account/stats"
                   className="font-headline inline-flex h-12 items-center justify-center rounded-full bg-[#2f672d] px-6 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22]"
@@ -72,7 +75,7 @@ export default async function AccountPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.85fr]">
+          <div className="mt-6">
             <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
               <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Profile</p>
               <div className="mt-5 grid gap-3">
@@ -85,32 +88,10 @@ export default async function AccountPage() {
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Login provider</p>
                   <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{provider}</p>
                 </div>
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
-              <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Account Settings</p>
-              <div className="mt-5 grid gap-3">
-                <div className="rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Member since</p>
-                  <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{createdAt}</p>
-                </div>
-                <div className="rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Stats</p>
-                  <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
-                    View your basic stats now. Advanced stats and subscriber features can slot in later.
-                  </p>
-                  <Link
-                    href="/account/stats"
-                    className="font-headline mt-3 inline-flex h-10 items-center justify-center rounded-full bg-[#eff1f4] px-4 text-sm font-extrabold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
-                  >
-                    Open stats
-                  </Link>
-                </div>
                 <div className="rounded-2xl border border-[#ffd2c7] bg-[#fff8f6] px-4 py-4">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#b02500]">Session</p>
                   <p className="mt-1 text-sm font-semibold leading-relaxed text-[#7a4a3e]">
-                    Log out on this device. Your saved progress stays connected to your account.
+                    Your saved progress stays connected to your account.
                   </p>
                   <div className="mt-3">
                     <SignOutButton />
