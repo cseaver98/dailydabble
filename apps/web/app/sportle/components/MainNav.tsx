@@ -1,6 +1,8 @@
 "use client";
 
-import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
+import { DailydabbleNav } from "@dailydabble/ui";
+import GameMenu from "../../components/GameMenu";
+import AccountNav from "../../components/AccountNav";
 import { usePathname } from "next/navigation";
 
 export default function MainNav({ label = "Sportle", hideToday = false }) {
@@ -16,17 +18,8 @@ export default function MainNav({ label = "Sportle", hideToday = false }) {
       labelId="challengeDate"
       labelClassName="subtle nav-date"
       homeHref="/"
-      rightContent={
-        <DailydabbleMenu
-          buttonId="menuToggleBtn"
-          menuId="navMenu"
-          items={[
-            { label: "DailyDabble", href: "/", brand: true },
-            { label: "Today", href: "/sportle", id: "todayGameBtn", hidden: hideTodayOption },
-            { label: "Archive games", href: "/sportle/archive" },
-          ]}
-        />
-      }
+      leftContent={<GameMenu todayHref="/sportle" archiveHref="/sportle/archive" hideToday={hideTodayOption} />}
+      rightContent={<AccountNav />}
     />
   );
 }

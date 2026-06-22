@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { DailydabbleMenu, DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
+import { DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import AccountNav from "../../components/AccountNav";
+import GameMenu from "../../components/GameMenu";
 import { toPublicAppUrl } from "@/lib/app-url";
 import { recordGameCompletionQuietly } from "@/lib/record-game-completion";
 import { buildResultPayload } from "@/lib/result-payload";
@@ -559,11 +561,6 @@ export default function AgegapleGameClient({
   const mainClass = "min-h-screen text-[color:var(--foreground)]";
   const mutedTextClass = "text-[color:var(--outline)]";
   const panelClass = "card border border-[color:var(--surface-container)] flex h-full min-h-0 flex-col gap-2 sm:gap-3";
-  const navItems = [
-    { label: "DailyDabble", href: "/", brand: true },
-    ...(isArchiveView ? [{ label: "Today", href: "/agegaple" }] : []),
-    { label: "Archive games", href: archiveHref },
-  ];
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
@@ -579,11 +576,10 @@ export default function AgegapleGameClient({
             subtitle="Agegaple"
             subtitleHref="/agegaple"
             homeHref="/"
-            rightContent={
-              <DailydabbleMenu
-                items={navItems}
-              />
+            leftContent={
+              <GameMenu todayHref="/agegaple" archiveHref={archiveHref} hideToday={!isArchiveView} />
             }
+            rightContent={<AccountNav />}
           />
 
           <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
@@ -603,11 +599,10 @@ export default function AgegapleGameClient({
         subtitle="Agegaple"
         subtitleHref="/agegaple"
         homeHref="/"
-        rightContent={
-          <DailydabbleMenu
-            items={navItems}
-          />
+        leftContent={
+          <GameMenu todayHref="/agegaple" archiveHref={archiveHref} hideToday={!isArchiveView} />
         }
+        rightContent={<AccountNav />}
       />
 
       <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">

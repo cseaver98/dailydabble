@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../components/AccountNav";
+import SiteMenu from "../components/SiteMenu";
 import AccountLoginPanel from "./AccountLoginPanel";
 import ProfileForm from "./ProfileForm";
 import SignOutButton from "./SignOutButton";
@@ -25,7 +26,7 @@ export default async function AccountPage() {
   if (!user) {
     return (
       <>
-        <DailydabbleNav headerClassName="hub-nav" rightContent={<AccountNav />} />
+        <DailydabbleNav headerClassName="hub-nav" leftContent={<SiteMenu />} rightContent={<AccountNav />} />
         <main className="min-h-screen bg-transparent px-5 pb-12 pt-10 text-[#2c2f31] sm:px-8">
           <AccountLoginPanel />
         </main>
@@ -41,7 +42,7 @@ export default async function AccountPage() {
 
   return (
     <>
-      <DailydabbleNav headerClassName="hub-nav" rightContent={<AccountNav />} />
+      <DailydabbleNav headerClassName="hub-nav" leftContent={<SiteMenu />} rightContent={<AccountNav />} />
       <main className="min-h-screen bg-transparent px-5 pb-12 pt-8 text-[#2c2f31] sm:px-8">
         <section className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-[2.25rem] bg-white p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">

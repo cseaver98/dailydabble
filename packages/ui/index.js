@@ -1,4 +1,5 @@
 import React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 
 export function DailydabbleNav({
   subtitle,
@@ -7,6 +8,7 @@ export function DailydabbleNav({
   labelId,
   labelClassName = "",
   homeHref = "/",
+  leftContent = null,
   rightContent = null,
   headerClassName = "",
   innerClassName = "",
@@ -20,6 +22,7 @@ export function DailydabbleNav({
       React.createElement(
         "div",
         { className: "dd-nav-left" },
+        leftContent ? React.createElement("div", { className: "dd-nav-left-content" }, leftContent) : null,
         React.createElement(
           "div",
           { className: "dd-brand" },
@@ -60,83 +63,151 @@ export function DailydabbleMenu({
   buttonAriaLabel = "Open menu",
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const menuRef = React.useRef(null);
+  const [menuTop, setMenuTop] = React.useState(0);
+  const menuWrapRef = React.useRef(null);
   const visibleItems = items.filter((item) => !item.hidden);
 
-  React.useEffect(() => {
+  const updateMenuTop = React.useCallback(() => {
+    const nav = menuWrapRef.current?.closest(".dd-nav");
+    setMenuTop(nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0);
+  }, []);
+
+  React.useLayoutEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
 
-    const onPointerDown = (event) => {
-      if (!menuRef.current) {
-        return;
-      }
-      if (!menuRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    updateMenuTop();
+    window.addEventListener("resize", updateMenuTop);
+    window.addEventListener("scroll", updateMenuTop, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateMenuTop);
+      window.removeEventListener("scroll", updateMenuTop);
     };
-
-    window.addEventListener("mousedown", onPointerDown);
-    return () => window.removeEventListener("mousedown", onPointerDown);
-  }, [isOpen]);
-
-  const closeMenu = () => setIsOpen(false);
+  }, [isOpen, updateMenuTop]);
 
   return React.createElement(
-    "div",
-    { className: "dd-menu-wrap", ref: menuRef },
-    React.createElement(
-      "button",
-      {
-        id: buttonId,
-        type: "button",
-        className: "menu-toggle-btn",
-        "data-dd-menu-managed": "react",
-        "aria-label": buttonAriaLabel,
-        "aria-expanded": isOpen,
-        onClick: () => setIsOpen((value) => !value),
+    Dialog.Root,
+    {
+      modal: false,
+      open: isOpen,
+      onOpenChange: (nextOpen) => {
+        if (nextOpen) {
+          updateMenuTop();
+        }
+        setIsOpen(nextOpen);
       },
+    },
+    React.createElement(
+      "div",
+      { className: "dd-menu-wrap", ref: menuWrapRef },
       React.createElement(
-        "svg",
-        { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
-        React.createElement("path", {
-          d: "M4 7h16M4 12h16M4 17h16",
-          stroke: "currentColor",
-          strokeWidth: "2",
-          strokeLinecap: "round",
-        }),
+        Dialog.Trigger,
+        { asChild: true },
+        React.createElement(
+          "button",
+          {
+            id: buttonId,
+            type: "button",
+            className: "menu-toggle-btn",
+            "data-dd-menu-managed": "react",
+            "aria-label": buttonAriaLabel,
+          },
+          React.createElement(
+            "svg",
+            { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+            React.createElement("path", {
+              d: "M4 7h16M4 12h16M4 17h16",
+              stroke: "currentColor",
+              strokeWidth: "2",
+              strokeLinecap: "round",
+            }),
+          ),
+        ),
       ),
     ),
     React.createElement(
-      "div",
-      { id: menuId, className: "nav-menu", "data-dd-menu-managed": "react", hidden: !isOpen },
-      visibleItems.map((item) =>
+      Dialog.Portal,
+      null,
+      React.createElement(
+        Dialog.Content,
+        {
+          id: menuId,
+          className: "nav-menu",
+          "data-dd-menu-managed": "react",
+          "aria-label": "DailyDabble menu",
+          style: { "--dd-menu-top": `${menuTop}px` },
+        },
         React.createElement(
-          "a",
-          {
-            key: `${item.href}-${item.label}`,
-            id: item.id,
-            className: item.brand ? "nav-menu-item nav-menu-item-brand" : "nav-menu-item",
-            href: item.href,
-            onClick: closeMenu,
-          },
-          React.createElement("span", null, item.label),
-        ),
-      ),
-      legalLinks.length
-        ? React.createElement(
-            "div",
-            { className: "nav-menu-footer" },
-            legalLinks.map((item) =>
-              React.createElement(
-                "a",
-                { key: item.href, className: "nav-menu-legal-link", href: item.href, onClick: closeMenu },
-                item.label,
-              ),
+          "div",
+          { className: "nav-menu-header" },
+          React.createElement("p", { className: "nav-menu-title" }, "Games"),
+          React.createElement(
+            Dialog.Close,
+            { asChild: true },
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "nav-menu-close",
+                "aria-label": "Close menu",
+              },
+              "×",
             ),
-          )
-        : null,
+          ),
+        ),
+        visibleItems.map((item) =>
+          React.createElement(
+            Dialog.Close,
+            { key: `${item.href}-${item.label}`, asChild: true },
+            React.createElement(
+              "a",
+              {
+                id: item.id,
+                className: item.brand ? "nav-menu-item nav-menu-item-brand" : "nav-menu-item",
+                href: item.href,
+                style: item.iconBackground ? { "--dd-menu-item-hover-bg": item.iconBackground } : undefined,
+              },
+              item.iconSrc
+                  ? React.createElement(
+                      "span",
+                    {
+                      className: "nav-menu-item-icon",
+                      "aria-hidden": "true",
+                      style: item.iconBackground ? { "--dd-menu-item-icon-bg": item.iconBackground } : undefined,
+                    },
+                    React.createElement("img", {
+                      src: item.iconSrc,
+                      alt: "",
+                      loading: "lazy",
+                    }),
+                  )
+                : null,
+              React.createElement("span", null, item.label),
+              item.completed
+                ? React.createElement("span", {
+                    className: "nav-menu-complete-check",
+                    "aria-label": "Completed",
+                    role: "img",
+                  })
+                : null,
+            ),
+          ),
+        ),
+        legalLinks.length
+          ? React.createElement(
+              "div",
+              { className: "nav-menu-footer" },
+              legalLinks.map((item) =>
+                React.createElement(
+                  Dialog.Close,
+                  { key: item.href, asChild: true },
+                  React.createElement("a", { className: "nav-menu-legal-link", href: item.href }, item.label),
+                ),
+              ),
+            )
+          : null,
+      ),
     ),
   );
 }

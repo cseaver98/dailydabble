@@ -1,7 +1,9 @@
 "use client";
 
-import { DailydabbleMenu, DailydabbleNav } from "@dailydabble/ui";
+import { DailydabbleNav } from "@dailydabble/ui";
 import { useEffect, useMemo, useState } from "react";
+import AccountNav from "../../components/AccountNav";
+import GameMenu from "../../components/GameMenu";
 import LockedArchiveTile from "../../components/LockedArchiveTile";
 import useArchiveCompletionStatus from "../../components/useArchiveCompletionStatus";
 
@@ -106,15 +108,10 @@ export default function ArchivePage() {
         subtitle="Agegaple"
         subtitleHref="/agegaple"
         homeHref="/"
-        rightContent={
-          <DailydabbleMenu
-            items={[
-              { label: "DailyDabble", href: "/", brand: true },
-              { label: "Today", href: "/agegaple" },
-              { label: "Archive games", href: "/agegaple/archive" },
-            ]}
-          />
+        leftContent={
+          <GameMenu todayHref="/agegaple" archiveHref="/agegaple/archive" />
         }
+        rightContent={<AccountNav />}
       />
 
       <div className="container">

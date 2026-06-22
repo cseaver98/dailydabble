@@ -8,6 +8,7 @@ import { CSSProperties, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
 import LoadingLabel from "./components/LoadingLabel";
+import SiteMenu from "./components/SiteMenu";
 
 type StatusResponse = {
   date: string;
@@ -153,6 +154,7 @@ export default function Home() {
     <>
       <DailydabbleNav
         headerClassName="hub-nav"
+        leftContent={<SiteMenu />}
         rightContent={<AccountNav />}
       />
 
@@ -425,8 +427,6 @@ export default function Home() {
         </section>
         <section className="mx-auto mt-6 max-w-3xl text-center">
           <p className="text-sm text-[#595c5e]">
-            Legal:
-            {" "}
             <a href="/terms" className="font-semibold text-[#2c2f31] underline underline-offset-2 hover:opacity-75">Terms</a>
             {" "}
             and

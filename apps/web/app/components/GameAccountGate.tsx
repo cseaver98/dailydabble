@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "./AccountNav";
 import AuthDialog from "./AuthDialog";
+import SiteMenu from "./SiteMenu";
 
 type GameAccountGateProps = {
   gameName: string;
@@ -14,7 +15,7 @@ export default function GameAccountGate({ gameName }: GameAccountGateProps) {
 
   return (
     <>
-      <DailydabbleNav headerClassName="hub-nav" rightContent={<AccountNav />} />
+      <DailydabbleNav headerClassName="hub-nav" leftContent={<SiteMenu />} rightContent={<AccountNav />} />
       <main className="min-h-screen bg-transparent px-5 pb-12 pt-10 text-[#2c2f31] sm:px-8">
         <section className="mx-auto max-w-xl rounded-[2rem] border border-[#d8dce2] bg-white p-8 text-center shadow-[0_20px_40px_rgba(44,47,49,0.06)]">
           <p className="font-headline text-xs font-extrabold uppercase tracking-[0.18em] text-[#2f672d]">DailyDabble</p>

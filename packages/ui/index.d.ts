@@ -7,6 +7,7 @@ export type DailydabbleNavProps = {
   labelId?: string;
   labelClassName?: string;
   homeHref?: string;
+  leftContent?: ReactNode;
   rightContent?: ReactNode;
   headerClassName?: string;
   innerClassName?: string;
@@ -18,6 +19,10 @@ export type DailydabbleMenuLink = {
   id?: string;
   hidden?: boolean;
   brand?: boolean;
+  iconSrc?: string;
+  iconAlt?: string;
+  iconBackground?: string;
+  completed?: boolean;
 };
 
 export type DailydabbleUnavailableProps = {

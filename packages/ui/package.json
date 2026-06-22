@@ -10,6 +10,10 @@
     "./nav.css": "./styles/nav.css"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.17"
   }
 }
