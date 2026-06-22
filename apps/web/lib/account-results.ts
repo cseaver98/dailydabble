@@ -203,6 +203,56 @@ export const getGuestCompletionCount = async (playerId?: string | null) => {
   return { playerId: resolvedPlayerId, count: count ?? 0, limit: GUEST_COMPLETION_LIMIT, locked: (count ?? 0) >= GUEST_COMPLETION_LIMIT };
 };
 
+export const hasGuestTodayCompletion = async ({
+  playerId,
+  gameSlug,
+  puzzleDate,
+}: {
+  playerId: string;
+  gameSlug: string;
+  puzzleDate: string;
+}) => {
+  if (!allowedGameSlugs.has(gameSlug)) {
+    return false;
+  }
+
+  assertValidDate(puzzleDate);
+
+  const supabase = getAccountSupabaseAdmin();
+  const { data: resultRow, error: resultError } = await supabase
+    .schema("core")
+    .from("game_results")
+    .select("id")
+    .eq("player_id", playerId)
+    .eq("game_slug", gameSlug)
+    .eq("puzzle_date", puzzleDate)
+    .eq("is_archive", false)
+    .maybeSingle<{ id: string }>();
+
+  if (resultError) {
+    throw new Error(`Failed to read today game result: ${resultError.message}`);
+  }
+
+  if (resultRow) {
+    return true;
+  }
+
+  const { data: completionRow, error: completionError } = await supabase
+    .schema("core")
+    .from("completions")
+    .select("player_id")
+    .eq("player_id", playerId)
+    .eq("game_slug", gameSlug)
+    .eq("puzzle_date", puzzleDate)
+    .maybeSingle<{ player_id: string }>();
+
+  if (completionError) {
+    throw new Error(`Failed to read today completion: ${completionError.message}`);
+  }
+
+  return Boolean(completionRow);
+};
+
 export const claimGuestResultsForUser = async ({
   playerId,
   userId,

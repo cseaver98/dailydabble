@@ -171,9 +171,7 @@ export default function Home() {
             const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
             const statusLabel = loading
               ? "Loading"
-              : lockedFromStarting
-                ? "Log in"
-                : gameStatus === "completed_lost"
+              : gameStatus === "completed_lost"
                   ? "Missed"
                   : complete
                     ? "Completed"
@@ -258,7 +256,7 @@ export default function Home() {
                 }}
                 data-hub-card={game.slug}
                 style={mobileCardStyle}
-                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${cardHoverClass} ${
+                className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${lockedFromStarting ? "bg-[#f1f3f5] saturate-[0.82]" : ""} ${cardHoverClass} ${
                   index === 0 ? "md:-translate-y-2" : ""
                 }`}
               >
@@ -266,6 +264,9 @@ export default function Home() {
                   style={mobileOrbStyle}
                   className={`pointer-events-none absolute -top-16 -right-16 h-36 w-36 rounded-full transition-all duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] max-md:transform-gpu max-md:will-change-transform max-md:duration-[120ms] max-md:ease-out ${orbHoverClass} ${iconAccent}`}
                 />
+                {lockedFromStarting ? (
+                  <div className="pointer-events-none absolute inset-0 z-[1] rounded-[2rem] bg-[#6f7479]/10" />
+                ) : null}
                 <div className="relative z-10">
                   <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${iconBackground}`}>
                     {isDoodle ? (
@@ -337,9 +338,7 @@ export default function Home() {
                           ? "bg-[#eff1f4] text-[#595c5e]"
                           : complete
                           ? "bg-[#d1ffc7] text-[#114c15]"
-                          : lockedFromStarting
-                            ? "bg-[#eff1f4] text-[#595c5e]"
-                            : "bg-[#fff2a6] text-[#4b3f00]"
+                          : "bg-[#fff2a6] text-[#4b3f00]"
                       }`}
                     >
                       <span>{loading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
@@ -355,11 +354,9 @@ export default function Home() {
                   <p className="mb-8 text-lg text-[#595c5e]">{game.description}</p>
                   <span
                     style={mobileButtonStyle}
-                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${
-                      lockedFromStarting ? "bg-[#2c2f31] text-white hover:bg-[#111315]" : buttonBackground
-                    }`}
+                    className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${buttonBackground}`}
                   >
-                    {lockedFromStarting ? "Sign in to play" : "Play"}
+                    {lockedFromStarting ? "Log in to play" : "Play"}
                     <span
                       aria-hidden
                       className="inline-block h-0 w-0 border-y-[0.38rem] border-l-[0.62rem] border-y-transparent border-l-current"
