@@ -172,7 +172,7 @@ export default function Home() {
             const statusLabel = loading
               ? "Loading"
               : lockedFromStarting
-                ? "Login"
+                ? "Log in"
                 : gameStatus === "completed_lost"
                   ? "Missed"
                   : complete

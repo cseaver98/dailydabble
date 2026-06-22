@@ -90,7 +90,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
     setLoadingProvider(null);
   };
 
-  const title = mode === "gate" ? "Create an account to keep playing" : "Create your free DailyDabble account";
+  const title = "Log in or create an account";
   const subtitle = mode === "gate"
     ? "You have completed your free games. Sign in to keep playing and save your stats."
     : "Save your stats, streaks, and progress across devices.";
@@ -114,7 +114,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
         </button>
 
         <div className="mb-6 pr-8">
-          <p className="mb-2 font-headline text-xs font-extrabold uppercase tracking-[0.18em] text-[#2f672d]">DailyDabble</p>
+          <p className="dd-brand-word mb-2 inline-block !text-xl">DailyDabble</p>
           <h2 id="auth-dialog-title" className="font-headline text-3xl font-extrabold leading-tight text-[#2c2f31]">
             {title}
           </h2>
@@ -126,17 +126,30 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
             type="button"
             onClick={() => void signInWithProvider("google")}
             disabled={loadingProvider !== null}
-            className="font-headline flex h-12 items-center justify-center rounded-full border border-[#d8dce2] bg-white px-4 text-sm font-extrabold text-[#2c2f31] transition hover:border-[#2f672d]/40 hover:bg-[#f5f6f9] disabled:cursor-wait disabled:opacity-70"
+            className="font-headline flex h-12 items-center justify-center gap-2.5 rounded-full border border-[#d8dce2] bg-white px-4 text-sm font-extrabold text-[#2c2f31] transition hover:border-[#2f672d]/40 hover:bg-[#f5f6f9] disabled:cursor-wait disabled:opacity-70"
           >
-            {loadingProvider === "google" ? "Opening Google..." : "Continue with Google"}
+            <span className="grid w-[190px] grid-cols-[1.25rem_1fr] items-center gap-2.5 text-left">
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.15v2.84C3.96 20.53 7.68 23 12 23z" />
+                <path fill="#fbbc05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.15C1.41 8.53 1 10.22 1 12s.41 3.47 1.15 4.94l3.69-2.84z" />
+                <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.68 1 3.96 3.47 2.15 7.06l3.69 2.84C6.71 7.3 9.14 5.38 12 5.38z" />
+              </svg>
+              <span>{loadingProvider === "google" ? "Opening Google..." : "Continue with Google"}</span>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => void signInWithProvider("apple")}
             disabled={loadingProvider !== null}
-            className="font-headline flex h-12 items-center justify-center rounded-full bg-[#2c2f31] px-4 text-sm font-extrabold text-white transition hover:bg-[#111315] disabled:cursor-wait disabled:opacity-70"
+            className="font-headline flex h-12 items-center justify-center gap-2.5 rounded-full bg-[#2c2f31] px-4 text-sm font-extrabold text-white transition hover:bg-[#111315] disabled:cursor-wait disabled:opacity-70"
           >
-            {loadingProvider === "apple" ? "Opening Apple..." : "Continue with Apple"}
+            <span className="grid w-[190px] grid-cols-[1.25rem_1fr] items-center gap-2.5 text-left">
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12.15 6.9c-.95 0-2.42-1.08-3.96-1.04-2.04.03-3.91 1.18-4.96 3.01-2.12 3.68-.55 9.1 1.52 12.09 1.01 1.45 2.21 3.09 3.79 3.04 1.52-.07 2.09-.99 3.94-.99 1.83 0 2.35.99 3.96.95 1.64-.03 2.68-1.48 3.68-2.95 1.16-1.69 1.64-3.33 1.66-3.42-.04-.01-3.18-1.22-3.22-4.86-.03-3.04 2.48-4.49 2.6-4.56-1.43-2.09-3.62-2.32-4.39-2.38-2-.15-3.68 1.09-4.62 1.09zM15.53 3.83C16.37 2.82 16.93 1.4 16.78 0c-1.21.05-2.66.8-3.53 1.82-.78.9-1.45 2.34-1.27 3.71 1.34.1 2.71-.69 3.55-1.7z" />
+              </svg>
+              <span>{loadingProvider === "apple" ? "Opening Apple..." : "Continue with Apple"}</span>
+            </span>
           </button>
         </div>
 
@@ -159,7 +172,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
             disabled={loadingProvider !== null}
             className="font-headline h-12 rounded-full bg-[#2f672d] px-4 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22] disabled:cursor-wait disabled:opacity-70"
           >
-            {loadingProvider === "email" ? "Sending link..." : "Send magic link"}
+            {loadingProvider === "email" ? "Sending link..." : "Send login link"}
           </button>
         </form>
 

@@ -95,7 +95,7 @@ export default function AccountNav() {
           onClick={() => setIsAuthOpen(true)}
           className="font-headline inline-flex h-[36px] items-center justify-center rounded-full bg-[#2f672d] px-5 text-sm font-bold text-[#d1ffc7] transition hover:opacity-90"
         >
-          Login
+          Log in
         </button>
         <AuthDialog isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </>
