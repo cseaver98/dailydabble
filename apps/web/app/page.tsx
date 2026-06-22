@@ -249,11 +249,6 @@ export default function Home() {
               <a
                 key={game.slug}
                 href={game.href}
-                onClick={(event) => {
-                  if (!lockedFromStarting) return;
-                  event.preventDefault();
-                  setIsAuthOpen(true);
-                }}
                 data-hub-card={game.slug}
                 style={mobileCardStyle}
                 className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${lockedFromStarting ? "bg-[#f1f3f5] saturate-[0.82]" : ""} ${cardHoverClass} ${
