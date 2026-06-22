@@ -9,6 +9,11 @@ type AuthDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   mode?: "login" | "gate";
+  title?: string;
+  subtitle?: string;
+  dismissible?: boolean;
+  backHref?: string;
+  backLabel?: string;
 };
 
 const getRedirectTo = () => {
@@ -24,12 +29,30 @@ const formatAuthError = (error: AuthError) => {
   return error.message;
 };
 
-export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDialogProps) {
+export default function AuthDialog({
+  isOpen,
+  onClose,
+  mode = "login",
+  title: titleOverride,
+  subtitle: subtitleOverride,
+  dismissible = true,
+  backHref,
+  backLabel = "Back to hub",
+}: AuthDialogProps) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loadingProvider, setLoadingProvider] = useState<"google" | "apple" | "email" | null>(null);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setPortalRoot(document.body);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,7 +65,7 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
     };
   }, [isOpen]);
 
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!portalRoot || !isOpen) return null;
 
   const signInWithProvider = async (provider: "google" | "apple") => {
     setError("");
@@ -90,13 +113,18 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
     setLoadingProvider(null);
   };
 
-  const title = "Log in or create an account";
-  const subtitle = mode === "gate"
-    ? "You have completed your free games. Sign in to keep playing and save your stats."
-    : "Save your stats, streaks, and progress across devices.";
+  const title = titleOverride ?? "Log in or create an account";
+  const subtitle =
+    subtitleOverride ??
+    (mode === "gate"
+      ? "You have completed your free games. Log in to keep playing and save your stats."
+      : "Save your stats, streaks, and progress across devices.");
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2c2f31]/45 px-4 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2c2f31]/45 px-4 backdrop-blur-sm"
+      onClick={dismissible ? onClose : undefined}
+    >
       <section
         className="relative w-full max-w-md rounded-[2rem] border border-[#d8dce2] bg-white p-6 shadow-[0_28px_80px_rgba(44,47,49,0.22)]"
         role="dialog"
@@ -104,16 +132,18 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
         aria-labelledby="auth-dialog-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close login dialog"
-          className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eff1f4] text-lg font-bold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
-        >
-          ×
-        </button>
+        {dismissible ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close login dialog"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eff1f4] text-lg font-bold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
+          >
+            ×
+          </button>
+        ) : null}
 
-        <div className="mb-6 pr-8">
+        <div className={`mb-6 ${dismissible ? "pr-8" : ""}`}>
           <p className="dd-brand-word mb-2 inline-block !text-xl">DailyDabble</p>
           <h2 id="auth-dialog-title" className="font-headline text-3xl font-extrabold leading-tight text-[#2c2f31]">
             {title}
@@ -178,8 +208,16 @@ export default function AuthDialog({ isOpen, onClose, mode = "login" }: AuthDial
 
         {message ? <p className="mt-4 text-sm font-bold text-[#2f672d]">{message}</p> : null}
         {error ? <p className="mt-4 text-sm font-bold text-[#b02500]">{error}</p> : null}
+        {backHref ? (
+          <a
+            href={backHref}
+            className="mt-5 inline-flex w-full items-center justify-center text-sm font-bold text-[#595c5e] underline decoration-[#abadb0] underline-offset-4 transition hover:text-[#2c2f31]"
+          >
+            {backLabel}
+          </a>
+        ) : null}
       </section>
     </div>,
-    document.body,
+    portalRoot,
   );
 }
