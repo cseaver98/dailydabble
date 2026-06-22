@@ -401,7 +401,7 @@ export default function Home() {
               <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
                 {isLoggedIn
                   ? "See your win rates, streaks, guesses, and progress across every DailyDabble game."
-                  : "Track streaks, compare times with friends, and unlock account-level progress across every game."}
+                  : "Save your progress, keep your stats, and pick up your DailyDabble games across devices."}
               </p>
               {isLoggedIn ? (
                 <Link
