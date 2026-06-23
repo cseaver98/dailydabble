@@ -45,7 +45,6 @@ export const generateMetadata = (): Metadata => ({
   icons: {
     icon: [
       { url: "/apple-icon.png", type: "image/png", sizes: "512x512" },
-      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     shortcut: "/apple-icon.png",
     apple: "/apple-icon.png",
