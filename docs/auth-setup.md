@@ -78,6 +78,18 @@ The magic link email template must use:
 
 Do not hardcode `{{ .SiteURL }}` or localhost in email templates.
 
+The repo-owned local template lives at:
+
+```text
+supabase/templates/magic-link.html
+```
+
+For quick browser checks without sending an email, open:
+
+```text
+supabase/templates/magic-link.preview.html
+```
+
 ## Google OAuth
 
 Google Cloud project branding:
