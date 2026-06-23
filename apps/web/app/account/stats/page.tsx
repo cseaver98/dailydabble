@@ -71,28 +71,7 @@ export default async function AccountStatsPage() {
             ))}
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-            <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
-              <div>
-                <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Basic Stats</p>
-              </div>
-
-              <div className="mt-6 grid gap-3">
-                <div className="flex items-center justify-between rounded-2xl bg-[#f5f6f9] px-4 py-3">
-                  <span className="font-bold text-[#595c5e]">Average guesses</span>
-                  <span className="font-headline text-xl font-extrabold text-[#2c2f31]">{formatAverage(stats.overall.averageGuesses)}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl bg-[#f5f6f9] px-4 py-3">
-                  <span className="font-bold text-[#595c5e]">Daily games played</span>
-                  <span className="font-headline text-xl font-extrabold text-[#2c2f31]">{stats.overall.dailyPlayed}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl bg-[#f5f6f9] px-4 py-3">
-                  <span className="font-bold text-[#595c5e]">Archive games played</span>
-                  <span className="font-headline text-xl font-extrabold text-[#2c2f31]">{stats.overall.archivePlayed}</span>
-                </div>
-              </div>
-            </section>
-
+          <div className="mt-6">
             <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
               <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Game Breakdown</p>
               <div className="mt-5 grid gap-3">

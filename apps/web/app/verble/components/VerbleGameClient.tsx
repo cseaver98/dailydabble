@@ -12,6 +12,7 @@ import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -80,6 +81,18 @@ type RestoredVerbleState = {
   guessesUsed: number;
 };
 
+type VerbleCompletionSnapshot = {
+  puzzleId: string;
+  gameState: Exclude<GameState, "playing">;
+  message: string;
+  wordAttempts: WordAttempt[];
+  solvedWords: Record<number, string>;
+  slotDrafts: SlotDrafts;
+  slotLocks: SlotLocks;
+  slotMarks: SlotMarks;
+  guessesUsed: number;
+};
+
 const ALPHA_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
 const FLIP_DURATION_MS = 260;
 const FLIP_STAGGER_MS = 208;
@@ -88,6 +101,28 @@ const GLOBAL_REVEAL_DELAY_MS = 180;
 const SLOW_FLIP_DURATION_MS = FLIP_DURATION_MS * 2;
 
 const normalizeWord = (value: string): string => value.toLowerCase().replace(/[^a-z]/g, "");
+
+const buildVerbleCompletionSnapshot = ({
+  puzzleId,
+  gameState,
+  message = "",
+  wordAttempts,
+  solvedWords,
+  slotDrafts,
+  slotLocks,
+  slotMarks,
+  guessesUsed,
+}: VerbleCompletionSnapshot): VerbleCompletionSnapshot => ({
+  puzzleId,
+  gameState,
+  message,
+  wordAttempts,
+  solvedWords,
+  slotDrafts,
+  slotLocks,
+  slotMarks,
+  guessesUsed,
+});
 
 const getFlipVisual = (feedback: LetterFeedback | "empty") => {
   if (feedback === "correct") {
@@ -350,10 +385,53 @@ export default function VerbleGameClient({
         }
         if (!active) return;
 
+        const progressKey = `${storagePrefix}:${payload.puzzleId}`;
+        const completionKey = `${completionPrefix}:${payload.puzzleId}`;
+        const storedResult = await fetchStoredGameResult({
+          gameSlug: "verble",
+          puzzleId: payload.puzzleId,
+          puzzleDate: payload.puzzleDate,
+          isArchive: isArchiveView,
+        });
+        if (storedResult) {
+          const localState = storedResult.resultPayload.localState && typeof storedResult.resultPayload.localState === "object" && !Array.isArray(storedResult.resultPayload.localState)
+            ? storedResult.resultPayload.localState
+            : null;
+          const answer = getResultPayloadAnswer(storedResult);
+          const words = answer.words && typeof answer.words === "object" && !Array.isArray(answer.words)
+            ? answer.words as Record<string, string>
+            : payload.answerWords;
+          const completedDrafts = Object.fromEntries(
+            payload.slots.map((slot: Slot) => [slot.index, (words[slot.index] || "").split("")]),
+          );
+          const completedLocks = Object.fromEntries(
+            payload.slots.map((slot: Slot) => [slot.index, Array.from({ length: slot.length }, () => storedResult.isWin)]),
+          );
+          const completedMarks = Object.fromEntries(
+            payload.slots.map((slot: Slot) => [slot.index, Array.from({ length: slot.length }, () => storedResult.isWin ? "correct" : "absent")]),
+          );
+          window.localStorage.setItem(
+            completionKey,
+            JSON.stringify(
+              localState ?? {
+                puzzleId: payload.puzzleId,
+                gameState: storedResult.isWin ? "won" : "lost",
+                message: "",
+                wordAttempts: getResultPayloadAttempts(storedResult),
+                solvedWords: storedResult.isWin ? words : {},
+                slotDrafts: completedDrafts,
+                slotLocks: completedLocks,
+                slotMarks: completedMarks,
+                guessesUsed: storedResult.guessesUsed,
+              },
+            ),
+          );
+        }
+
         const restoredState = restoreVerbleState({
           targetPuzzle: payload,
-          progressKey: `${storagePrefix}:${payload.puzzleId}`,
-          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          progressKey,
+          completionKey,
           lockDailyCompletion,
         });
         setPuzzle(payload);
@@ -428,7 +506,7 @@ export default function VerbleGameClient({
     if (!completionKey || !lockDailyCompletion || gameState === "playing" || !puzzle) return;
     window.localStorage.setItem(
       completionKey,
-      JSON.stringify({
+      JSON.stringify(buildVerbleCompletionSnapshot({
         puzzleId: puzzle.puzzleId,
         gameState,
         message,
@@ -438,7 +516,7 @@ export default function VerbleGameClient({
         slotLocks,
         slotMarks,
         guessesUsed,
-      }),
+      })),
     );
   }, [completionKey, gameState, guessesUsed, lockDailyCompletion, message, puzzle, slotDrafts, slotLocks, slotMarks, solvedWords, wordAttempts]);
 
@@ -798,14 +876,27 @@ export default function VerbleGameClient({
             isWin: true,
             guessesUsed: nextGuessesUsed,
             maxGuesses,
-            resultPayload: buildResultPayload({
-              attempts: nextAttempts,
-              answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
-              final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
-              isWin: true,
-              guessesUsed: nextGuessesUsed,
-              maxGuesses,
-            }),
+            resultPayload: {
+              ...buildResultPayload({
+                attempts: nextAttempts,
+                answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+                final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
+                isWin: true,
+                guessesUsed: nextGuessesUsed,
+                maxGuesses,
+              }),
+              localState: buildVerbleCompletionSnapshot({
+                puzzleId: puzzle.puzzleId,
+                gameState: "won",
+                message: "",
+                wordAttempts: nextAttempts,
+                solvedWords: resolvedSolved,
+                slotDrafts: finalSlotDrafts,
+                slotLocks: finalSlotLocks,
+                slotMarks: finalSlotMarks,
+                guessesUsed: nextGuessesUsed,
+              }),
+            },
           });
           return;
         }
@@ -822,14 +913,27 @@ export default function VerbleGameClient({
             isWin: false,
             guessesUsed: nextGuessesUsed,
             maxGuesses,
-            resultPayload: buildResultPayload({
-              attempts: nextAttempts,
-              answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
-              final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
-              isWin: false,
-              guessesUsed: nextGuessesUsed,
-              maxGuesses,
-            }),
+            resultPayload: {
+              ...buildResultPayload({
+                attempts: nextAttempts,
+                answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+                final: { type: "word", slotIndex: selectedSlotMeta.index, guess: appliedGuess },
+                isWin: false,
+                guessesUsed: nextGuessesUsed,
+                maxGuesses,
+              }),
+              localState: buildVerbleCompletionSnapshot({
+                puzzleId: puzzle.puzzleId,
+                gameState: "lost",
+                message: "",
+                wordAttempts: nextAttempts,
+                solvedWords: resolvedSolved,
+                slotDrafts: finalSlotDrafts,
+                slotLocks: finalSlotLocks,
+                slotMarks: finalSlotMarks,
+                guessesUsed: nextGuessesUsed,
+              }),
+            },
           });
           return;
         }
@@ -954,16 +1058,29 @@ export default function VerbleGameClient({
           isWin: true,
           guessesUsed,
           maxGuesses,
-          resultPayload: buildResultPayload({
-            attempts: wordAttempts,
-            answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
-            final: { type: "phrase", guess: normalized, isCorrect: true },
-            isWin: true,
-            guessesUsed,
-            maxGuesses,
-            submittedGuesses: wordAttempts.length + 1,
-            stats: { usedFullPhraseGuess: true },
-          }),
+          resultPayload: {
+            ...buildResultPayload({
+              attempts: wordAttempts,
+              answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+              final: { type: "phrase", guess: normalized, isCorrect: true },
+              isWin: true,
+              guessesUsed,
+              maxGuesses,
+              submittedGuesses: wordAttempts.length + 1,
+              stats: { usedFullPhraseGuess: true },
+            }),
+            localState: buildVerbleCompletionSnapshot({
+              puzzleId: puzzle.puzzleId,
+              gameState: "won",
+              message: "",
+              wordAttempts,
+              solvedWords: allSolvedWords,
+              slotDrafts: solvedDrafts,
+              slotLocks: solvedLocks,
+              slotMarks: solvedMarks,
+              guessesUsed,
+            }),
+          },
         });
       }, revealTotalMs);
       return;
@@ -1027,16 +1144,29 @@ export default function VerbleGameClient({
         isWin: false,
         guessesUsed: maxGuesses,
         maxGuesses,
-        resultPayload: buildResultPayload({
-          attempts: wordAttempts,
-          answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
-          final: { type: "phrase", guess: normalized, isCorrect: false },
-          isWin: false,
-          guessesUsed: maxGuesses,
-          maxGuesses,
-          submittedGuesses: wordAttempts.length + 1,
-          stats: { usedFullPhraseGuess: true },
-        }),
+        resultPayload: {
+          ...buildResultPayload({
+            attempts: wordAttempts,
+            answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
+            final: { type: "phrase", guess: normalized, isCorrect: false },
+            isWin: false,
+            guessesUsed: maxGuesses,
+            maxGuesses,
+            submittedGuesses: wordAttempts.length + 1,
+            stats: { usedFullPhraseGuess: true },
+          }),
+          localState: buildVerbleCompletionSnapshot({
+            puzzleId: puzzle.puzzleId,
+            gameState: "lost",
+            message: "",
+            wordAttempts,
+            solvedWords: {},
+            slotDrafts: revealedDrafts,
+            slotLocks: revealedLocks,
+            slotMarks: revealedMarks,
+            guessesUsed: maxGuesses,
+          }),
+        },
       });
     }, revealTotalMs);
     setGuessesUsed(maxGuesses);

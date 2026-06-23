@@ -1,4 +1,4 @@
-import { getOrCreatePlayerId } from "@/lib/player-id";
+import { getOrCreatePlayerId, resetPlayerId } from "@/lib/player-id";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
@@ -19,6 +19,16 @@ export async function POST() {
       );
     }
 
+    return NextResponse.json({ playerId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    const playerId = await resetPlayerId();
     return NextResponse.json({ playerId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

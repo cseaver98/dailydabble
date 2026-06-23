@@ -53,6 +53,7 @@ export async function GET() {
         .from("game_results")
         .select("game_slug,is_win,guesses_used,max_guesses,completed_at")
         .eq("player_id", playerId)
+        .is("user_id", null)
         .eq("puzzle_date", today)
         .eq("is_archive", false)
         .returns<GameResultRow[]>();

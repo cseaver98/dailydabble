@@ -9,6 +9,7 @@ import { toPublicAppUrl } from "@/lib/app-url";
 import { recordGameCompletionQuietly } from "@/lib/record-game-completion";
 import { buildResultPayload } from "@/lib/result-payload";
 import { buildGameShareText, shareResultText } from "@/lib/share-results";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "@/lib/stored-game-result";
 import { useNextGameCountdown } from "@/lib/use-next-game-countdown";
 import AsyncImage from "../../components/AsyncImage";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
@@ -313,6 +314,46 @@ export default function AgegapleGameClient({
         if (!active) {
           return;
         }
+        const storedResult = await fetchStoredGameResult({
+          gameSlug: "agegaple",
+          puzzleId: payload.puzzleId,
+          puzzleDate: payload.puzzleDate,
+          isArchive: isArchiveView,
+        });
+        if (storedResult) {
+          const answer = getResultPayloadAnswer(storedResult);
+          const final = storedResult.resultPayload.final && typeof storedResult.resultPayload.final === "object" && !Array.isArray(storedResult.resultPayload.final)
+            ? storedResult.resultPayload.final as Record<string, unknown>
+            : {};
+          const localState = storedResult.resultPayload.localState && typeof storedResult.resultPayload.localState === "object" && !Array.isArray(storedResult.resultPayload.localState)
+            ? storedResult.resultPayload.localState
+            : null;
+          const roundedAgeGapYears = typeof answer.roundedAgeGapYears === "number" ? answer.roundedAgeGapYears : 0;
+          const guessYears = typeof final.guessYears === "number" ? final.guessYears : roundedAgeGapYears;
+          const resultData: PuzzleAnswer = {
+            puzzleId: payload.puzzleId,
+            guessYears,
+            exactAgeGapYears: typeof answer.exactAgeGapYears === "number" ? answer.exactAgeGapYears : roundedAgeGapYears,
+            roundedAgeGapYears,
+            absErrorYears: typeof final.absErrorYears === "number" ? final.absErrorYears : Math.abs(roundedAgeGapYears - guessYears),
+            personABirthDate: typeof answer.personABirthDate === "string" ? answer.personABirthDate : "",
+            personBBirthDate: typeof answer.personBBirthDate === "string" ? answer.personBBirthDate : "",
+            attribution: typeof answer.attribution === "string" ? answer.attribution : "",
+          };
+          window.localStorage.setItem(
+            `${completionPrefix}${payload.puzzleId}`,
+            JSON.stringify(
+              localState ?? {
+                puzzleId: payload.puzzleId,
+                guess: String(guessYears),
+                result: resultData,
+                fingerprint: getPuzzleFingerprint(payload),
+                attempts: getResultPayloadAttempts(storedResult),
+              },
+            ),
+          );
+        }
+
         const restoredState = restoreAgegapleState({
           puzzle: payload,
           completionPrefix,
@@ -467,6 +508,13 @@ export default function AgegapleGameClient({
 
       setResult(data);
       setIsResultOpen(true);
+      const completion: StoredCompletion = {
+        puzzleId: puzzle.puzzleId,
+        guess,
+        result: data,
+        fingerprint: getPuzzleFingerprint(puzzle),
+        attempts: nextAttempts,
+      };
       recordGameCompletionQuietly({
         gameSlug: "agegaple",
         puzzleId: puzzle.puzzleId,
@@ -475,27 +523,23 @@ export default function AgegapleGameClient({
         isWin: didWin,
         guessesUsed: nextAttempts.length,
         maxGuesses,
-        resultPayload: buildResultPayload({
-          attempts: nextAttempts,
-          answer: { roundedAgeGapYears: data.roundedAgeGapYears },
-          final: {
-            guessYears: data.guessYears,
-            absErrorYears: data.absErrorYears,
-            direction: attempt.direction,
-          },
-          isWin: didWin,
-          guessesUsed: nextAttempts.length,
-          maxGuesses,
-        }),
+        resultPayload: {
+          ...buildResultPayload({
+            attempts: nextAttempts,
+            answer: { ...data },
+            final: {
+              guessYears: data.guessYears,
+              absErrorYears: data.absErrorYears,
+              direction: attempt.direction,
+            },
+            isWin: didWin,
+            guessesUsed: nextAttempts.length,
+            maxGuesses,
+          }),
+          localState: completion,
+        },
       });
       if (lockDailyCompletion) {
-        const completion: StoredCompletion = {
-          puzzleId: puzzle.puzzleId,
-          guess,
-          result: data,
-          fingerprint: getPuzzleFingerprint(puzzle),
-          attempts: nextAttempts,
-        };
         window.localStorage.setItem(`${completionPrefix}${puzzle.puzzleId}`, JSON.stringify(completion));
       }
       window.localStorage.removeItem(`${storagePrefix}${puzzle.puzzleId}`);

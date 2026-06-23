@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = user
       ? await query.eq("user_id", user.id).returns<ArchiveCompletionRow[]>()
-      : await query.eq("player_id", playerId).returns<ArchiveCompletionRow[]>();
+      : await query.eq("player_id", playerId).is("user_id", null).returns<ArchiveCompletionRow[]>();
 
     if (error) {
       return NextResponse.json({ error: "Failed to load archive completions", details: error.message }, { status: 500 });

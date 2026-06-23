@@ -8,6 +8,7 @@ import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
@@ -344,10 +345,33 @@ export default function DoodleGameClient({
           return;
         }
 
+        const storageKey = `${storagePrefix}:${payload.puzzleId}`;
+        const completionKey = `${completionPrefix}:${payload.puzzleId}`;
+        const storedResult = await fetchStoredGameResult({
+          gameSlug: "doodle",
+          puzzleId: payload.puzzleId,
+          puzzleDate: payload.puzzleDate,
+          isArchive: isArchiveView,
+        });
+        if (storedResult) {
+          const answer = getResultPayloadAnswer(storedResult);
+          const answerValue = typeof answer.value === "string" ? answer.value : payload.answer;
+          window.localStorage.setItem(
+            completionKey,
+            JSON.stringify({
+              puzzleId: payload.puzzleId,
+              guess: "",
+              attempts: getResultPayloadAttempts(storedResult),
+              gameState: storedResult.isWin ? "won" : "lost",
+              message: storedResult.isWin ? `Nice! The doodle is a ${answerValue}.` : `Out of guesses. The doodle was ${answerValue}.`,
+            }),
+          );
+        }
+
         const restoredState = restoreDoodleState({
           puzzleId: payload.puzzleId,
-          storageKey: `${storagePrefix}:${payload.puzzleId}`,
-          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          storageKey,
+          completionKey,
           lockDailyCompletion,
         });
         setPuzzle(payload);

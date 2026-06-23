@@ -13,6 +13,7 @@ import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
 
@@ -230,10 +231,37 @@ export default function YeardleGameClient({
           return;
         }
 
+        const progressKey = `${storagePrefix}:${payload.puzzleId}`;
+        const completionKey = `${completionPrefix}:${payload.puzzleId}`;
+        const storedResult = await fetchStoredGameResult({
+          gameSlug: "yeardle",
+          puzzleId: payload.puzzleId,
+          puzzleDate: payload.puzzleDate,
+          isArchive: isArchiveView,
+        });
+        if (storedResult) {
+          const answer = getResultPayloadAnswer(storedResult);
+          const answerYear = typeof answer.year === "number" || typeof answer.year === "string" ? String(answer.year) : "";
+          const eventTitle = typeof answer.eventTitle === "string" ? answer.eventTitle : "";
+          window.localStorage.setItem(
+            completionKey,
+            JSON.stringify({
+              puzzleId: payload.puzzleId,
+              guess: "",
+              attempts: getResultPayloadAttempts(storedResult),
+              gameState: storedResult.isWin ? "won" : "lost",
+              message: storedResult.isWin
+                ? `Correct. The event happened in ${answerYear}. ${eventTitle}`
+                : `Out of guesses. The year was ${answerYear}. ${eventTitle}`,
+              resolvedAnswer: `${answerYear} — ${eventTitle}`,
+            }),
+          );
+        }
+
         const restoredState = restoreYeardleState({
           puzzleId: payload.puzzleId,
-          progressKey: `${storagePrefix}:${payload.puzzleId}`,
-          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          progressKey,
+          completionKey,
           lockDailyCompletion,
         });
         setPuzzle(payload);

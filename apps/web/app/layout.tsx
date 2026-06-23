@@ -9,6 +9,7 @@ import "./equadle/equadle.css";
 import "./moviedle/moviedle.css";
 import "./doodle/doodle.css";
 import "./agegaple/agegaple.css";
+import AuthStateStorageBoundary from "./components/AuthStateStorageBoundary";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${plusJakartaSans.variable} ${manrope.variable} antialiased`}>
+        <AuthStateStorageBoundary />
         {children}
       </body>
     </html>

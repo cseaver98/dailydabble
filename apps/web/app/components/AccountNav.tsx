@@ -5,6 +5,7 @@ import Link from "next/link";
 import AuthDialog from "./AuthDialog";
 import LoadingLabel from "./LoadingLabel";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
+import { clearLocalGameState } from "@/lib/local-game-state";
 
 type AccountUser = {
   id: string;
@@ -72,6 +73,9 @@ export default function AccountNav() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearLocalGameState();
+    window.localStorage.setItem("dailydabble:v1:viewer", "guest");
+    await fetch("/api/player", { method: "DELETE" }).catch(() => null);
     setUser(null);
     setIsMenuOpen(false);
     window.location.href = "/";

@@ -5,7 +5,7 @@ import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CSSProperties, useEffect, useState } from "react";
+import { CSSProperties, Suspense, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
 import DisplayNameDialog from "./components/DisplayNameDialog";
@@ -47,7 +47,7 @@ type MobileCardMotion = {
   buttonShadow: string;
 };
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -188,11 +188,9 @@ export default function Home() {
             const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
             const statusLabel = loading
               ? "Loading"
-              : gameStatus === "completed_lost"
-                  ? "Missed"
-                  : complete
-                    ? "Completed"
-                    : "Not done";
+              : complete
+                ? "Completed"
+                : "Not done";
             const isDoodle = game.slug === "doodle";
             const isVerble = game.slug === "verble";
             const isYeardle = game.slug === "yeardle";
@@ -455,5 +453,13 @@ export default function Home() {
         }}
       />
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }

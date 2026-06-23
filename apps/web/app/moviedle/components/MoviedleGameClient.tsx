@@ -8,6 +8,7 @@ import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
@@ -221,10 +222,35 @@ export default function MoviedleGameClient({
           return;
         }
 
+        const progressKey = `${storagePrefix}:${payload.puzzleId}`;
+        const completionKey = `${completionPrefix}:${payload.puzzleId}`;
+        const storedResult = await fetchStoredGameResult({
+          gameSlug: "moviedle",
+          puzzleId: payload.puzzleId,
+          puzzleDate: payload.puzzleDate,
+          isArchive: isArchiveView,
+        });
+        if (storedResult) {
+          const answer = getResultPayloadAnswer(storedResult);
+          const title = typeof answer.title === "string" ? answer.title : "Unavailable";
+          window.localStorage.setItem(
+            completionKey,
+            JSON.stringify({
+              puzzleId: payload.puzzleId,
+              guess: "",
+              attempts: getResultPayloadAttempts(storedResult),
+              gameState: storedResult.isWin ? "won" : "lost",
+              message: storedResult.isWin ? `Correct! It was ${title}.` : `Out of guesses. The movie was ${title}.`,
+              revealedAnswer: title,
+              revealedDetails: normalizeRevealedDetails(answer.details),
+            }),
+          );
+        }
+
         const restoredState = restoreMoviedleState({
           puzzleId: payload.puzzleId,
-          progressKey: `${storagePrefix}:${payload.puzzleId}`,
-          completionKey: `${completionPrefix}:${payload.puzzleId}`,
+          progressKey,
+          completionKey,
           lockDailyCompletion,
         });
         setPuzzle(payload);

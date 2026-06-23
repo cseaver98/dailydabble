@@ -326,6 +326,16 @@ export const claimGuestResultsForUser = async ({
     });
 
     if (existing) {
+      const { error: deleteDuplicateError } = await supabase
+        .schema("core")
+        .from("game_results")
+        .delete()
+        .eq("id", row.id);
+
+      if (deleteDuplicateError) {
+        throw new Error(`Failed to remove duplicate guest result: ${deleteDuplicateError.message}`);
+      }
+
       skipped += 1;
       continue;
     }
@@ -340,6 +350,16 @@ export const claimGuestResultsForUser = async ({
       throw new Error(`Failed to claim guest result: ${updateError.message}`);
     }
     claimed += 1;
+  }
+
+  const { error: legacyDeleteError } = await supabase
+    .schema("core")
+    .from("completions")
+    .delete()
+    .eq("player_id", playerId);
+
+  if (legacyDeleteError) {
+    throw new Error(`Failed to remove claimed legacy completions: ${legacyDeleteError.message}`);
   }
 
   return { playerId, userId, claimed, skipped };
