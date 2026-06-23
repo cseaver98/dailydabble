@@ -104,7 +104,8 @@ export const enforceStagingAccess = async (request: NextRequest): Promise<NextRe
     const formData = await request.formData().catch(() => null);
     const password = String(formData?.get("password") ?? "");
     if (constantTimeEqual(password, stagingPassword)) {
-      const response = NextResponse.redirect(request.nextUrl);
+      const redirectUrl = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, request.url);
+      const response = NextResponse.redirect(redirectUrl, { status: 303 });
       response.cookies.set(STAGING_ACCESS_COOKIE, expectedToken, {
         httpOnly: true,
         sameSite: "lax",
