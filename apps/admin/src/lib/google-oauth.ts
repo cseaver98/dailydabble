@@ -49,6 +49,23 @@ const redirectToLoginError = (request: NextRequest, message: string): NextRespon
   return NextResponse.redirect(loginUrl);
 };
 
+const getOAuthConfigurationError = (): string | null => {
+  const adminAuthError = getAdminAuthConfigurationError();
+  if (adminAuthError) {
+    return adminAuthError;
+  }
+
+  if (!getGoogleClientId()) {
+    return "GOOGLE_CLIENT_ID is not configured.";
+  }
+
+  if (!getGoogleClientSecret()) {
+    return "GOOGLE_CLIENT_SECRET is not configured.";
+  }
+
+  return null;
+};
+
 const clearOAuthCookies = (response: NextResponse): void => {
   for (const cookieName of [OAUTH_STATE_COOKIE, OAUTH_NEXT_COOKIE]) {
     response.cookies.set(cookieName, "", {
@@ -63,11 +80,10 @@ const clearOAuthCookies = (response: NextResponse): void => {
 
 export const startGoogleAdminOAuth = (request: NextRequest): NextResponse => {
   const clientId = getGoogleClientId();
-  const clientSecret = getGoogleClientSecret();
-  const configurationError = getAdminAuthConfigurationError();
+  const configurationError = getOAuthConfigurationError();
 
-  if (configurationError || !clientId || !clientSecret) {
-    return redirectToLoginError(request, "Admin Google OAuth is not configured.");
+  if (configurationError) {
+    return redirectToLoginError(request, configurationError);
   }
 
   const state = randomToken();
@@ -99,10 +115,10 @@ export const startGoogleAdminOAuth = (request: NextRequest): NextResponse => {
 export const finishGoogleAdminOAuth = async (request: NextRequest): Promise<NextResponse> => {
   const clientId = getGoogleClientId();
   const clientSecret = getGoogleClientSecret();
-  const configurationError = getAdminAuthConfigurationError();
+  const configurationError = getOAuthConfigurationError();
 
-  if (configurationError || !clientId || !clientSecret) {
-    return redirectToLoginError(request, "Admin Google OAuth is not configured.");
+  if (configurationError) {
+    return redirectToLoginError(request, configurationError);
   }
 
   const code = request.nextUrl.searchParams.get("code");
