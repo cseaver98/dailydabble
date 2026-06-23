@@ -6,11 +6,13 @@ import { getDoodleSupabaseAdmin } from "@/lib/supabase/doodle";
 
 export const runtime = "nodejs";
 
-const STATUS_VALUES = ["pending", "approved", "used"] as const;
+const STATUS_VALUES = ["pending", "approved"] as const;
+const STORED_STATUS_VALUES = ["pending", "approved", "used"] as const;
 type DoodleStatus = (typeof STATUS_VALUES)[number];
+type StoredDoodleStatus = (typeof STORED_STATUS_VALUES)[number];
 
 type ReviewStateRecord = {
-  status: DoodleStatus;
+  status: StoredDoodleStatus;
   updatedAt: string;
 };
 
@@ -91,6 +93,9 @@ const storagePathForSlug = (slug: string): string =>
 const isValidStatus = (value: unknown): value is DoodleStatus =>
   typeof value === "string" && STATUS_VALUES.includes(value as DoodleStatus);
 
+const isValidStoredStatus = (value: unknown): value is StoredDoodleStatus =>
+  typeof value === "string" && STORED_STATUS_VALUES.includes(value as StoredDoodleStatus);
+
 const readJsonFile = <T>(path: string): T | null => {
   if (!existsSync(path)) {
     return null;
@@ -117,7 +122,7 @@ const loadReviewState = (): ReviewState => {
       continue;
     }
     const record = entry as Partial<ReviewStateRecord>;
-    if (!isValidStatus(record.status)) {
+    if (!isValidStoredStatus(record.status)) {
       continue;
     }
     result[slug] = {
@@ -465,19 +470,20 @@ const buildOverview = async () => {
     const state = reviewState[slug] ?? { status: "pending" as DoodleStatus, updatedAt: nowIso };
     const puzzleId = puzzlesBySlug.get(slug) ?? null;
     const scheduleDates = puzzleId ? (scheduleDatesByPuzzleId.get(puzzleId) ?? []).sort((a, b) => a.localeCompare(b)) : [];
-    const hasUsedDate = scheduleDates.some((date) => date <= today);
     const usedDates = scheduleDates.filter((date) => date <= today);
     const futureDates = scheduleDates.filter((date) => date > today);
     const latestUsedDate = usedDates.length > 0 ? usedDates[usedDates.length - 1] : null;
     const nextScheduledDate = futureDates.length > 0 ? futureDates[0] : null;
     const isUsedToday = scheduleDates.includes(today);
+    const isFinished = Boolean(latestUsedDate);
     const scheduledPuzzleDate = latestUsedDate ?? nextScheduledDate;
-    const effectiveStatus: DoodleStatus = hasUsedDate ? "used" : state.status;
+    const normalizedStatus: DoodleStatus = state.status === "used" ? "approved" : state.status;
 
     return {
       slug,
       filename: file.filename,
-      status: effectiveStatus,
+      status: normalizedStatus,
+      lifecycleStatus: isUsedToday ? "today" : latestUsedDate ? "finished" : nextScheduledDate ? "scheduled" : "unscheduled",
       statusUpdatedAt: state.updatedAt,
       rawUpdatedAt: file.updatedAt,
       hasProcessed: Boolean(processedSummary),
@@ -489,6 +495,9 @@ const buildOverview = async () => {
       storagePath: storagePathForSlug(slug),
       scheduledPuzzleDate,
       isUsedToday,
+      isFinished,
+      nextScheduledDate,
+      lastUsedPuzzleDate: latestUsedDate,
     };
   });
 
@@ -497,22 +506,29 @@ const buildOverview = async () => {
       acc[item.status] += 1;
       return acc;
     },
-    { pending: 0, approved: 0, used: 0 },
+    { pending: 0, approved: 0 },
   );
 
-  const approvedProcessed = items.filter((item) => item.status === "approved" && item.hasProcessed).length;
-  const approvedUnprocessed = items.filter((item) => item.status === "approved" && !item.hasProcessed).length;
+  const approvedTotal = items.filter((item) => item.status === "approved").length;
+  const approvedProcessed = items.filter((item) => item.status === "approved" && item.hasProcessed && !item.isFinished).length;
+  const approvedUnprocessed = items.filter((item) => item.status === "approved" && !item.hasProcessed && !item.isFinished).length;
   const pendingProcessed = items.filter((item) => item.status === "pending" && item.hasProcessed).length;
-  const usedTotal = items.filter((item) => item.status === "used").length;
+  const finished = items.filter((item) => item.isFinished).length;
+  const scheduled = items.filter((item) => item.scheduledPuzzleDate).length;
+  const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
 
   const queueHealth = {
     runwayDays: approvedProcessed,
     approvedProcessed,
     approvedUnprocessed,
+    approved: approvedTotal,
+    scheduled,
     pending: queueCounts.pending,
     pendingProcessed,
-    used: usedTotal,
+    finished,
     total: items.length,
+    lowQueueThreshold,
+    isLow: approvedProcessed < lowQueueThreshold,
   };
 
   return {

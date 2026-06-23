@@ -78,6 +78,97 @@ a {
   color: var(--brand-soft);
 }
 
+.admin-queue-health {
+  margin-top: 0.95rem;
+  border: 1px solid var(--outline);
+  border-radius: 18px;
+  background: #f8fafc;
+  padding: 0.9rem;
+}
+
+.admin-queue-health.is-low {
+  border-color: #f5b8a8;
+  background: #fff8f6;
+}
+
+.admin-queue-health-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-queue-health-eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-queue-health-title {
+  margin: 0.16rem 0 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.admin-queue-health-warning,
+.admin-queue-health-ok {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 0.3rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.admin-queue-health-warning {
+  background: #ffe2da;
+  color: #a32912;
+}
+
+.admin-queue-health-ok {
+  background: var(--brand-soft);
+  color: #1d5b1c;
+}
+
+.admin-queue-health-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.75rem;
+}
+
+.admin-queue-health-metric {
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 0.72rem;
+}
+
+.admin-queue-health-metric span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.admin-queue-health-metric strong {
+  color: var(--text);
+  display: block;
+  font-size: 1.45rem;
+  font-weight: 950;
+  margin-top: 0.1rem;
+}
+
+.admin-queue-health-copy {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 750;
+  margin: 0.75rem 0 0;
+}
+
 .admin-content {
   padding: 1.15rem;
 }

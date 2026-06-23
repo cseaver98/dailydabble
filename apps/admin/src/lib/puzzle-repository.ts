@@ -1242,6 +1242,7 @@ export const getQueueHealth = async (): Promise<QueueHealth> => {
     approvedTotal,
     approvedUnused,
     approvedUsed,
+    scheduled: usedIds.size,
     pending,
     finished,
     runwayDays,

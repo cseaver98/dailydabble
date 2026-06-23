@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import QueueHealthPanel from "../components/queue-health-panel";
 
 const statuses = ["pending_review", "approved", "finished"];
-const filterStatuses = ["pending_review", "approved", "today", "finished"];
+const filterStatuses = ["pending_review", "approved", "today", "finished", "all"];
 const candidatePageSize = 10;
+const statusLabel = (status) => (status === "pending_review" ? "pending" : status);
 
 export default function EquadleAdminTab() {
   const [items, setItems] = useState([]);
@@ -148,16 +150,7 @@ export default function EquadleAdminTab() {
       <h1 className="admin-title">Equadle Curation</h1>
       <p className="admin-copy">Review candidate equations and approve them for the daily runway queue.</p>
 
-      {queueHealth ? (
-        <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
-          <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
-          <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-            Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
-            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
-            Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
-          </p>
-        </div>
-      ) : null}
+      <QueueHealthPanel queueHealth={queueHealth} />
 
       <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem" }}>
         <p style={{ margin: 0, fontWeight: 900 }}>Add puzzle candidate</p>
@@ -181,9 +174,8 @@ export default function EquadleAdminTab() {
         <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
           Status
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
-            <option value="all">all</option>
             {filterStatuses.map((status) => (
-              <option key={status} value={status}>{status}</option>
+              <option key={status} value={status}>{statusLabel(status)}</option>
             ))}
           </select>
         </label>

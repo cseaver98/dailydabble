@@ -180,6 +180,8 @@ export async function GET(request: Request) {
     const approvedUnused = ((allMovies as Array<{ id: string; status: string }> | null) ?? []).filter(
       (row) => row.status === "approved" && !finishedIds.has(row.id),
     ).length;
+    const scheduled = new Set(((allSchedule as Array<{ movie_id: string; puzzle_date: string }> | null) ?? []).map((row) => row.movie_id)).size;
+    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
 
     return NextResponse.json({
       items,
@@ -191,9 +193,12 @@ export async function GET(request: Request) {
         runwayDays: approvedUnused,
         approved,
         approvedUnused,
+        scheduled,
         pending,
         finished,
         total: ((allMovies as Array<{ id: string; status: string }> | null) ?? []).length,
+        lowQueueThreshold,
+        isLow: approvedUnused < lowQueueThreshold,
       },
     });
   } catch (error) {

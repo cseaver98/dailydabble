@@ -179,12 +179,6 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<DoodlePu
       throw new Error(`Failed to auto-schedule doodle puzzle: ${insertError.message}`);
     }
 
-    await supabase
-      .from("puzzles")
-      .update({ status: "used" })
-      .eq("id", candidate.id)
-      .eq("status", "approved");
-
     return mapPuzzle(
       { puzzle_date: date, puzzle_id: candidate.id },
       candidate,

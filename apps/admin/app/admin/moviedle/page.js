@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import QueueHealthPanel from "../components/queue-health-panel";
 
 const candidateStatuses = ["pending", "approved", "finished"];
-const filterStatuses = ["pending", "approved", "today", "finished"];
+const filterStatuses = ["pending", "approved", "today", "finished", "all"];
 const candidatePageSize = 10;
 const PLACEHOLDER_IMAGE = "/favicon.svg";
 const statusLabel = {
@@ -11,6 +12,7 @@ const statusLabel = {
   approved: "approved",
   today: "today",
   finished: "finished",
+  all: "all",
 };
 
 export default function MoviedleAdminTab() {
@@ -443,16 +445,7 @@ export default function MoviedleAdminTab() {
         <h1 className="admin-title">Moviedle Curation</h1>
         <p className="admin-copy">Create candidates from the title library, curate still images, and move candidates through review.</p>
 
-        {queueHealth ? (
-          <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
-            <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
-            <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-              Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
-              Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
-              Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
-            </p>
-          </div>
-        ) : null}
+        <QueueHealthPanel queueHealth={queueHealth} />
 
         <div
           style={{
@@ -522,7 +515,6 @@ export default function MoviedleAdminTab() {
           <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
             Status
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
-              <option value="all">all</option>
               {filterStatuses.map((status) => (
                 <option key={status} value={status}>{statusLabel[status] || status}</option>
               ))}

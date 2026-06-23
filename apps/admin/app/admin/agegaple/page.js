@@ -2,14 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import QueueHealthPanel from "../components/queue-health-panel";
 
 const statuses = ["pending_review", "approved", "finished"];
+const filterStatuses = ["pending_review", "approved", "used_today", "finished", "all"];
 const batchSizeOptions = [1, 5, 10, 15, 20];
 const candidatePageSize = 10;
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520"><rect width="800" height="520" fill="#eef1f4"/><g fill="none" stroke="#c6ccd3" stroke-width="8"><rect x="140" y="96" width="520" height="328" rx="24"/><path d="M178 362 304 238l92 90 98-116 128 150"/><circle cx="300" cy="188" r="28"/></g><text x="400" y="466" text-anchor="middle" fill="#7c8590" font-family="Arial, Helvetica, sans-serif" font-size="28">No image</text></svg>`,
 )}`;
-const statusLabel = (status) => (status === "pending_review" ? "pending" : status);
+const statusLabel = (status) => {
+  if (status === "pending_review") return "pending";
+  if (status === "used_today") return "today";
+  return status;
+};
 
 export default function AgegapleAdminTab() {
   const router = useRouter();
@@ -462,47 +468,41 @@ export default function AgegapleAdminTab() {
           </button>
         </div>
 
-        {queueHealth ? (
-          <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
-            <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
-            <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-              Runway: <b>{queueHealth.runwayDays}</b> day(s) |
-              Pending: <b>{queueHealth.pending}</b> | Finished: <b>{queueHealth.finished}</b> |
-              Total: <b>{queueHealth.totalCandidates ?? 0}</b>
-            </p>
-          </div>
-        ) : null}
+        <QueueHealthPanel queueHealth={queueHealth} />
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
-          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
-            Batch size
-            <select value={batchSize} onChange={(event) => setBatchSize(Number(event.target.value))} style={{ marginLeft: ".45rem" }}>
-              {batchSizeOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={isSeeding}>
-            {isSeeding ? "Seeding..." : `Start Batch Seed (${batchSize})`}
-          </button>
-          <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(true)}>
-            Create candidate
-          </button>
-          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
-            Status
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
-              <option value="all">all</option>
-              <option value="used_today">today&apos;s game</option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>{statusLabel(status)}</option>
-              ))}
-            </select>
-          </label>
+        <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, background: "#f8fafc", padding: ".8rem" }}>
+          <p style={{ margin: 0, fontWeight: 900 }}>Batch seed operations</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".65rem" }}>
+            <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
+              Batch size
+              <select value={batchSize} onChange={(event) => setBatchSize(Number(event.target.value))} style={{ marginLeft: ".45rem" }}>
+                {batchSizeOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={isSeeding}>
+              {isSeeding ? "Seeding..." : `Start Batch Seed (${batchSize})`}
+            </button>
+            <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(true)}>
+              Create candidate
+            </button>
+          </div>
         </div>
 
         {seedError ? <p style={{ marginTop: ".55rem", color: "#b42318", fontWeight: 700 }}>{seedError}</p> : null}
         {seedOutput ? <pre style={{ marginTop: ".55rem", maxHeight: 200, overflow: "auto", background: "#f8fafc", borderRadius: 10, padding: ".55rem" }}>{seedOutput}</pre> : null}
         {error ? <p style={{ marginTop: ".6rem", color: "#b42318", fontWeight: 700 }}>{error}</p> : null}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
+          <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
+            Status
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
+              {filterStatuses.map((status) => (
+                <option key={status} value={status}>{statusLabel(status)}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         {loading ? <p className="admin-copy">Loading candidates...</p> : null}
 
         <div style={{ marginTop: ".9rem", display: "grid", gap: ".65rem" }}>

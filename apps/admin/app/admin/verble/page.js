@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import QueueHealthPanel from "../components/queue-health-panel";
 
 const statuses = ["pending_review", "approved"];
-const filterStatuses = ["pending_review", "approved", "today", "finished"];
+const filterStatuses = ["pending_review", "approved", "today", "finished", "all"];
 const candidatePageSize = 10;
-const statusLabel = (status) => String(status || "").replaceAll("_", " ");
+const statusLabel = (status) => (status === "pending_review" ? "pending" : String(status || "").replaceAll("_", " "));
 
 export default function VerbleAdminTab() {
   const [items, setItems] = useState([]);
@@ -149,16 +150,7 @@ export default function VerbleAdminTab() {
       <h1 className="admin-title">Verble Curation</h1>
       <p className="admin-copy">Review phrase candidates and approve them for the daily Verble runway queue.</p>
 
-      {queueHealth ? (
-        <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 14, padding: ".7rem .8rem", background: "#f8fafc" }}>
-          <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
-          <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-            Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved: <b>{queueHealth.approved || 0}</b> |
-            Approved unused: <b>{queueHealth.approvedUnused || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
-            Finished: <b>{queueHealth.finished || 0}</b> | Total: <b>{queueHealth.total || 0}</b>
-          </p>
-        </div>
-      ) : null}
+      <QueueHealthPanel queueHealth={queueHealth} />
 
       <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem", display: "grid", gap: ".7rem" }}>
         <div>

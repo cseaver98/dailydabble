@@ -103,6 +103,7 @@ export type QueueHealth = {
   approvedTotal: number;
   approvedUnused: number;
   approvedUsed: number;
+  scheduled: number;
   pending: number;
   finished: number;
   runwayDays: number;

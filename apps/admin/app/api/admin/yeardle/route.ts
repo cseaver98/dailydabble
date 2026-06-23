@@ -105,6 +105,8 @@ export async function GET(request: Request) {
     const approved = hydrated.filter((row) => row.status === "approved").length;
     const finished = hydrated.filter((row) => row.isFinished).length;
     const approvedUnused = hydrated.filter((row) => row.status === "approved" && !row.isFinished).length;
+    const scheduled = hydrated.filter((row) => row.scheduleCount > 0).length;
+    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
 
     return NextResponse.json({
       ok: true,
@@ -115,9 +117,12 @@ export async function GET(request: Request) {
       queueHealth: {
         runwayDays: approvedUnused,
         approved,
+        scheduled,
         pending,
         finished,
         total: hydrated.length,
+        lowQueueThreshold,
+        isLow: approvedUnused < lowQueueThreshold,
       },
     });
   } catch (error) {

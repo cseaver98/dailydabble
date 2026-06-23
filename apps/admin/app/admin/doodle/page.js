@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import QueueHealthPanel from "../components/queue-health-panel";
 
-const STATUS_VALUES = ["pending", "approved", "used"];
+const STATUS_VALUES = ["pending", "approved"];
+const filterStatuses = ["pending", "approved", "used_today", "finished", "all"];
 const candidatePageSize = 10;
 
 const statusLabel = {
   pending: "Pending",
   approved: "Approved",
-  used: "Used",
-  used_today: "Today's game",
+  finished: "Finished",
+  used_today: "Today",
+  all: "All",
 };
 
 export default function DoodleAdminTab() {
   const [items, setItems] = useState([]);
-  const [queueCounts, setQueueCounts] = useState({ pending: 0, approved: 0, used: 0 });
+  const [queueCounts, setQueueCounts] = useState({ pending: 0, approved: 0 });
   const [queueHealth, setQueueHealth] = useState(null);
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -41,7 +44,7 @@ export default function DoodleAdminTab() {
   const hydrateOverview = (payload) => {
     if (Array.isArray(payload.items)) {
       setItems(payload.items);
-      setQueueCounts(payload.queueCounts || { pending: 0, approved: 0, used: 0 });
+      setQueueCounts(payload.queueCounts || { pending: 0, approved: 0 });
       setQueueHealth(payload.queueHealth || null);
       return;
     }
@@ -58,7 +61,7 @@ export default function DoodleAdminTab() {
         pathCount: 0,
       })),
     );
-    setQueueCounts({ pending: fallbackFiles.length, approved: 0, used: 0 });
+    setQueueCounts({ pending: fallbackFiles.length, approved: 0 });
     setQueueHealth(null);
   };
 
@@ -287,6 +290,12 @@ export default function DoodleAdminTab() {
     if (statusFilter === "used_today") {
       return sorted.filter((item) => item.isUsedToday);
     }
+    if (statusFilter === "finished") {
+      return sorted.filter((item) => item.isFinished);
+    }
+    if (statusFilter === "approved") {
+      return sorted.filter((item) => item.status === "approved" && !item.isFinished);
+    }
     if (STATUS_VALUES.includes(statusFilter)) {
       return sorted.filter((item) => item.status === statusFilter);
     }
@@ -426,25 +435,13 @@ export default function DoodleAdminTab() {
           </div>
         ) : null}
 
-        {queueHealth ? (
-          <div style={{ marginTop: ".95rem", border: "1px solid #d8dce2", borderRadius: 12, padding: ".7rem .8rem", background: "#f8fafc" }}>
-            <p style={{ margin: 0, fontWeight: 800 }}>Queue Health</p>
-            <p style={{ margin: ".35rem 0 0", color: "#5b6168", fontSize: ".9rem" }}>
-              Runway: <b>{queueHealth.runwayDays || 0}</b> day(s) | Approved (ready): <b>{queueHealth.approvedProcessed || 0}</b> |
-              Approved (needs pipeline): <b>{queueHealth.approvedUnprocessed || 0}</b> | Pending: <b>{queueHealth.pending || 0}</b> |
-              Pending (already staged): <b>{queueHealth.pendingProcessed || 0}</b> | Used: <b>{queueHealth.used || 0}</b> |
-              Total: <b>{queueHealth.total || 0}</b>
-            </p>
-          </div>
-        ) : null}
+        <QueueHealthPanel queueHealth={queueHealth} />
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: ".5rem", alignItems: "end", marginTop: ".9rem" }}>
           <label style={{ fontWeight: 700, fontSize: ".9rem" }}>
             Status
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ marginLeft: ".45rem" }}>
-              <option value="all">all</option>
-              <option value="used_today">{statusLabel.used_today}</option>
-              {STATUS_VALUES.map((status) => (
+              {filterStatuses.map((status) => (
                 <option key={status} value={status}>{statusLabel[status]}</option>
               ))}
             </select>
@@ -474,7 +471,7 @@ export default function DoodleAdminTab() {
                   <div>
                     <p style={{ margin: 0, fontWeight: 900 }}>{item.slug}</p>
                     <p style={{ margin: ".22rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
-                      Status: <b>{statusLabel[item.status] || item.status}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
+                      Status: <b>{statusLabel[item.status] || item.status}</b> | Lifecycle: <b>{statusLabel[item.lifecycleStatus] || item.lifecycleStatus}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
                     </p>
                     <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
                       In manifest: {item.inManifest ? "yes" : "no"} | Preview html: {item.previewReady ? "yes" : "no"}
