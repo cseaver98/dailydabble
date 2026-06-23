@@ -47,6 +47,8 @@ type MobileCardMotion = {
   buttonShadow: string;
 };
 
+const firstVisitToastKey = "dailydabble:v1:first-visit-toast-seen";
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,6 +59,7 @@ function HomeContent() {
   const [error, setError] = useState("");
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
+  const [showFirstVisitToast, setShowFirstVisitToast] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
 
@@ -97,6 +100,24 @@ function HomeContent() {
   const isLoggedIn = Boolean(access?.loggedIn);
   const onboardingNext = searchParams.get("next");
   const safeOnboardingNext = onboardingNext && onboardingNext.startsWith("/") && !onboardingNext.startsWith("//") ? onboardingNext : "/";
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(firstVisitToastKey)) {
+        return;
+      }
+
+      window.localStorage.setItem(firstVisitToastKey, "true");
+      setShowFirstVisitToast(true);
+      const timeoutId = window.setTimeout(() => {
+        setShowFirstVisitToast(false);
+      }, 15000);
+
+      return () => window.clearTimeout(timeoutId);
+    } catch {
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
@@ -452,6 +473,30 @@ function HomeContent() {
           router.refresh();
         }}
       />
+      {showFirstVisitToast ? (
+        <div className="fixed inset-x-4 bottom-5 z-[90] mx-auto max-w-md rounded-[1.5rem] bg-white/95 p-4 text-[#2c2f31] shadow-[0_18px_50px_rgba(44,47,49,0.18)] backdrop-blur sm:bottom-6">
+          <div className="absolute right-3 top-3 h-10 w-10">
+            <svg className="first-visit-toast-ring absolute inset-0 h-10 w-10 -rotate-90" viewBox="0 0 40 40" aria-hidden="true">
+              <circle cx="20" cy="20" r="18" fill="none" stroke="#e0e3e6" strokeWidth="2" />
+              <circle className="first-visit-toast-ring-progress" cx="20" cy="20" r="18" fill="none" stroke="#2f672d" strokeLinecap="round" strokeWidth="2.5" />
+            </svg>
+            <button
+              type="button"
+              onClick={() => setShowFirstVisitToast(false)}
+              aria-label="Close intro message"
+              className="absolute inset-1 inline-flex items-center justify-center rounded-full bg-[#eff1f4] text-base font-extrabold text-[#595c5e] transition hover:bg-[#e0e3e6]"
+            >
+              ×
+            </button>
+          </div>
+          <div className="pr-8">
+            <p className="font-headline text-lg font-extrabold text-[#2c2f31]">Daily games, all in one place.</p>
+            <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
+              Pick a game, play in under a minute, and come back tomorrow for a fresh set.
+            </p>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

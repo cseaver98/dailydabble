@@ -175,6 +175,18 @@ body {
   user-select: none;
 }
 
+.first-visit-toast-ring-progress {
+  animation: first-visit-toast-countdown 15000ms linear forwards;
+  stroke-dasharray: 113.1;
+  stroke-dashoffset: 0;
+}
+
+@keyframes first-visit-toast-countdown {
+  to {
+    stroke-dashoffset: 113.1;
+  }
+}
+
 @media (max-width: 640px) {
   .archive-complete-badge,
   .archive-not-done-badge,
