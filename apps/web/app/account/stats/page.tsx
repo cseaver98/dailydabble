@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../../components/AccountNav";
 import SiteMenu from "../../components/SiteMenu";
 import AccountLoginPanel from "../AccountLoginPanel";
 import { getAccountStats } from "@/lib/account-stats";
+import { games } from "@/lib/games";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
 export const metadata: Metadata = {
@@ -57,11 +59,12 @@ export default async function AccountStatsPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               ["Daily games played", stats.overall.played.toString()],
               ["Wins", stats.overall.wins.toString()],
               ["Win rate", formatPercent(stats.overall.winRate)],
+              ["Average guesses", formatAverage(stats.overall.averageGuesses)],
               ["DailyDabble streak 🔥", stats.overall.currentDailyDabbleStreak.toString()],
             ].map(([label, value]) => (
               <section key={label} className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_32px_rgba(44,47,49,0.05)]">
@@ -75,34 +78,54 @@ export default async function AccountStatsPage() {
             <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
               <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Game Breakdown</p>
               <div className="mt-5 grid gap-3">
-                {stats.games.map((gameStat) => (
-                  <div key={gameStat.gameSlug} className="grid gap-3 rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-                    <div>
-                      <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.gameName}</p>
-                      <p className="mt-1 text-sm font-semibold text-[#75777a]">
-                        {gameStat.played
-                          ? `${gameStat.played} daily played • ${formatPercent(gameStat.winRate)} wins`
-                          : gameStat.archivePlayed
-                            ? `${gameStat.archivePlayed} archive played`
-                            : "No daily games played yet"}
-                      </p>
+                {stats.games.map((gameStat) => {
+                  const game = games.find((item) => item.slug === gameStat.gameSlug);
+
+                  return (
+                    <div key={gameStat.gameSlug} className="grid gap-3 rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div className="flex items-center gap-3">
+                        {game ? (
+                          <span
+                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                            style={{ backgroundColor: game.iconBackground }}
+                          >
+                            <Image
+                              src={game.iconSrc}
+                              alt={game.iconAlt}
+                              width={28}
+                              height={28}
+                              className="h-7 w-7 object-contain"
+                            />
+                          </span>
+                        ) : null}
+                        <div className="min-w-0">
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.gameName}</p>
+                          <p className="mt-1 text-sm font-semibold text-[#75777a]">
+                            {gameStat.played
+                              ? `${gameStat.played} daily played • ${formatPercent(gameStat.winRate)} wins`
+                              : gameStat.archivePlayed
+                                ? `${gameStat.archivePlayed} archive played`
+                                : "No daily games played yet"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center sm:w-72">
+                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Best</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatNumber(gameStat.bestGuesses)}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Avg</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatAverage(gameStat.averageGuesses)}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Streak 🔥</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.currentStreak}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center sm:w-72">
-                      <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Best</p>
-                        <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatNumber(gameStat.bestGuesses)}</p>
-                      </div>
-                      <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Avg</p>
-                        <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatAverage(gameStat.averageGuesses)}</p>
-                      </div>
-                      <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Streak 🔥</p>
-                        <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.currentStreak}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           </div>
