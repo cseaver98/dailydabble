@@ -5,7 +5,7 @@ import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CSSProperties, Suspense, useEffect, useState } from "react";
+import { CSSProperties, Suspense, useEffect, useRef, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
 import DisplayNameDialog from "./components/DisplayNameDialog";
@@ -62,6 +62,7 @@ function HomeContent() {
   const [showFirstVisitToast, setShowFirstVisitToast] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
+  const mobilePeakAnchorRef = useRef<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -130,11 +131,19 @@ function HomeContent() {
       setIsMobileViewport((current) => (current === mobile ? current : mobile));
 
       if (!mobile) {
+        mobilePeakAnchorRef.current = null;
         setMobileCardMotion((current) => (Object.keys(current).length ? {} : current));
         return;
       }
 
-      const viewportMidpoint = window.innerHeight / 2;
+      if (mobilePeakAnchorRef.current === null) {
+        const firstCardBounds = cards[0]?.getBoundingClientRect();
+        mobilePeakAnchorRef.current = firstCardBounds
+          ? firstCardBounds.top + firstCardBounds.height / 2
+          : window.innerHeight / 2;
+      }
+
+      const peakAnchor = mobilePeakAnchorRef.current;
       const nextMotion = cards.reduce<Record<string, MobileCardMotion>>((acc, card) => {
         const slug = card.getAttribute("data-hub-card");
         if (!slug) {
@@ -143,7 +152,7 @@ function HomeContent() {
 
         const bounds = card.getBoundingClientRect();
         const center = bounds.top + bounds.height / 2;
-        const normalizedOffset = (center - viewportMidpoint) / Math.max(window.innerHeight * 0.52, 1);
+        const normalizedOffset = (center - peakAnchor) / Math.max(window.innerHeight * 0.52, 1);
         const clampedOffset = Math.max(-1, Math.min(1, normalizedOffset));
         const proximity = 1 - Math.abs(clampedOffset);
         const easedProximity = Math.max(0, proximity);
