@@ -19,6 +19,18 @@ const formatProvider = (provider?: string) => {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 };
 
+const getDisplayNameHeadingClass = (displayName: string) => {
+  if (displayName.length > 24) {
+    return "text-2xl sm:text-4xl";
+  }
+
+  if (displayName.length > 16) {
+    return "text-[1.7rem] sm:text-5xl";
+  }
+
+  return "text-3xl sm:text-6xl";
+};
+
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,10 +47,11 @@ export default async function AccountPage() {
   }
 
   const profile = await getProfile(user.id);
-  const displayName = profile?.displayName ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Dabbler";
+  const displayName = profile?.displayName ?? "Dabbler";
   const email = user.email ?? "Private email";
   const provider = formatProvider(user.app_metadata?.provider);
   const createdAt = user.created_at ? new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(user.created_at)) : "Unknown";
+  const displayNameHeadingClass = getDisplayNameHeadingClass(displayName);
 
   return (
     <>
@@ -47,15 +60,15 @@ export default async function AccountPage() {
         <section className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-[2.25rem] bg-white p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
             <div className="relative flex flex-col gap-6">
-              <div className="flex items-start justify-between gap-4">
-                <h1 className="font-headline text-4xl font-extrabold leading-tight text-[#2c2f31] sm:text-6xl">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
+                <h1 className={`font-headline w-full min-w-0 flex-1 break-words font-extrabold leading-tight text-[#2c2f31] ${displayNameHeadingClass}`}>
                   {displayName}
                 </h1>
-                <div className="relative shrink-0 overflow-hidden rounded-2xl border border-[#cfd5dc] bg-[linear-gradient(135deg,#ffffff_0%,#d9dee4_34%,#f8fafc_54%,#b8c0ca_100%)] px-4 py-3 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(44,47,49,0.08)]">
+                <div className="relative w-[calc(50%-0.5rem)] shrink-0 overflow-hidden rounded-2xl border border-[#cfd5dc] bg-[linear-gradient(135deg,#ffffff_0%,#d9dee4_34%,#f8fafc_54%,#b8c0ca_100%)] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(44,47,49,0.08)] sm:w-auto sm:text-right">
                   <div className="pointer-events-none absolute inset-y-0 left-1/4 w-8 rotate-12 bg-white/45 blur-md" />
                   <div className="relative">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Member since</p>
-                  <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{createdAt}</p>
+                  <p className="whitespace-nowrap text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-[#75777a] sm:text-xs sm:tracking-[0.14em]">Member since</p>
+                  <p className="mt-1 whitespace-nowrap text-xs font-extrabold text-[#2c2f31] sm:text-base">{createdAt}</p>
                   </div>
                 </div>
               </div>

@@ -74,9 +74,7 @@ export default function AccountNav() {
     await supabase.auth.signOut();
     setUser(null);
     setIsMenuOpen(false);
-    if (window.location.pathname.startsWith("/account")) {
-      window.location.href = "/";
-    }
+    window.location.href = "/";
   };
 
   if (loading) {
@@ -109,15 +107,15 @@ export default function AccountNav() {
       <button
         type="button"
         onClick={() => setIsMenuOpen((current) => !current)}
-        className="font-headline inline-flex h-[36px] max-w-[190px] items-center justify-center truncate rounded-full bg-[#d1ffc7] px-5 text-sm font-bold text-[#225b22] transition hover:bg-[#b6f6ab]"
+        className="font-headline inline-flex h-[36px] max-w-[148px] items-center justify-center rounded-full bg-[#d1ffc7] px-4 text-sm font-bold text-[#225b22] transition hover:bg-[#b6f6ab] sm:max-w-[190px] sm:px-5"
       >
-        {label}
+        <span className="block min-w-0 truncate">{label}</span>
       </button>
 
       {isMenuOpen ? (
         <div className="absolute right-0 top-11 z-[80] w-56 rounded-2xl border border-[#d8dce2] bg-white p-2 shadow-[0_18px_50px_rgba(44,47,49,0.16)]">
           <p className="px-3 py-2 text-xs font-bold text-[#75777a]">Signed in as</p>
-          <p className="truncate px-3 pb-2 text-sm font-extrabold text-[#2c2f31]">{label}</p>
+          <p className="truncate px-3 pb-2 text-sm font-extrabold text-[#2c2f31]" title={label}>{label}</p>
           <div className="my-1 h-px bg-[#eff1f4]" />
           <Link
             href="/account"

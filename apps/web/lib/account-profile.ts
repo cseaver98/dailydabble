@@ -22,6 +22,9 @@ export const validateDisplayName = (value: string) => {
   if (normalized.length > 32) {
     throw new Error("Display name must be 32 characters or fewer.");
   }
+  if (!/^[A-Za-z0-9]+$/.test(normalized)) {
+    throw new Error("Display name can only use letters and numbers.");
+  }
   return normalized;
 };
 

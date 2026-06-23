@@ -31,18 +31,40 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const admin = getAccountSupabaseAdmin();
-    const { error: profileError } = await admin
+    let needsDisplayName = false;
+    const { data: existingProfile, error: readProfileError } = await admin
       .schema("core")
       .from("profiles")
-      .upsert(
-        {
-          id: user.id,
-          display_name: user.user_metadata?.full_name || user.email?.split("@")[0] || null,
+      .select("id,display_name")
+      .eq("id", user.id)
+      .maybeSingle<{ id: string; display_name: string | null }>();
+
+    if (readProfileError) {
+      redirectUrl.searchParams.set("auth_warning", "profile_sync_failed");
+    } else {
+      needsDisplayName = !existingProfile?.display_name;
+    }
+
+    const profileWrite = existingProfile
+      ? admin
+        .schema("core")
+        .from("profiles")
+        .update({
           avatar_url: user.user_metadata?.avatar_url || null,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" },
-      );
+        })
+        .eq("id", user.id)
+      : admin
+        .schema("core")
+        .from("profiles")
+        .insert({
+          id: user.id,
+          display_name: null,
+          avatar_url: user.user_metadata?.avatar_url || null,
+          updated_at: new Date().toISOString(),
+        });
+
+    const { error: profileError } = await profileWrite;
 
     if (profileError) {
       redirectUrl.searchParams.set("auth_warning", "profile_sync_failed");
@@ -56,6 +78,18 @@ export async function GET(request: NextRequest) {
         console.warn(claimError instanceof Error ? claimError.message : "Failed to claim guest results");
         redirectUrl.searchParams.set("auth_warning", "guest_claim_failed");
       }
+    }
+
+    if (needsDisplayName) {
+      const welcomeUrl = new URL("/", requestUrl.origin);
+      welcomeUrl.searchParams.set("onboarding", "display-name");
+      welcomeUrl.searchParams.set("next", next);
+      for (const [key, value] of redirectUrl.searchParams) {
+        if (key.startsWith("auth_warning")) {
+          welcomeUrl.searchParams.set(key, value);
+        }
+      }
+      return NextResponse.redirect(welcomeUrl);
     }
   }
 

@@ -4,9 +4,11 @@ import { games } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CSSProperties, useEffect, useState } from "react";
 import AccountNav from "./components/AccountNav";
 import AuthDialog from "./components/AuthDialog";
+import DisplayNameDialog from "./components/DisplayNameDialog";
 import LoadingLabel from "./components/LoadingLabel";
 import SiteMenu from "./components/SiteMenu";
 
@@ -29,6 +31,12 @@ type AccessResponse = {
   locked: boolean;
 };
 
+type SessionResponse = {
+  user: {
+    needsDisplayName?: boolean;
+  } | null;
+};
+
 type MobileCardMotion = {
   cardTransform: string;
   cardOpacity: number;
@@ -40,12 +48,15 @@ type MobileCardMotion = {
 };
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [gameStatuses, setGameStatuses] = useState<StatusResponse["gameStatuses"]>({});
   const [access, setAccess] = useState<AccessResponse | null>(null);
   const [error, setError] = useState("");
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [needsDisplayName, setNeedsDisplayName] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
 
@@ -67,6 +78,10 @@ export default function Home() {
         setStatus(payload.status);
         setGameStatuses(payload.gameStatuses ?? {});
         setAccess(accessPayload);
+
+        const sessionRes = await fetch("/api/auth/session", { method: "GET" });
+        const sessionPayload = (await sessionRes.json()) as SessionResponse;
+        setNeedsDisplayName(Boolean(sessionPayload.user?.needsDisplayName));
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
@@ -80,6 +95,8 @@ export default function Home() {
 
   const isGuestLocked = Boolean(access?.locked);
   const isLoggedIn = Boolean(access?.loggedIn);
+  const onboardingNext = searchParams.get("next");
+  const safeOnboardingNext = onboardingNext && onboardingNext.startsWith("/") && !onboardingNext.startsWith("//") ? onboardingNext : "/";
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
@@ -429,6 +446,14 @@ export default function Home() {
         </section>
       </main>
       <AuthDialog isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} mode={isGuestLocked ? "gate" : "login"} />
+      <DisplayNameDialog
+        isOpen={needsDisplayName}
+        onComplete={() => {
+          setNeedsDisplayName(false);
+          router.replace(safeOnboardingNext);
+          router.refresh();
+        }}
+      />
     </>
   );
 }

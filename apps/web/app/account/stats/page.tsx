@@ -62,7 +62,7 @@ export default async function AccountStatsPage() {
               ["Daily games played", stats.overall.played.toString()],
               ["Wins", stats.overall.wins.toString()],
               ["Win rate", formatPercent(stats.overall.winRate)],
-              ["DailyDabble streak", stats.overall.currentDailyDabbleStreak.toString()],
+              ["DailyDabble streak 🔥", stats.overall.currentDailyDabbleStreak.toString()],
             ].map(([label, value]) => (
               <section key={label} className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_32px_rgba(44,47,49,0.05)]">
                 <p className="text-sm font-bold text-[#75777a]">{label}</p>
@@ -73,13 +73,8 @@ export default async function AccountStatsPage() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <section className="rounded-[2rem] bg-white p-6 shadow-[0_18px_36px_rgba(44,47,49,0.05)]">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Basic Stats</p>
-                </div>
-                <span className="rounded-full bg-[#eff1f4] px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-[#595c5e]">
-                  Free
-                </span>
+              <div>
+                <p className="font-headline text-2xl font-extrabold text-[#2c2f31]">Basic Stats</p>
               </div>
 
               <div className="mt-6 grid gap-3">
@@ -123,7 +118,7 @@ export default async function AccountStatsPage() {
                         <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatAverage(gameStat.averageGuesses)}</p>
                       </div>
                       <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Streak</p>
+                        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Streak 🔥</p>
                         <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.currentStreak}</p>
                       </div>
                     </div>

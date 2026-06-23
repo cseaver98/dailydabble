@@ -16,7 +16,8 @@ export async function GET() {
     user: {
       id: user.id,
       email: user.email ?? null,
-      displayName: profile?.displayName ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? null,
+      displayName: profile?.displayName ?? null,
+      needsDisplayName: !profile?.displayName,
       avatarUrl: profile?.avatarUrl ?? user.user_metadata?.avatar_url ?? null,
     },
   });
