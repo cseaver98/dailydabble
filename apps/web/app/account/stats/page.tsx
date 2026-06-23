@@ -54,21 +54,23 @@ export default async function AccountStatsPage() {
                 </Link>
               </div>
               <p className="mt-3 text-sm font-semibold text-[#595c5e]">
-                Complete every daily game to build your total DailyDabble streak.
+                Complete every daily game to build your total <span className="font-extrabold text-[#2f672d]">DailyDabble</span> streak 🔥.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <h2 className="font-headline mt-6 px-6 text-2xl font-extrabold text-[#2c2f31]">Stats</h2>
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-6">
             {[
               ["Daily games played", stats.overall.played.toString()],
               ["Wins", stats.overall.wins.toString()],
               ["Win rate", formatPercent(stats.overall.winRate)],
               ["Average guesses", formatAverage(stats.overall.averageGuesses)],
-              ["DailyDabble streak 🔥", stats.overall.currentDailyDabbleStreak.toString()],
+              ["Current streak", `${stats.overall.currentDailyDabbleStreak} 🔥`],
+              ["Best streak", `${stats.overall.bestDailyDabbleStreak} 🔥`],
             ].map(([label, value]) => (
-              <section key={label} className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_32px_rgba(44,47,49,0.05)]">
-                <p className="text-sm font-bold text-[#75777a]">{label}</p>
+              <section key={label} className="rounded-[1.75rem] bg-white p-5 text-center shadow-[0_16px_32px_rgba(44,47,49,0.05)] sm:text-left">
+                <p className="whitespace-nowrap text-sm font-bold text-[#75777a]">{label}</p>
                 <p className="font-headline mt-2 text-4xl font-extrabold text-[#2c2f31]">{value}</p>
               </section>
             ))}
@@ -82,8 +84,8 @@ export default async function AccountStatsPage() {
                   const game = games.find((item) => item.slug === gameStat.gameSlug);
 
                   return (
-                    <div key={gameStat.gameSlug} className="grid gap-3 rounded-2xl border border-[#e0e3e6] bg-[#fdfefe] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-                      <div className="flex items-center gap-3">
+                    <div key={gameStat.gameSlug} className="grid grid-cols-2 gap-3 rounded-2xl border border-[#edf0f3] bg-[#fdfefe] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div className="flex min-h-[5.25rem] min-w-0 flex-col items-center justify-center gap-2 text-center sm:min-h-0 sm:flex-row sm:justify-start sm:text-left sm:gap-3">
                         {game ? (
                           <span
                             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
@@ -99,28 +101,29 @@ export default async function AccountStatsPage() {
                           </span>
                         ) : null}
                         <div className="min-w-0">
-                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.gameName}</p>
-                          <p className="mt-1 text-sm font-semibold text-[#75777a]">
-                            {gameStat.played
-                              ? `${gameStat.played} daily played • ${formatPercent(gameStat.winRate)} wins`
-                              : gameStat.archivePlayed
-                                ? `${gameStat.archivePlayed} archive played`
-                                : "No daily games played yet"}
-                          </p>
+                          <p className="font-headline text-base font-extrabold text-[#2c2f31] sm:text-lg">{gameStat.gameName}</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-center sm:w-72">
-                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Best</p>
+                      <div className="contents text-center sm:grid sm:w-[30rem] sm:grid-cols-5 sm:gap-2">
+                        <div className="flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl bg-[#f5f6f9] px-3 py-2 sm:min-h-0">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Played</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.dailyPlayed}</p>
+                        </div>
+                        <div className="flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl bg-[#f5f6f9] px-3 py-2 sm:min-h-0">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Wins</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.wins}</p>
+                        </div>
+                        <div className="flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl bg-[#f5f6f9] px-3 py-2 sm:min-h-0">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Rate</p>
+                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatPercent(gameStat.winRate)}</p>
+                        </div>
+                        <div className="flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl bg-[#f5f6f9] px-3 py-2 sm:min-h-0">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Best guess</p>
                           <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatNumber(gameStat.bestGuesses)}</p>
                         </div>
-                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Avg</p>
+                        <div className="flex min-h-[5.25rem] flex-col items-center justify-center rounded-xl bg-[#f5f6f9] px-3 py-2 sm:min-h-0">
+                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Avg guesses</p>
                           <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{formatAverage(gameStat.averageGuesses)}</p>
-                        </div>
-                        <div className="rounded-xl bg-[#f5f6f9] px-3 py-2">
-                          <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-[#75777a]">Streak 🔥</p>
-                          <p className="font-headline text-lg font-extrabold text-[#2c2f31]">{gameStat.currentStreak}</p>
                         </div>
                       </div>
                     </div>

@@ -40,6 +40,7 @@ export type AccountStats = {
     winRate: number | null;
     averageGuesses: number | null;
     currentDailyDabbleStreak: number;
+    bestDailyDabbleStreak: number;
     completedTodayCount: number;
     totalGamesToday: number;
   };
@@ -110,6 +111,35 @@ const calculateDailyDabbleStreak = (rows: GameResultRow[]) => {
   }
 
   return streak;
+};
+
+const calculateBestDailyDabbleStreak = (rows: GameResultRow[]) => {
+  const requiredGameSlugs = new Set(games.map((game) => game.slug));
+  const completedGamesByDate = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    if (row.is_archive) continue;
+    const completedGames = completedGamesByDate.get(row.puzzle_date) ?? new Set<string>();
+    completedGames.add(row.game_slug);
+    completedGamesByDate.set(row.puzzle_date, completedGames);
+  }
+
+  const completeDates = [...completedGamesByDate.entries()]
+    .filter(([, completedGames]) => [...requiredGameSlugs].every((slug) => completedGames.has(slug)))
+    .map(([date]) => date)
+    .sort();
+
+  let bestStreak = 0;
+  let currentStreak = 0;
+  let previousCompleteDate: string | null = null;
+
+  for (const date of completeDates) {
+    currentStreak = previousCompleteDate && previousDate(date) === previousCompleteDate ? currentStreak + 1 : 1;
+    bestStreak = Math.max(bestStreak, currentStreak);
+    previousCompleteDate = date;
+  }
+
+  return bestStreak;
 };
 
 const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]): GameStats => {
@@ -190,6 +220,7 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
       winRate: played ? roundRate(wins / played) : null,
       averageGuesses: guesses.length ? roundAverage(guesses.reduce((sum, value) => sum + value, 0) / guesses.length) : null,
       currentDailyDabbleStreak: calculateDailyDabbleStreak(rows),
+      bestDailyDabbleStreak: calculateBestDailyDabbleStreak(rows),
       completedTodayCount,
       totalGamesToday: games.length,
     },
