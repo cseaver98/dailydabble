@@ -1,8 +1,10 @@
 const ADMIN_SESSION_COOKIE = "agegaple_admin_session";
 const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const MIN_ADMIN_AUTH_SECRET_LENGTH = 32;
 
 type SessionPayload = {
   sub: "admin";
+  email?: string;
   exp: number;
 };
 
@@ -57,28 +59,54 @@ const hmacSha256 = async (value: string, secret: string): Promise<Uint8Array> =>
 
 const getAdminPassword = (): string => process.env.ADMIN_PASSWORD ?? "";
 const getAdminAuthSecret = (): string => process.env.ADMIN_AUTH_SECRET ?? "";
+const getAllowedAdminEmailsValue = (): string => process.env.ADMIN_ALLOWED_EMAILS ?? "cseaver98@gmail.com";
 
 const constantTimeEqualStrings = (a: string, b: string): boolean =>
   constantTimeEqualBytes(new TextEncoder().encode(a), new TextEncoder().encode(b));
 
+export const getAdminAuthConfigurationError = (): string | null => {
+  const secret = getAdminAuthSecret();
+
+  if (!secret) {
+    return "ADMIN_AUTH_SECRET is not configured.";
+  }
+
+  if (secret.length < MIN_ADMIN_AUTH_SECRET_LENGTH) {
+    return `ADMIN_AUTH_SECRET must be at least ${MIN_ADMIN_AUTH_SECRET_LENGTH} characters.`;
+  }
+
+  return null;
+};
+
+export const getAllowedAdminEmails = (): string[] =>
+  getAllowedAdminEmailsValue()
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+export const isAllowedAdminEmail = (email: string): boolean =>
+  getAllowedAdminEmails().includes(email.trim().toLowerCase());
+
 export const getAdminSessionCookieName = (): string => ADMIN_SESSION_COOKIE;
 
 export const isValidAdminPassword = (password: string): boolean => {
-  const expected = getAdminPassword();
-  if (!expected) {
+  if (getAdminAuthConfigurationError()) {
     return false;
   }
+
+  const expected = getAdminPassword();
   return constantTimeEqualStrings(password, expected);
 };
 
-export const createAdminSessionToken = async (): Promise<string | null> => {
-  const secret = getAdminAuthSecret();
-  if (!secret) {
+export const createAdminSessionToken = async (email?: string): Promise<string | null> => {
+  if (getAdminAuthConfigurationError()) {
     return null;
   }
 
+  const secret = getAdminAuthSecret();
   const payload: SessionPayload = {
     sub: "admin",
+    email,
     exp: Date.now() + ADMIN_SESSION_TTL_SECONDS * 1000,
   };
   const payloadPart = base64UrlEncode(JSON.stringify(payload));
@@ -93,7 +121,7 @@ export const isValidAdminSessionToken = async (token: string | undefined): Promi
   }
 
   const secret = getAdminAuthSecret();
-  if (!secret) {
+  if (getAdminAuthConfigurationError()) {
     return false;
   }
 

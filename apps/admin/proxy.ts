@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminSessionCookieName, isValidAdminSessionToken } from "@/lib/admin-auth";
+import { enforceStagingAccess } from "@/lib/staging-access";
+
+const isLocalDevelopment = (): boolean => process.env.NODE_ENV !== "production";
+const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
 
 const isPublicAdminPath = (pathname: string): boolean =>
-  pathname === "/admin/login" || pathname === "/api/admin/login";
+  pathname === "/admin/login" ||
+  pathname === "/api/admin/google/start" ||
+  pathname === "/api/admin/google/callback";
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const stagingResponse = await enforceStagingAccess(request);
+  if (stagingResponse) {
+    return stagingResponse;
+  }
+
+  if (!pathname.startsWith("/admin/") && !pathname.startsWith("/api/admin/")) {
+    return NextResponse.next();
+  }
+
+  if (isLocalDevelopment() || isStagingEnvironment()) {
+    return NextResponse.next();
+  }
 
   if (isPublicAdminPath(pathname)) {
     const token = request.cookies.get(getAdminSessionCookieName())?.value;
@@ -35,5 +53,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots.txt|sitemap.xml).*)"],
 };
