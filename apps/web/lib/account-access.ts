@@ -1,6 +1,6 @@
 import { getGuestCompletionCount, GUEST_COMPLETION_LIMIT, hasGuestTodayCompletion } from "@/lib/account-results";
 import { allowedGameSlugs } from "@/lib/games";
-import { getOrCreatePlayerId } from "@/lib/player-id";
+import { getExistingPlayerId } from "@/lib/player-id";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
@@ -26,7 +26,17 @@ export async function getAccountAccess(gameSlug?: string): Promise<AccountAccess
     };
   }
 
-  const playerId = await getOrCreatePlayerId();
+  const playerId = await getExistingPlayerId();
+  if (!playerId) {
+    return {
+      loggedIn: false,
+      guestCount: 0,
+      guestLimit: GUEST_COMPLETION_LIMIT,
+      locked: false,
+      completedTodayGame: false,
+    };
+  }
+
   const guestStatus = await getGuestCompletionCount(playerId);
   let completedTodayGame = false;
 
