@@ -421,8 +421,13 @@
 }
 
 .sportle-shell .clue-media-frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-soft) 24%, white);
 }
 
 .sportle-shell .clue-logo-frame {
@@ -439,15 +444,37 @@
 }
 
 .sportle-shell .clue-image-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
   border-radius: inherit;
   background: color-mix(in srgb, var(--brand-soft) 34%, white);
   color: var(--brand);
 }
 
+.sportle-shell .clue-media-frame[aria-busy="false"] .clue-image-loading-overlay {
+  opacity: 0;
+}
+
 .sportle-shell .clue-image-spinner {
   height: 1.7rem;
   width: 1.7rem;
+  border-style: solid;
   border-width: 2px;
+  border-color: currentColor;
+  border-top-color: transparent;
+  border-radius: 999px;
+  animation: sportle-image-spinner 780ms linear infinite;
+}
+
+@keyframes sportle-image-spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sportle-shell .team-logo {
