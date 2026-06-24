@@ -137,7 +137,7 @@ export default function AuthDialog({
             type="button"
             onClick={onClose}
             aria-label="Close login dialog"
-            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eff1f4] text-lg font-bold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#eff1f4] text-lg font-bold text-[#2c2f31] transition hover:bg-[#e0e3e6]"
           >
             ×
           </button>
@@ -156,7 +156,7 @@ export default function AuthDialog({
             type="button"
             onClick={() => void signInWithProvider("google")}
             disabled={loadingProvider !== null}
-            className="font-headline flex h-12 items-center justify-center gap-2.5 rounded-full border border-[#d8dce2] bg-white px-4 text-sm font-extrabold text-[#2c2f31] transition hover:border-[#2f672d]/40 hover:bg-[#f5f6f9] disabled:cursor-wait disabled:opacity-70"
+            className="font-headline flex h-12 cursor-pointer items-center justify-center gap-2.5 rounded-full border border-[#d8dce2] bg-white px-4 text-sm font-extrabold text-[#2c2f31] transition hover:border-[#2f672d]/40 hover:bg-[#f5f6f9] disabled:cursor-wait disabled:opacity-70"
           >
             <span className="grid w-[190px] grid-cols-[1.25rem_1fr] items-center gap-2.5 text-left">
               <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
@@ -172,7 +172,7 @@ export default function AuthDialog({
             type="button"
             onClick={() => void signInWithProvider("apple")}
             disabled={loadingProvider !== null}
-            className="font-headline flex h-12 items-center justify-center gap-2.5 rounded-full bg-[#2c2f31] px-4 text-sm font-extrabold text-white transition hover:bg-[#111315] disabled:cursor-wait disabled:opacity-70"
+            className="font-headline flex h-12 cursor-pointer items-center justify-center gap-2.5 rounded-full bg-[#2c2f31] px-4 text-sm font-extrabold text-white transition hover:bg-[#111315] disabled:cursor-wait disabled:opacity-70"
           >
             <span className="grid w-[190px] grid-cols-[1.25rem_1fr] items-center gap-2.5 text-left">
               <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -200,7 +200,7 @@ export default function AuthDialog({
           <button
             type="submit"
             disabled={loadingProvider !== null}
-            className="font-headline h-12 rounded-full bg-[#2f672d] px-4 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22] disabled:cursor-wait disabled:opacity-70"
+            className="font-headline h-12 cursor-pointer rounded-full bg-[#2f672d] px-4 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22] disabled:cursor-wait disabled:opacity-70"
           >
             {loadingProvider === "email" ? "Sending link..." : "Send login link"}
           </button>
