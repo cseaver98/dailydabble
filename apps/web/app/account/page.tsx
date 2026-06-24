@@ -64,7 +64,7 @@ export default async function AccountPage() {
                 <h1 className={`font-headline w-full min-w-0 flex-1 break-words font-extrabold leading-tight text-[#2c2f31] ${displayNameHeadingClass}`}>
                   {displayName}
                 </h1>
-                <div className="relative w-[calc(50%-0.5rem)] shrink-0 overflow-hidden rounded-2xl border border-[#cfd5dc] bg-[linear-gradient(135deg,#ffffff_0%,#d9dee4_34%,#f8fafc_54%,#b8c0ca_100%)] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(44,47,49,0.08)] sm:w-auto sm:text-right">
+                <div className="relative w-[calc(50%-0.5rem)] shrink-0 overflow-hidden rounded-2xl border border-[#cfd5dc] bg-[linear-gradient(135deg,#ffffff_0%,#d9dee4_34%,#f8fafc_54%,#b8c0ca_100%)] px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(44,47,49,0.08)] sm:w-auto sm:text-right">
                   <div className="pointer-events-none absolute inset-y-0 left-1/4 w-8 rotate-12 bg-white/45 blur-md" />
                   <div className="relative">
                   <p className="whitespace-nowrap text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-[#75777a] sm:text-xs sm:tracking-[0.14em]">Member since</p>
