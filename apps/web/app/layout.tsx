@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "@dailydabble/ui/nav.css";
 import "./globals.css";
 import "./verble/verble.css";
@@ -61,6 +62,7 @@ export default function RootLayout({
       <body className={`${plusJakartaSans.variable} ${manrope.variable} antialiased`}>
         <AuthStateStorageBoundary />
         {children}
+        <Analytics />
       </body>
     </html>
   );
