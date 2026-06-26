@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-const loadedImageSources = new Set<string>();
+import { useState } from "react";
 
 type AsyncImageProps = {
   src?: string | null;
@@ -23,28 +21,8 @@ export default function AsyncImage({
   spinnerClassName = "",
   onError,
 }: AsyncImageProps) {
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const [isLoaded, setIsLoaded] = useState(() => (src ? loadedImageSources.has(src) : false));
-
-  useEffect(() => {
-    if (!src) {
-      setIsLoaded(false);
-      return;
-    }
-
-    if (loadedImageSources.has(src)) {
-      setIsLoaded(true);
-      return;
-    }
-
-    setIsLoaded(false);
-
-    const image = imageRef.current;
-    if (image && image.complete && image.naturalWidth > 0) {
-      loadedImageSources.add(src);
-      setIsLoaded(true);
-    }
-  }, [src]);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const isLoaded = Boolean(src && loadedSrc === src);
 
   if (!src) {
     return null;
@@ -57,16 +35,15 @@ export default function AsyncImage({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        ref={imageRef}
+        key={src}
         src={src}
         alt={alt}
         className={`${className} transition-opacity duration-200 ${isLoaded ? "opacity-100" : "opacity-0"}`.trim()}
         onLoad={() => {
-          loadedImageSources.add(src);
-          setIsLoaded(true);
+          setLoadedSrc(src);
         }}
         onError={() => {
-          setIsLoaded(true);
+          setLoadedSrc(src);
           onError?.();
         }}
       />

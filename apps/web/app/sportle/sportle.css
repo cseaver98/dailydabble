@@ -428,11 +428,15 @@
   overflow: hidden;
   border-radius: 8px;
   background: color-mix(in srgb, var(--brand-soft) 24%, white);
+  isolation: isolate;
 }
 
 .sportle-shell .clue-logo-frame {
-  width: min(100%, 88px);
-  height: min(100%, 88px);
+  width: 88px;
+  height: 88px;
+  max-width: 100%;
+  max-height: 100%;
+  flex: 0 0 auto;
 }
 
 .sportle-shell .clue-headshot-frame {
@@ -441,18 +445,40 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+  min-height: 0;
+}
+
+.sportle-shell .clue-media-frame[aria-busy="true"]::before,
+.sportle-shell .clue-media-frame[aria-busy="true"]::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.sportle-shell .clue-media-frame[aria-busy="true"]::before {
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--brand-soft) 34%, white);
+}
+
+.sportle-shell .clue-media-frame[aria-busy="true"]::after {
+  inset: 0;
+  z-index: 4;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin: auto;
+  border: 2px solid var(--brand);
+  border-top-color: transparent;
+  border-radius: 999px;
+  animation: sportle-image-spinner 780ms linear infinite;
 }
 
 .sportle-shell .clue-image-loading-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 1;
+  z-index: 5;
+  display: none;
   border-radius: inherit;
-  background: color-mix(in srgb, var(--brand-soft) 34%, white);
+  background: transparent;
   color: var(--brand);
 }
 
@@ -577,18 +603,44 @@
 }
 
 .sportle-shell .result-modal-image-frame {
+  position: relative;
   width: min(280px, 100%);
   min-height: 180px;
   margin: 0 auto;
   border-radius: 1rem;
   overflow: hidden;
   background: color-mix(in srgb, var(--brand-soft) 24%, white);
+  isolation: isolate;
+}
+
+.sportle-shell .result-modal-image-frame[aria-busy="true"]::before,
+.sportle-shell .result-modal-image-frame[aria-busy="true"]::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.sportle-shell .result-modal-image-frame[aria-busy="true"]::before {
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--brand-soft) 42%, white);
+}
+
+.sportle-shell .result-modal-image-frame[aria-busy="true"]::after {
+  inset: 0;
+  z-index: 4;
+  height: 2rem;
+  width: 2rem;
+  margin: auto;
+  border: 2px solid var(--brand);
+  border-top-color: transparent;
+  border-radius: 999px;
+  animation: sportle-image-spinner 780ms linear infinite;
 }
 
 .sportle-shell .result-modal-image-loading-overlay {
-  border-radius: inherit;
-  background: color-mix(in srgb, var(--brand-soft) 42%, white);
-  color: var(--brand);
+  display: none;
 }
 
 .sportle-shell .result-modal-image-spinner {
