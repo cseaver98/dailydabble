@@ -80,7 +80,18 @@ create index if not exists agegaple_images_subject_idx on agegaple.images(subjec
 create index if not exists agegaple_puzzle_candidates_status_idx on agegaple.puzzle_candidates(status);
 create index if not exists agegaple_puzzle_candidates_couple_idx on agegaple.puzzle_candidates(couple_id);
 create index if not exists agegaple_daily_puzzles_candidate_idx on agegaple.daily_puzzles(candidate_id);
-create index if not exists agegaple_guesses_puzzle_player_idx on agegaple.guesses(puzzle_id, player_id);
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'agegaple'
+      and table_name = 'guesses'
+      and column_name = 'player_id'
+  ) then
+    create index if not exists agegaple_guesses_puzzle_player_idx on agegaple.guesses(puzzle_id, player_id);
+  end if;
+end $$;
 
 grant usage on schema agegaple to anon, authenticated, service_role;
 grant select on all tables in schema agegaple to anon, authenticated;
