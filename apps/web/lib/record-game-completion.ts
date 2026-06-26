@@ -9,6 +9,19 @@ export type RecordGameCompletionInput = {
   resultPayload?: Record<string, unknown>;
 };
 
+const dispatchTodayCompletionRecorded = (input: RecordGameCompletionInput) => {
+  if (typeof window === "undefined" || input.isArchive) return;
+
+  window.dispatchEvent(
+    new CustomEvent("dailydabble:today-completion-recorded", {
+      detail: {
+        gameSlug: input.gameSlug,
+        puzzleDate: input.puzzleDate,
+      },
+    }),
+  );
+};
+
 export const recordGameCompletion = async (input: RecordGameCompletionInput) => {
   const response = await fetch("/api/completions", {
     method: "POST",
@@ -21,6 +34,8 @@ export const recordGameCompletion = async (input: RecordGameCompletionInput) => 
     const message = typeof payload.error === "string" ? payload.error : "Failed to record game completion";
     throw new Error(message);
   }
+
+  dispatchTodayCompletionRecorded(input);
 };
 
 export const recordGameCompletionQuietly = (input: RecordGameCompletionInput) => {

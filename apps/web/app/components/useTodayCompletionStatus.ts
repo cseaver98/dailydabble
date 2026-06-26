@@ -6,6 +6,11 @@ type CompletionStatusResponse = {
   status?: Record<string, boolean>;
 };
 
+type TodayCompletionRecordedEvent = CustomEvent<{
+  gameSlug?: string;
+  puzzleDate?: string;
+}>;
+
 export function useTodayCompletionStatus() {
   const [completedGames, setCompletedGames] = useState<Record<string, boolean>>({});
 
@@ -31,8 +36,19 @@ export function useTodayCompletionStatus() {
 
     void loadCompletionStatus();
 
+    const handleTodayCompletionRecorded = (event: Event) => {
+      const { gameSlug } = (event as TodayCompletionRecordedEvent).detail ?? {};
+      if (gameSlug) {
+        setCompletedGames((current) => ({ ...current, [gameSlug]: true }));
+      }
+      void loadCompletionStatus();
+    };
+
+    window.addEventListener("dailydabble:today-completion-recorded", handleTodayCompletionRecorded);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("dailydabble:today-completion-recorded", handleTodayCompletionRecorded);
     };
   }, []);
 
