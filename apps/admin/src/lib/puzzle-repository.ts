@@ -264,7 +264,7 @@ export const purgeExpiredRejectedCandidates = async (): Promise<number> => {
 export const getTodayPuzzle = async (): Promise<PuzzlePublic | null> => {
   await purgeExpiredRejectedCandidates();
 
-  const timeZone = process.env.APP_TIMEZONE ?? "America/New_York";
+  const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
 
   const existingToday = await getPuzzleForDate(today);
@@ -300,7 +300,7 @@ type ArchiveRow = {
 
 export const listArchivePuzzles = async (): Promise<ArchivePuzzleListItem[]> => {
   const supabase = getSupabaseAdmin();
-  const timeZone = process.env.APP_TIMEZONE ?? "America/New_York";
+  const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
 
   const { data, error } = await supabase
@@ -765,7 +765,7 @@ export const listReviewCandidates = async ({
   pageSize?: number;
 } = {}): Promise<{ items: ReviewCandidate[]; total: number }> => {
   const supabase = getSupabaseAdmin();
-  const timeZone = process.env.APP_TIMEZONE ?? "America/New_York";
+  const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
   const tomorrow = getDateOffsetInTimeZone(timeZone, 1);
   const safePage = Math.max(1, Math.floor(Number(page) || 1));

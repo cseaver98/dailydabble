@@ -1,6 +1,6 @@
 import { getDoodleSupabaseAdmin } from "./supabase";
 
-const DEFAULT_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
+const DEFAULT_TIMEZONE = process.env.TIMEZONE || "America/New_York";
 
 const getDateInTimeZone = (timeZone: string): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {

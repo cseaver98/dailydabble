@@ -1,6 +1,6 @@
 import { getVerbleSupabaseAdmin } from "./supabase";
 
-const DEFAULT_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
+const DEFAULT_TIMEZONE = process.env.TIMEZONE || "America/New_York";
 
 type Slot = {
   index: number;

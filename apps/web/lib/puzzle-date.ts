@@ -1,4 +1,4 @@
-export const DEFAULT_PUZZLE_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
+export const DEFAULT_PUZZLE_TIMEZONE = process.env.TIMEZONE || "America/New_York";
 
 export const getDateInTimeZone = (timeZone = DEFAULT_PUZZLE_TIMEZONE): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {

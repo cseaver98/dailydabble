@@ -423,7 +423,7 @@ const buildOverview = async () => {
   const previewDir = getPreviewDir();
   const nowIso = new Date().toISOString();
   const storageFiles = await listAvailableSvgs();
-  const today = getDateInTimeZone(process.env.PUZZLE_TIMEZONE || "America/New_York");
+  const today = getDateInTimeZone(process.env.TIMEZONE || "America/New_York");
 
   const { data: puzzleRows, error: puzzleRowsError } = await supabase
     .from("puzzles")

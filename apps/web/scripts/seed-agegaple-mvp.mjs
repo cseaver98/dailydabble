@@ -810,7 +810,7 @@ const run = async () => {
     );
   }
 
-  const timeZone = process.env.APP_TIMEZONE ?? "America/New_York";
+  const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
   console.log(
     `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s), requested ${targetBatchSize}, pool=${poolSize}, primary>=${thresholds.minPrimarySitelinks}, combined>=${thresholds.minCombinedSitelinks}.`,

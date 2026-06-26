@@ -6,7 +6,7 @@ import { getSupabaseServerKey, getSupabaseUrl } from "@/lib/supabase/env";
 export const runtime = "nodejs";
 
 const validBatchSizes = new Set([1, 3, 5, 7, 10, 14]);
-const DEFAULT_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
+const DEFAULT_TIMEZONE = process.env.TIMEZONE || "America/New_York";
 
 type OnThisDayPage = {
   titles?: {

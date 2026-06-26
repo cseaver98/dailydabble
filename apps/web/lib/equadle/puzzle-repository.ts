@@ -1,6 +1,6 @@
 import { getEquadleSupabaseAdmin } from "./supabase";
 
-const DEFAULT_TIMEZONE = process.env.PUZZLE_TIMEZONE || "America/New_York";
+const DEFAULT_TIMEZONE = process.env.TIMEZONE || "America/New_York";
 
 const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
