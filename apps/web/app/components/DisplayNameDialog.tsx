@@ -11,6 +11,7 @@ type DisplayNameDialogProps = {
 export default function DisplayNameDialog({ isOpen, onComplete }: DisplayNameDialogProps) {
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [marketingEmailOptIn, setMarketingEmailOptIn] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -44,7 +45,7 @@ export default function DisplayNameDialog({ isOpen, onComplete }: DisplayNameDia
       const response = await fetch("/api/account/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName }),
+        body: JSON.stringify({ displayName, marketingEmailOptIn }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -103,6 +104,16 @@ export default function DisplayNameDialog({ isOpen, onComplete }: DisplayNameDia
               />
               <p className="mt-2 text-xs font-semibold text-[#75777a]">2-32 characters. You can change it later.</p>
             </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[#f5f6f9] px-4 py-3 text-sm font-bold leading-snug text-[#4f5356]">
+              <input
+                type="checkbox"
+                checked={marketingEmailOptIn}
+                onChange={(event) => setMarketingEmailOptIn(event.target.checked)}
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#2f672d]"
+              />
+              <span>Send me product updates and launch news</span>
+            </label>
 
             <button
               type="submit"

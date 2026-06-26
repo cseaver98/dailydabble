@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = safeNextPath(requestUrl.searchParams.get("next"));
+  const marketingEmailOptIn = requestUrl.searchParams.get("marketing_email_opt_in") === "1";
   const redirectUrl = new URL(next, requestUrl.origin);
 
   if (!code) {
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
         .from("profiles")
         .update({
           avatar_url: user.user_metadata?.avatar_url || null,
+          ...(marketingEmailOptIn ? { marketing_email_opt_in: true } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
           id: user.id,
           display_name: null,
           avatar_url: user.user_metadata?.avatar_url || null,
+          marketing_email_opt_in: marketingEmailOptIn,
           updated_at: new Date().toISOString(),
         });
 

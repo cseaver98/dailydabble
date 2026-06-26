@@ -19,6 +19,8 @@ export async function GET() {
       displayName: profile?.displayName ?? null,
       needsDisplayName: !profile?.displayName,
       avatarUrl: profile?.avatarUrl ?? user.user_metadata?.avatar_url ?? null,
+      marketingEmailOptIn: profile?.marketingEmailOptIn ?? false,
+      dailyReminderOptIn: profile?.dailyReminderOptIn ?? false,
     },
   });
 }

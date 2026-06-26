@@ -5,6 +5,7 @@ import AccountNav from "../components/AccountNav";
 import SiteMenu from "../components/SiteMenu";
 import AccountLoginPanel from "./AccountLoginPanel";
 import ProfileForm from "./ProfileForm";
+import EmailPreferencesForm from "./EmailPreferencesForm";
 import SignOutButton from "./SignOutButton";
 import { getProfile } from "@/lib/account-profile";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
@@ -18,6 +19,8 @@ const formatProvider = (provider?: string) => {
   if (!provider) return "Email";
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 };
+
+const isApplePrivateRelayEmail = (email: string) => email.toLowerCase().endsWith("@privaterelay.appleid.com");
 
 const getDisplayNameHeadingClass = (displayName: string) => {
   if (displayName.length > 24) {
@@ -50,6 +53,7 @@ export default async function AccountPage() {
   const displayName = profile?.displayName ?? "Dabbler";
   const email = user.email ?? "Private email";
   const provider = formatProvider(user.app_metadata?.provider);
+  const displayedEmail = isApplePrivateRelayEmail(email) ? "Private Apple relay email" : email;
   const createdAt = user.created_at ? new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(user.created_at)) : "Unknown";
   const displayNameHeadingClass = getDisplayNameHeadingClass(displayName);
 
@@ -96,8 +100,12 @@ export default async function AccountPage() {
                 <ProfileForm initialDisplayName={displayName} />
                 <div className="rounded-2xl bg-[#f5f6f9] px-4 py-3">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Email</p>
-                  <p className="mt-1 break-words text-base font-extrabold text-[#2c2f31]">{email}</p>
+                  <p className="mt-1 break-words text-base font-extrabold text-[#2c2f31]">{displayedEmail}</p>
                 </div>
+                <EmailPreferencesForm
+                  initialMarketingEmailOptIn={profile?.marketingEmailOptIn ?? false}
+                  initialDailyReminderOptIn={profile?.dailyReminderOptIn ?? false}
+                />
                 <div className="rounded-2xl bg-[#f5f6f9] px-4 py-3">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Login provider</p>
                   <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{provider}</p>
