@@ -5,6 +5,15 @@ const STAGING_ACCESS_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
 
+const isAuthorizedCronRequest = (request: NextRequest): boolean => {
+  const cronSecret = process.env.CRON_SECRET;
+  return Boolean(
+    cronSecret &&
+      request.nextUrl.pathname.startsWith("/api/cron/") &&
+      request.headers.get("authorization") === `Bearer ${cronSecret}`,
+  );
+};
+
 const base64UrlEncodeBytes = (bytes: Uint8Array): string => {
   let binary = "";
   for (const byte of bytes) {
@@ -83,6 +92,10 @@ const renderStagingAccessForm = (error?: string): NextResponse =>
 
 export const enforceStagingAccess = async (request: NextRequest): Promise<NextResponse | null> => {
   if (!isStagingEnvironment()) {
+    return null;
+  }
+
+  if (isAuthorizedCronRequest(request)) {
     return null;
   }
 
