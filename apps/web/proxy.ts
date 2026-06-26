@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 import { enforceStagingAccess } from "./lib/staging-access";
+import { refreshSupabaseAuthSession } from "./lib/supabase-auth/proxy";
 
 export async function proxy(request: NextRequest) {
-  return (await enforceStagingAccess(request)) ?? NextResponse.next();
+  const stagingResponse = await enforceStagingAccess(request);
+  if (stagingResponse) {
+    return stagingResponse;
+  }
+
+  return refreshSupabaseAuthSession(request);
 }
 
 export const config = {
