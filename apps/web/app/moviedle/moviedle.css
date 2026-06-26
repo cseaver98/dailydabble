@@ -189,11 +189,11 @@
 }
 
 .moviedle-shell .still-nav-btn-prev  {
-  left: 1.15rem;
+  left: 1.65rem;
 }
 
 .moviedle-shell .still-nav-btn-next  {
-  right: 1.15rem;
+  right: 1.65rem;
 }
 
 .moviedle-shell .image-modal-backdrop  {
@@ -841,6 +841,14 @@
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--muted);
+}
+
+@media (min-width: 721px) {
+  .moviedle-shell .still-nav-btn {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
 }
 
 @media (max-width: 720px) {

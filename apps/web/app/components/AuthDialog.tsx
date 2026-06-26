@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AuthError } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
@@ -27,6 +27,17 @@ const formatAuthError = (error: AuthError) => {
   }
 
   return error.message;
+};
+
+const stopEditableKeyPropagation = (event: KeyboardEvent<HTMLElement>) => {
+  const target = event.target;
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  ) {
+    event.stopPropagation();
+  }
 };
 
 export default function AuthDialog({
@@ -131,6 +142,7 @@ export default function AuthDialog({
         aria-modal="true"
         aria-labelledby="auth-dialog-title"
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={stopEditableKeyPropagation}
       >
         {dismissible ? (
           <button
