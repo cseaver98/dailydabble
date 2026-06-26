@@ -10,6 +10,19 @@ type CandidateStatus = (typeof validStatuses)[number];
 type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
 const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+const isValidMonthDay = (month: number, day: number): boolean => {
+  if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  return new Date(Date.UTC(2000, month - 1, day)).getUTCMonth() === month - 1;
+};
+const getMonthDayFromDate = (date: string): { month: number; day: number } | null => {
+  const parts = date.split("-").map((part) => Number(part));
+  if (parts.length !== 3 || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) {
+    return null;
+  }
+  return { month: parts[1], day: parts[2] };
+};
 
 const getSupabaseYeardleAdmin = () =>
   createClient(getSupabaseUrl(), getSupabaseServerKey(), {
@@ -36,7 +49,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseYeardleAdmin();
     const { data: eventRows, error: eventsError } = await supabase
       .from("events")
-      .select("id,title,event_year,image_url,hint_person,hint_description,wikipedia_url,status,created_at")
+      .select("id,title,event_year,event_month,event_day,image_url,hint_person,hint_description,wikipedia_url,status,created_at")
       .order("created_at", { ascending: false })
       .limit(5000);
     if (eventsError) {
@@ -48,6 +61,8 @@ export async function GET(request: Request) {
         id: string;
         title: string;
         event_year: number;
+        event_month: number | null;
+        event_day: number | null;
         image_url: string;
         hint_person: string | null;
         hint_description: string | null;
@@ -81,6 +96,13 @@ export async function GET(request: Request) {
       const dates = (byEventId.get(row.id) ?? []).sort((a, b) => b.localeCompare(a));
       const isFinished = dates.some((date) => date <= today);
       const nextScheduledDate = dates.filter((date) => date >= today).sort((a, b) => a.localeCompare(b))[0] || null;
+      const hasEventDate = typeof row.event_month === "number" && typeof row.event_day === "number";
+      const mismatchedDates = hasEventDate
+        ? dates.filter((date) => {
+            const monthDay = getMonthDayFromDate(date);
+            return !monthDay || monthDay.month !== row.event_month || monthDay.day !== row.event_day;
+          })
+        : [];
       return {
         ...row,
         scheduleCount: dates.length,
@@ -88,6 +110,12 @@ export async function GET(request: Request) {
         nextScheduledDate,
         isScheduledToday: dates.includes(today),
         isFinished,
+        hasEventDate,
+        scheduleDateWarning: hasEventDate
+          ? mismatchedDates[0] || null
+          : dates.length > 0
+            ? "missing_event_date"
+            : null,
       };
     });
 
@@ -141,6 +169,8 @@ export async function PATCH(request: Request) {
       candidate?: {
         title?: string;
         eventYear?: number;
+        eventMonth?: number | null;
+        eventDay?: number | null;
         keyFigures?: string;
         description?: string;
         wikipediaUrl?: string;
@@ -179,12 +209,20 @@ export async function PATCH(request: Request) {
     if (hasCandidate) {
       const title = String(candidate?.title || "").trim();
       const eventYear = Number(candidate?.eventYear);
+      const eventMonth = candidate?.eventMonth == null || candidate?.eventMonth === 0 ? null : Number(candidate?.eventMonth);
+      const eventDay = candidate?.eventDay == null || candidate?.eventDay === 0 ? null : Number(candidate?.eventDay);
       const description = String(candidate?.description || "").trim();
       if (!title) {
         return NextResponse.json({ error: "Candidate title is required." }, { status: 400 });
       }
       if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
         return NextResponse.json({ error: "Event year must be between 1000 and current year." }, { status: 400 });
+      }
+      if ((eventMonth == null) !== (eventDay == null)) {
+        return NextResponse.json({ error: "Event month and day must be provided together." }, { status: 400 });
+      }
+      if (eventMonth != null && eventDay != null && !isValidMonthDay(eventMonth, eventDay)) {
+        return NextResponse.json({ error: "Event month/day must be a real calendar date." }, { status: 400 });
       }
       if (!description) {
         return NextResponse.json({ error: "Description is required." }, { status: 400 });
@@ -219,6 +257,8 @@ export async function PATCH(request: Request) {
     if (hasCandidate) {
       updatePayload.title = String(candidate?.title || "").trim();
       updatePayload.event_year = Math.floor(Number(candidate?.eventYear));
+      updatePayload.event_month = candidate?.eventMonth == null || candidate?.eventMonth === 0 ? null : Math.floor(Number(candidate?.eventMonth));
+      updatePayload.event_day = candidate?.eventDay == null || candidate?.eventDay === 0 ? null : Math.floor(Number(candidate?.eventDay));
       updatePayload.hint_category = null;
       updatePayload.hint_region = null;
       updatePayload.hint_era = null;

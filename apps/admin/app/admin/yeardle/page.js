@@ -7,10 +7,51 @@ const statuses = ["pending_review", "approved", "finished"];
 const filterStatuses = ["pending_review", "approved", "today", "finished", "all"];
 const candidatePageSize = 10;
 const statusLabel = (status) => (status === "pending_review" ? "pending" : status);
+const monthOptions = [
+  ["", "Month"],
+  ["1", "January"],
+  ["2", "February"],
+  ["3", "March"],
+  ["4", "April"],
+  ["5", "May"],
+  ["6", "June"],
+  ["7", "July"],
+  ["8", "August"],
+  ["9", "September"],
+  ["10", "October"],
+  ["11", "November"],
+  ["12", "December"],
+];
+const formatEventDate = (month, day, year) => {
+  const numericYear = Number(year);
+  if (!Number.isFinite(numericYear)) {
+    return "Date unknown";
+  }
+  const numericMonth = Number(month);
+  const numericDay = Number(day);
+  if (!Number.isFinite(numericMonth) || !Number.isFinite(numericDay) || numericMonth < 1 || numericDay < 1) {
+    return String(numericYear);
+  }
+  const monthDay = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, numericMonth - 1, numericDay)),
+  );
+  return `${monthDay}, ${numericYear}`;
+};
+const getScheduleWarningCopy = (item) => {
+  if (!item?.scheduleDateWarning) {
+    return "";
+  }
+  if (item.scheduleDateWarning === "missing_event_date") {
+    return "Scheduled, but event month/day has not been set yet.";
+  }
+  return `Scheduled for ${item.scheduleDateWarning}, but event date is ${formatEventDate(item.event_month, item.event_day, item.event_year)}.`;
+};
 
 export default function YeardleAdminTab() {
   const [manualUrl, setManualUrl] = useState("");
   const [manualYear, setManualYear] = useState("");
+  const [manualMonth, setManualMonth] = useState("");
+  const [manualDay, setManualDay] = useState("");
   const [manualCandidate, setManualCandidate] = useState(null);
   const [isEditingManualCandidate, setIsEditingManualCandidate] = useState(false);
   const [isLookingUpManualCandidate, setIsLookingUpManualCandidate] = useState(false);
@@ -95,6 +136,8 @@ export default function YeardleAdminTab() {
 
       setManualCandidate(payload.candidate || null);
       setManualYear(payload?.candidate?.eventYearGuess ? String(payload.candidate.eventYearGuess) : "");
+      setManualMonth(payload?.candidate?.eventMonthGuess ? String(payload.candidate.eventMonthGuess) : "");
+      setManualDay(payload?.candidate?.eventDayGuess ? String(payload.candidate.eventDayGuess) : "");
       setIsEditingManualCandidate(false);
       setMessage("Candidate preview ready.");
     } catch (lookupError) {
@@ -121,8 +164,13 @@ export default function YeardleAdminTab() {
 
     try {
       const eventYear = Number(manualYear);
+      const eventMonth = manualMonth ? Number(manualMonth) : null;
+      const eventDay = manualDay ? Number(manualDay) : null;
       if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
         throw new Error("Enter a valid event year.");
+      }
+      if ((eventMonth === null) !== (eventDay === null)) {
+        throw new Error("Enter both event month and day, or leave both blank.");
       }
 
       const normalizedTitle = String(manualCandidate.title || "").trim();
@@ -153,6 +201,8 @@ export default function YeardleAdminTab() {
         body: JSON.stringify({
           candidate: payloadCandidate,
           eventYear,
+          eventMonth,
+          eventDay,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -163,6 +213,8 @@ export default function YeardleAdminTab() {
       setMessage(`Added ${manualCandidate.title} as a pending candidate.`);
       setManualCandidate(null);
       setManualYear("");
+      setManualMonth("");
+      setManualDay("");
       setIsEditingManualCandidate(false);
       await load({ page: currentPage, status: statusFilter });
     } catch (addError) {
@@ -175,6 +227,8 @@ export default function YeardleAdminTab() {
   const rejectManualCandidate = () => {
     setManualCandidate(null);
     setManualYear("");
+    setManualMonth("");
+    setManualDay("");
     setIsEditingManualCandidate(false);
     setMessage("Candidate dismissed.");
   };
@@ -267,6 +321,8 @@ export default function YeardleAdminTab() {
     setEditingCandidateDraft({
       title: String(item.title || ""),
       eventYear: String(item.event_year || ""),
+      eventMonth: item.event_month ? String(item.event_month) : "",
+      eventDay: item.event_day ? String(item.event_day) : "",
       keyFigures: String(item.hint_person || ""),
       description: String(item.hint_description || ""),
       wikipediaUrl: String(item.wikipedia_url || ""),
@@ -300,6 +356,8 @@ export default function YeardleAdminTab() {
           candidate: {
             title: editingCandidateDraft.title,
             eventYear: Number(editingCandidateDraft.eventYear),
+            eventMonth: editingCandidateDraft.eventMonth ? Number(editingCandidateDraft.eventMonth) : null,
+            eventDay: editingCandidateDraft.eventDay ? Number(editingCandidateDraft.eventDay) : null,
             keyFigures: editingCandidateDraft.keyFigures,
             description: editingCandidateDraft.description,
             wikipediaUrl: editingCandidateDraft.wikipediaUrl,
@@ -580,6 +638,29 @@ export default function YeardleAdminTab() {
                     style={{ marginLeft: ".35rem", width: 110 }}
                   />
                 </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event month
+                  <select
+                    value={manualMonth}
+                    onChange={(event) => setManualMonth(event.target.value)}
+                    style={{ marginLeft: ".35rem" }}
+                  >
+                    {monthOptions.map(([value, label]) => (
+                      <option key={value || "empty"} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event day
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={manualDay}
+                    onChange={(event) => setManualDay(event.target.value)}
+                    style={{ marginLeft: ".35rem", width: 76 }}
+                  />
+                </label>
                 {manualCandidate.wikipediaUrl ? (
                   <a className="admin-btn" href={manualCandidate.wikipediaUrl} target="_blank" rel="noreferrer">Wikipedia</a>
                 ) : null}
@@ -654,8 +735,13 @@ export default function YeardleAdminTab() {
               <div>
             <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.title}</p>
             <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
-              Year: {item.event_year} | Status: {item.status}
+              Date: {formatEventDate(item.event_month, item.event_day, item.event_year)} | Status: {item.status}
             </p>
+            {getScheduleWarningCopy(item) ? (
+              <p style={{ margin: "0 0 .18rem", color: "#8b2d2d", fontSize: ".86rem", fontWeight: 800 }}>
+                {getScheduleWarningCopy(item)}
+              </p>
+            ) : null}
             {item.hint_person ? (
               <p style={{ margin: "0 0 .18rem", color: "#5b6168", fontSize: ".86rem" }}>
                 Key figures: {item.hint_person}
@@ -690,6 +776,29 @@ export default function YeardleAdminTab() {
                     value={editingCandidateDraft.eventYear}
                     onChange={(event) => updateEditingCandidateField("eventYear", event.target.value)}
                     style={{ marginLeft: ".35rem", width: 120 }}
+                  />
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event month
+                  <select
+                    value={editingCandidateDraft.eventMonth}
+                    onChange={(event) => updateEditingCandidateField("eventMonth", event.target.value)}
+                    style={{ marginLeft: ".35rem" }}
+                  >
+                    {monthOptions.map(([value, label]) => (
+                      <option key={value || "empty"} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                  Event day
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={editingCandidateDraft.eventDay}
+                    onChange={(event) => updateEditingCandidateField("eventDay", event.target.value)}
+                    style={{ marginLeft: ".35rem", width: 76 }}
                   />
                 </label>
                 <label style={{ fontWeight: 700, fontSize: ".85rem" }}>

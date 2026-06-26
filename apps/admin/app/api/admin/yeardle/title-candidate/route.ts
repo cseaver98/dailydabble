@@ -40,6 +40,8 @@ type ManualCandidate = {
   keyFigures: string;
   description: string;
   eventYearGuess: number | null;
+  eventMonthGuess: number | null;
+  eventDayGuess: number | null;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -136,6 +138,45 @@ const extractYearGuess = (title: string, extract: string): number | null => {
     .filter((value) => Number.isFinite(value) && value >= MIN_YEAR && value <= currentYear);
 
   return years.length > 0 ? years[0] : null;
+};
+
+const monthNames = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+const isValidMonthDay = (month: number, day: number): boolean => {
+  if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  return new Date(Date.UTC(2000, month - 1, day)).getUTCMonth() === month - 1;
+};
+
+const extractMonthDayGuess = (title: string, extract: string): { month: number | null; day: number | null } => {
+  const text = `${title} ${extract}`;
+  const monthPattern = monthNames.join("|");
+  const match = text.match(new RegExp(`\\b(${monthPattern})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,\\s*\\d{3,4})?\\b`, "i"));
+  if (!match) {
+    return { month: null, day: null };
+  }
+
+  const month = monthNames.indexOf(match[1].toLowerCase()) + 1;
+  const day = Number(match[2]);
+  if (!isValidMonthDay(month, day)) {
+    return { month: null, day: null };
+  }
+
+  return { month, day };
 };
 
 const getSupabaseYeardleAdmin = () =>
@@ -245,6 +286,7 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
   const fallbackSummary = `Review and edit this candidate for ${title}.`;
   const normalizedDescription = (description || fallbackSummary).slice(0, 600);
   const yearGuess = extractYearGuess(title, normalizedDescription);
+  const { month, day } = extractMonthDayGuess(title, normalizedDescription);
 
   return {
     title,
@@ -254,6 +296,8 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
     keyFigures: inferKeyFigures(title, normalizedDescription),
     description: normalizedDescription,
     eventYearGuess: yearGuess,
+    eventMonthGuess: month,
+    eventDayGuess: day,
   };
 };
 
@@ -290,10 +334,14 @@ export async function POST(request: Request) {
     const payload = (await request.json().catch(() => ({}))) as {
       candidate?: ManualCandidate;
       eventYear?: number;
+      eventMonth?: number | null;
+      eventDay?: number | null;
     };
 
     const candidate = payload.candidate;
     const eventYear = Number(payload.eventYear);
+    const eventMonth = payload.eventMonth == null || payload.eventMonth === 0 ? null : Number(payload.eventMonth);
+    const eventDay = payload.eventDay == null || payload.eventDay === 0 ? null : Number(payload.eventDay);
     const currentYear = new Date().getFullYear();
 
     if (!candidate || !candidate.title || !candidate.imageUrl) {
@@ -302,6 +350,12 @@ export async function POST(request: Request) {
 
     if (!Number.isFinite(eventYear) || eventYear < MIN_YEAR || eventYear > currentYear) {
       return NextResponse.json({ error: `eventYear must be between ${MIN_YEAR} and ${currentYear}.` }, { status: 400 });
+    }
+    if ((eventMonth == null) !== (eventDay == null)) {
+      return NextResponse.json({ error: "eventMonth and eventDay must be provided together." }, { status: 400 });
+    }
+    if (eventMonth != null && eventDay != null && !isValidMonthDay(eventMonth, eventDay)) {
+      return NextResponse.json({ error: "eventMonth/eventDay must be a real calendar date." }, { status: 400 });
     }
 
     const sourceKey = `${slugify(candidate.title)}-${eventYear}`;
@@ -314,6 +368,8 @@ export async function POST(request: Request) {
           source_key: sourceKey,
           title: candidate.title,
           event_year: eventYear,
+          event_month: eventMonth,
+          event_day: eventDay,
           image_url: candidate.imageUrl,
           image_alt: candidate.imageAlt,
           wikipedia_url: candidate.wikipediaUrl,
@@ -327,7 +383,7 @@ export async function POST(request: Request) {
         },
         { onConflict: "source_key" },
       )
-      .select("id,title,event_year,status")
+      .select("id,title,event_year,event_month,event_day,status")
       .single();
 
     if (eventError || !eventRow) {
@@ -340,6 +396,8 @@ export async function POST(request: Request) {
         id: eventRow.id,
         title: eventRow.title,
         eventYear: Number(eventRow.event_year),
+        eventMonth: eventRow.event_month == null ? null : Number(eventRow.event_month),
+        eventDay: eventRow.event_day == null ? null : Number(eventRow.event_day),
         status: eventRow.status,
       },
     });

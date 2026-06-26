@@ -35,6 +35,8 @@ type YeardlePuzzle = {
   maxGuesses: number;
   eventTitle: string;
   eventYear?: number;
+  eventMonth?: number | null;
+  eventDay?: number | null;
   imageUrl?: string;
   imageAlt?: string;
   wikipediaUrl?: string;
@@ -51,6 +53,37 @@ type RestoredYeardleState = {
 };
 
 const isValidYear = (value: string) => /^\d{4}$/.test(value.trim());
+const formatMonthDay = (dateString: string | undefined) => {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return "";
+  }
+
+  const [, month, day] = dateString.split("-").map((part) => Number(part));
+  if (!Number.isFinite(month) || !Number.isFinite(day)) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, month - 1, day)),
+  );
+};
+const formatFullEventDate = (
+  month: number | null | undefined,
+  day: number | null | undefined,
+  year: number | undefined,
+) => {
+  if (typeof year !== "number" || !Number.isFinite(year)) {
+    return "";
+  }
+  if (typeof month !== "number" || typeof day !== "number" || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return String(year);
+  }
+
+  const monthDay = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, Number(month) - 1, Number(day))),
+  );
+  return `${monthDay}, ${year}`;
+};
 const getDefaultRestoredYeardleState = (): RestoredYeardleState => ({
   guess: "",
   attempts: [],
@@ -454,11 +487,13 @@ export default function YeardleGameClient({
   const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
   const earlierAttempts = attempts.length > 1 ? attempts.slice(0, -1).reverse() : [];
   const eventTitleLabel = puzzle?.eventTitle || "";
+  const monthDayLabel = formatMonthDay(puzzle?.puzzleDate);
+  const fullEventDateLabel = formatFullEventDate(puzzle?.eventMonth, puzzle?.eventDay, puzzle?.eventYear);
   const resultAnswerLabel = (() => {
     if (gameState === "won" || gameState === "lost") {
       const title = puzzle?.eventTitle || "";
-      if (title && Number.isFinite(puzzle?.eventYear)) {
-        return `${title} - ${puzzle?.eventYear}`;
+      if (title && fullEventDateLabel) {
+        return `${title} - ${fullEventDateLabel}`;
       }
     }
     return effectiveAnswer;
@@ -540,6 +575,7 @@ export default function YeardleGameClient({
             </button>
           </div>
 
+          {monthDayLabel ? <p className="puzzle-kicker">On This Day: {monthDayLabel}</p> : null}
           {eventTitleLabel ? <h2 className="puzzle-title">{eventTitleLabel}</h2> : null}
 
           <figure className="event-figure">
@@ -674,6 +710,12 @@ export default function YeardleGameClient({
               />
             ) : null}
             <p className="result-modal-answer">{resultAnswerLabel}</p>
+            {monthDayLabel ? (
+              <p className="result-modal-copy">
+                This event happened on {monthDayLabel}
+                {typeof puzzle?.eventYear === "number" && Number.isFinite(puzzle.eventYear) ? `, ${puzzle.eventYear}` : ""}.
+              </p>
+            ) : null}
             {puzzle?.editorialContext?.description ? (
               <p className="result-modal-copy result-modal-detail">
                 <strong>Description:</strong> {puzzle.editorialContext.description}
@@ -694,7 +736,7 @@ export default function YeardleGameClient({
       {isHowToPlayOpen ? (
         <HowToPlayDialog
           title="How to play Yeardle"
-          subtitle="Guess the year of the historic event."
+          subtitle="This event happened on this date. Guess the year."
           steps={[
             "After each guess, warm and cold hints show how close your guess was.",
             "Use the image, hints, and your prior guesses to narrow it down.",

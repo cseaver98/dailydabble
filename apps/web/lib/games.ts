@@ -49,7 +49,7 @@ export const games: Game[] = [
     slug: "yeardle",
     name: "Yeardle",
     href: "/yeardle",
-    description: "Guess the year of the historic event.",
+    description: "Guess the year of an event from this day in history.",
     iconSrc: "/yeardle-mark-v2.png",
     iconAlt: "Yeardle logo",
     iconBackground: "#ede9fe",

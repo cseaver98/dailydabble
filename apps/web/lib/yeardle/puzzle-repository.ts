@@ -29,6 +29,8 @@ type EventRow = {
   id: string;
   title: string;
   event_year: number;
+  event_month?: number | null;
+  event_day?: number | null;
   image_url: string;
   image_alt?: string | null;
   wikipedia_url?: string | null;
@@ -42,6 +44,8 @@ export type YeardlePuzzle = {
   archiveGameNumber: number;
   eventTitle: string;
   eventYear: number;
+  eventMonth: number | null | undefined;
+  eventDay: number | null | undefined;
   imageUrl: string;
   imageAlt: string;
   wikipediaUrl: string | null | undefined;
@@ -70,6 +74,8 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, eventRow: EventRow): Promise<
     archiveGameNumber: await getArchiveGameNumber(scheduleRow.puzzle_date),
     eventTitle: eventRow.title,
     eventYear: eventRow.event_year,
+    eventMonth: eventRow.event_month,
+    eventDay: eventRow.event_day,
     imageUrl: eventRow.image_url,
     imageAlt: eventRow.image_alt || `Historical event image for ${eventRow.title}`,
     wikipediaUrl: eventRow.wikipedia_url,
@@ -99,7 +105,7 @@ const getPuzzleByScheduleDate = async (date: string): Promise<YeardlePuzzle | nu
 
   const { data: eventRow, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_description")
+    .select("id,title,event_year,event_month,event_day,image_url,image_alt,wikipedia_url,hint_description")
     .eq("id", scheduleRow.event_id)
     .maybeSingle<EventRow>();
 
@@ -119,7 +125,7 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<YeardleP
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("events")
-    .select("id,title,event_year,image_url,image_alt,wikipedia_url,hint_description,created_at")
+    .select("id,title,event_year,event_month,event_day,image_url,image_alt,wikipedia_url,hint_description,created_at")
     .eq("status", "approved")
     .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
@@ -130,7 +136,13 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<YeardleP
   }
 
   const candidates = (Array.isArray(approvedRows) ? approvedRows : []) as EventRow[];
+  const [, scheduledMonth, scheduledDay] = date.split("-").map((part) => Number(part));
   for (const candidate of candidates) {
+    const hasEventMonthDay = typeof candidate.event_month === "number" && typeof candidate.event_day === "number";
+    if (hasEventMonthDay && (candidate.event_month !== scheduledMonth || candidate.event_day !== scheduledDay)) {
+      continue;
+    }
+
     const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
       .from("daily_schedule")
       .select("puzzle_date")
