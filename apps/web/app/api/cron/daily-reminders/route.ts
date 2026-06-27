@@ -63,7 +63,6 @@ const chunk = <T,>(items: T[], size: number) => {
 
 const buildReminderEmail = (userId: string) => {
   const appUrl = getAppUrl();
-  const accountUrl = `${appUrl}/account`;
   const unsubscribeUrl = `${appUrl}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(userId, "daily_reminder"))}`;
 
   return {
@@ -79,9 +78,6 @@ const buildReminderEmail = (userId: string) => {
       "You received this email because daily reminders are turned on for your DailyDabble account.",
       "Turn off reminder emails:",
       unsubscribeUrl,
-      "",
-      "Manage reminders:",
-      accountUrl,
     ].join("\n"),
     html: `
       <!doctype html>
@@ -128,8 +124,7 @@ const buildReminderEmail = (userId: string) => {
                   <tr>
                     <td style="padding: 16px 8px 0; text-align: center; color: #75777a; font-size: 12px; line-height: 1.5;">
                       You received this email because daily reminders are turned on for your DailyDabble account.
-                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">unsubscribe</a>
-                      or manage reminders from <a href="${accountUrl}" style="color: #75777a; text-decoration: underline;">your account settings</a>.
+                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">Unsubscribe</a>.
                     </td>
                   </tr>
                 </table>

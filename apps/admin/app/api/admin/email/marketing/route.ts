@@ -66,7 +66,6 @@ const buildMarketingEmail = ({
   unsubscribeUrlOverride?: string;
 }) => {
   const appUrl = getAppUrl();
-  const accountUrl = `${appUrl}/account`;
   const unsubscribeUrl =
     unsubscribeUrlOverride ||
     `${appUrl}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(userId, "marketing"))}`;
@@ -77,11 +76,8 @@ const buildMarketingEmail = ({
     body.trim(),
     "",
     "You received this email because product updates and launch news are turned on for your DailyDabble account.",
-    "unsubscribe:",
+    "Unsubscribe:",
     unsubscribeUrl,
-    "",
-    "Manage email preferences:",
-    accountUrl,
   ].join("\n");
   const paragraphHtml = paragraphs
     .map((paragraph, index) => {
@@ -126,8 +122,7 @@ const buildMarketingEmail = ({
                   <tr>
                     <td style="padding: 16px 8px 0; text-align: center; color: #75777a; font-size: 12px; line-height: 1.5;">
                       You received this email because product updates and launch news are turned on for your DailyDabble account.
-                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">unsubscribe</a>
-                      or manage email preferences from <a href="${accountUrl}" style="color: #75777a; text-decoration: underline;">your account settings</a>.
+                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">Unsubscribe</a>.
                     </td>
                   </tr>
                 </table>
