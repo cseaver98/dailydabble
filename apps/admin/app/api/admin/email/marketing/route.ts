@@ -23,7 +23,9 @@ const escapeHtml = (value: string): string =>
     .replaceAll("'", "&#39;");
 
 const getAppUrl = () => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dailydabble.app";
+  const appUrl =
+    process.env.NEXT_PUBLIC_WEB_APP_URL ||
+    (process.env.NEXT_PUBLIC_APP_ENV === "staging" ? "https://staging.dailydabble.app" : "https://dailydabble.app");
   return appUrl.replace(/\/+$/, "");
 };
 
