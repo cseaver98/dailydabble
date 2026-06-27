@@ -164,7 +164,8 @@ const getMarketingRecipients = async () => {
     throw new Error(`Failed to load marketing recipients: ${error.message}`);
   }
 
-  return (data ?? []).map((row) => ({ userId: row.user_id, email: row.email }));
+  const recipients = (data ?? []) as MarketingRecipientRow[];
+  return recipients.map((row) => ({ userId: row.user_id, email: row.email }));
 };
 
 export async function GET() {
