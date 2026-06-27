@@ -1,6 +1,7 @@
 import { games } from "@/lib/games";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { createHmac } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 
@@ -39,6 +40,19 @@ const getAppUrl = () => {
   return appUrl.replace(/\/+$/, "");
 };
 
+const getUnsubscribeSecret = () => process.env.EMAIL_UNSUBSCRIBE_SECRET || process.env.CRON_SECRET || "";
+
+const createUnsubscribeToken = (userId: string, preference: "daily_reminder") => {
+  const secret = getUnsubscribeSecret();
+  if (!secret) {
+    throw new Error("Missing EMAIL_UNSUBSCRIBE_SECRET or CRON_SECRET");
+  }
+
+  const payload = Buffer.from(JSON.stringify({ userId, preference }), "utf8").toString("base64url");
+  const signature = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+};
+
 const chunk = <T,>(items: T[], size: number) => {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -47,30 +61,83 @@ const chunk = <T,>(items: T[], size: number) => {
   return chunks;
 };
 
-const buildReminderEmail = () => {
+const buildReminderEmail = (userId: string) => {
   const appUrl = getAppUrl();
   const accountUrl = `${appUrl}/account`;
+  const unsubscribeUrl = `${appUrl}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(userId, "daily_reminder"))}`;
 
   return {
     subject: "Today's DailyDabble games are live",
     text: [
       "Today's DailyDabble games are live.",
       "",
+      "Play a quick round and keep your streak going.",
+      "",
       "Play here:",
       appUrl,
       "",
-      "You can manage daily reminder emails from your account settings:",
+      "You received this email because daily reminders are turned on for your DailyDabble account.",
+      "Turn off reminder emails:",
+      unsubscribeUrl,
+      "",
+      "Manage reminders:",
       accountUrl,
     ].join("\n"),
     html: `
-      <div style="font-family: Arial, sans-serif; color: #2c2f31; line-height: 1.5;">
-        <p>Today's DailyDabble games are live.</p>
-        <p><a href="${appUrl}" style="color: #2f8f46; font-weight: 700;">Play today's games</a></p>
-        <p style="font-size: 13px; color: #6b7280;">
-          You can manage daily reminder emails from
-          <a href="${accountUrl}" style="color: #2f8f46;">your account settings</a>.
-        </p>
-      </div>
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Today's DailyDabble games are live</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;900&family=Plus+Jakarta+Sans:wght@900&display=swap" rel="stylesheet">
+        </head>
+        <body style="margin: 0; padding: 0; background: #f5f6f9; color: #2c2f31; font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; background: #f5f6f9;">
+            <tr>
+              <td align="center" style="padding: 32px 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width: 100%; max-width: 520px; border-collapse: collapse;">
+                  <tr>
+                    <td style="border: 1px solid #d8dce2; border-radius: 20px; background: #ffffff; padding: 28px; box-shadow: 0 18px 44px rgba(44, 47, 49, 0.12);">
+                      <img src="https://dailydabble.app/dailydabble-logo-email.png" width="220" height="47" alt="DailyDabble" style="display: block; width: 220px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
+                      <p style="margin: 16px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
+                        Today's DailyDabble games are live.
+                      </p>
+                      <p style="margin: 8px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
+                        Play a quick round and keep your streak going.
+                      </p>
+                      <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0 0; border-collapse: collapse;">
+                        <tr>
+                          <td>
+                            <a href="${appUrl}" style="display: inline-block; border-radius: 999px; background: #2c2f31; color: #ffffff; padding: 13px 22px; font-size: 15px; line-height: 1; font-weight: 900; text-decoration: none;">
+                              Play today's games
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin: 24px 0 0; color: #595c5e; font-size: 14px; line-height: 1.55; font-weight: 600;">
+                        If the button does not work, copy and paste this link into your browser:
+                      </p>
+                      <p style="margin: 8px 0 0; word-break: break-all; color: #2c2f31; font-size: 13px; line-height: 1.5;">
+                        <a href="${appUrl}" style="color: #2c2f31; text-decoration: underline;">${appUrl}</a>
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 16px 8px 0; text-align: center; color: #75777a; font-size: 12px; line-height: 1.5;">
+                      You received this email because daily reminders are turned on for your DailyDabble account.
+                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">Turn off reminder emails</a>
+                      or manage reminders from <a href="${accountUrl}" style="color: #75777a; text-decoration: underline;">your account settings</a>.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
     `,
   };
 };
@@ -165,7 +232,6 @@ export async function GET(request: NextRequest) {
   }
 
   const resend = new Resend(apiKey);
-  const email = buildReminderEmail();
   const sentUserIds: string[] = [];
   const failures: Array<{ userId: string; error: string }> = [];
 
@@ -180,6 +246,7 @@ export async function GET(request: NextRequest) {
           return;
         }
 
+        const email = buildReminderEmail(profile.id);
         const { error: sendError } = await resend.emails.send({
           from,
           to: emailAddress,

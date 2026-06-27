@@ -60,6 +60,7 @@ function HomeContent() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
   const [showFirstVisitToast, setShowFirstVisitToast] = useState(false);
+  const [emailPreferenceToast, setEmailPreferenceToast] = useState("");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileCardMotion, setMobileCardMotion] = useState<Record<string, MobileCardMotion>>({});
   const mobilePeakAnchorRef = useRef<number | null>(null);
@@ -101,9 +102,43 @@ function HomeContent() {
   const isLoggedIn = Boolean(access?.loggedIn);
   const onboardingNext = searchParams.get("next");
   const safeOnboardingNext = onboardingNext && onboardingNext.startsWith("/") && !onboardingNext.startsWith("//") ? onboardingNext : "/";
+  const emailPreferenceStatus = searchParams.get("emailPreference");
+
+  useEffect(() => {
+    if (!emailPreferenceStatus) {
+      return;
+    }
+
+    const message =
+      emailPreferenceStatus === "reminder-unsubscribed"
+        ? "You have unsubscribed from reminder emails."
+        : emailPreferenceStatus === "marketing-unsubscribed"
+          ? "You have unsubscribed from marketing emails."
+          : emailPreferenceStatus === "unsubscribe-error"
+            ? "We could not update that email preference. Please try from account settings."
+            : "";
+
+    if (!message) {
+      return;
+    }
+
+    setEmailPreferenceToast(message);
+    setShowFirstVisitToast(false);
+    router.replace("/", { scroll: false });
+
+    const timeoutId = window.setTimeout(() => {
+      setEmailPreferenceToast("");
+    }, 8000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [emailPreferenceStatus, router]);
 
   useEffect(() => {
     try {
+      if (emailPreferenceStatus) {
+        return;
+      }
+
       if (window.localStorage.getItem(firstVisitToastKey)) {
         return;
       }
@@ -118,7 +153,7 @@ function HomeContent() {
     } catch {
       return;
     }
-  }, []);
+  }, [emailPreferenceStatus]);
 
   useEffect(() => {
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-hub-card]"));
@@ -503,6 +538,22 @@ function HomeContent() {
             <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
               Pick a game, play in under a minute, and come back tomorrow for a fresh set.
             </p>
+          </div>
+        </div>
+      ) : null}
+      {emailPreferenceToast ? (
+        <div className="fixed inset-x-4 bottom-5 z-[95] mx-auto max-w-md rounded-[1.5rem] bg-white/95 p-4 text-[#2c2f31] shadow-[0_18px_50px_rgba(44,47,49,0.18)] backdrop-blur sm:bottom-6">
+          <button
+            type="button"
+            onClick={() => setEmailPreferenceToast("")}
+            aria-label="Close email preference message"
+            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eff1f4] text-base font-extrabold text-[#595c5e] transition hover:bg-[#e0e3e6]"
+          >
+            ×
+          </button>
+          <div className="pr-9">
+            <p className="font-headline text-lg font-extrabold text-[#2c2f31]">Email preference updated</p>
+            <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">{emailPreferenceToast}</p>
           </div>
         </div>
       ) : null}
