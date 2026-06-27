@@ -67,11 +67,11 @@ const buildReminderEmail = (userId: string) => {
   const unsubscribeUrl = `${appUrl}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(userId, "daily_reminder"))}`;
 
   return {
-    subject: "Today's DailyDabble games are live",
+    subject: "Today's DailyDabble games are live!",
     text: [
-      "Today's DailyDabble games are live.",
+      "Today's DailyDabble games are live!",
       "",
-      "Play a quick round and keep your streak going.",
+      "Play a quick round and keep your streak 🔥 going.",
       "",
       "Play here:",
       appUrl,
@@ -89,7 +89,7 @@ const buildReminderEmail = (userId: string) => {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Today's DailyDabble games are live</title>
+          <title>Today's DailyDabble games are live!</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;900&family=Plus+Jakarta+Sans:wght@900&display=swap" rel="stylesheet">
@@ -103,10 +103,10 @@ const buildReminderEmail = (userId: string) => {
                     <td style="border: 1px solid #d8dce2; border-radius: 20px; background: #ffffff; padding: 28px; box-shadow: 0 18px 44px rgba(44, 47, 49, 0.12);">
                       <img src="https://dailydabble.app/dailydabble-logo-email.png" width="220" height="47" alt="DailyDabble" style="display: block; width: 220px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
                       <p style="margin: 16px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
-                        Today's DailyDabble games are live.
+                        Today's DailyDabble games are live!
                       </p>
                       <p style="margin: 8px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
-                        Play a quick round and keep your streak going.
+                        Play a quick round and keep your streak 🔥 going.
                       </p>
                       <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0 0; border-collapse: collapse;">
                         <tr>
@@ -128,7 +128,7 @@ const buildReminderEmail = (userId: string) => {
                   <tr>
                     <td style="padding: 16px 8px 0; text-align: center; color: #75777a; font-size: 12px; line-height: 1.5;">
                       You received this email because daily reminders are turned on for your DailyDabble account.
-                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">Turn off reminder emails</a>
+                      <a href="${unsubscribeUrl}" style="color: #75777a; text-decoration: underline;">unsubscribe</a>
                       or manage reminders from <a href="${accountUrl}" style="color: #75777a; text-decoration: underline;">your account settings</a>.
                     </td>
                   </tr>

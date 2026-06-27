@@ -11,6 +11,7 @@ const tabs = [
   { href: "/admin/yeardle", label: "Yeardle" },
   { href: "/admin/equadle", label: "Equadle" },
   { href: "/admin/sportle", label: "Sportle" },
+  { href: "/admin/email", label: "Email" },
 ];
 
 export default function AdminShell({ children }) {
