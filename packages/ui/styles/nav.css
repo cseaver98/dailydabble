@@ -202,6 +202,57 @@
   letter-spacing: -0.03em;
 }
 
+.nav-menu-progress,
+.dd-nav .nav-menu-progress {
+  display: grid;
+  gap: 0.5rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-container-low, #eff1f4) 72%, white);
+  padding: 0.85rem 0.9rem;
+}
+
+.nav-menu-progress-copy,
+.dd-nav .nav-menu-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #75777a;
+  font-family: var(--font-headline, inherit), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.nav-menu-progress-copy strong,
+.dd-nav .nav-menu-progress-copy strong {
+  color: var(--foreground, #2c2f31);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.nav-menu-progress-track,
+.dd-nav .nav-menu-progress-track {
+  display: block;
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #d8dce2;
+}
+
+.nav-menu-progress-fill,
+.dd-nav .nav-menu-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary, #2f672d);
+}
+
+.nav-menu-list,
+.dd-nav .nav-menu-list {
+  display: grid;
+  gap: 0.48rem;
+}
+
 .nav-menu-close,
 .dd-nav .nav-menu-close {
   display: inline-flex;
@@ -244,12 +295,42 @@
   letter-spacing: 0.01em;
 }
 
-.nav-menu-item > span:not(.nav-menu-item-icon):not(.nav-menu-complete-check),
-.dd-nav .nav-menu-item > span:not(.nav-menu-item-icon):not(.nav-menu-complete-check) {
+.nav-menu-game-row,
+.dd-nav .nav-menu-game-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.7rem;
+  gap: 0.42rem;
+}
+
+.nav-menu-game-row .nav-menu-item,
+.dd-nav .nav-menu-game-row .nav-menu-item {
+  min-height: 3.65rem;
+}
+
+.nav-menu-item-copy,
+.dd-nav .nav-menu-item-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.nav-menu-item-label,
+.dd-nav .nav-menu-item-label,
+.nav-menu-item-description,
+.dd-nav .nav-menu-item-description {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nav-menu-item-description,
+.dd-nav .nav-menu-item-description {
+  color: #75777a;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0;
 }
 
 .nav-menu-item-icon,
@@ -284,6 +365,65 @@
   width: 0.875rem;
 }
 
+.nav-menu-status,
+.dd-nav .nav-menu-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0.22rem 0.52rem;
+  font-family: "Manrope", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nav-menu-status-done,
+.dd-nav .nav-menu-status-done {
+  background: #d1ffc7;
+  color: #114c15;
+}
+
+.nav-menu-status-neutral,
+.dd-nav .nav-menu-status-neutral {
+  background: #fff2a6;
+  color: #4b3f00;
+}
+
+.nav-menu-status-check,
+.dd-nav .nav-menu-status-check {
+  display: inline-block;
+  width: 0.72rem;
+  height: 0.42rem;
+  border-bottom: 0.13rem solid #114c15;
+  border-left: 0.13rem solid #114c15;
+  transform: translateY(-0.1rem) rotate(-45deg);
+}
+
+.nav-menu-archive-link,
+.dd-nav .nav-menu-archive-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  min-height: 3.65rem;
+  border-radius: 12px;
+  background: #f7f8fa;
+  color: #75777a;
+  text-decoration: none;
+}
+
+.nav-menu-archive-link:hover,
+.dd-nav .nav-menu-archive-link:hover {
+  background: var(--surface-container-high, #e0e3e6);
+  color: var(--foreground, #2c2f31);
+}
+
 .nav-menu-item:hover,
 .dd-nav .nav-menu-item:hover {
   background: var(--dd-menu-item-hover-bg, var(--dd-menu-hover-bg, #ffe9e9));
@@ -307,13 +447,19 @@
 .nav-menu-footer,
 .dd-nav .nav-menu-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 0.75rem;
-  padding-top: 0.5rem;
+  gap: 0.45rem;
+  border-top: 1px solid #eff1f4;
+  margin-top: 0.24rem;
+  padding-top: 0.72rem;
 }
 
 .nav-menu-legal-link,
 .dd-nav .nav-menu-legal-link {
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.34rem 0.48rem;
   font-size: 0.8rem;
   color: #8d9196;
   text-decoration: none;
@@ -323,6 +469,7 @@
 
 .nav-menu-legal-link:hover,
 .dd-nav .nav-menu-legal-link:hover {
+  background: #eff1f4;
   color: #727780;
 }
 
@@ -371,7 +518,7 @@
 
   .nav-menu,
   .dd-nav .nav-menu {
-    width: min(225px, 58vw);
+    width: min(320px, 88vw);
   }
 }
 

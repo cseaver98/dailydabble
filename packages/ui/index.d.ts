@@ -19,10 +19,21 @@ export type DailydabbleMenuLink = {
   id?: string;
   hidden?: boolean;
   brand?: boolean;
+  description?: string;
   iconSrc?: string;
   iconAlt?: string;
   iconBackground?: string;
   completed?: boolean;
+  statusLabel?: string;
+  statusTone?: "done" | "neutral" | string;
+  archiveHref?: string;
+};
+
+export type DailydabbleMenuProgressSummary = {
+  label?: string;
+  completed?: number;
+  total?: number;
+  ariaLabel?: string;
 };
 
 export type DailydabbleUnavailableProps = {
@@ -34,6 +45,7 @@ export type DailydabbleUnavailableProps = {
 export type DailydabbleMenuProps = {
   items?: DailydabbleMenuLink[];
   legalLinks?: DailydabbleMenuLink[];
+  progressSummary?: DailydabbleMenuProgressSummary | null;
   buttonId?: string;
   menuId?: string;
   buttonAriaLabel?: string;

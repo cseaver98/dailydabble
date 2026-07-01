@@ -58,6 +58,7 @@ export function DailydabbleNav({
 export function DailydabbleMenu({
   items = [],
   legalLinks = [],
+  progressSummary = null,
   buttonId,
   menuId,
   buttonAriaLabel = "Open menu",
@@ -156,22 +157,42 @@ export function DailydabbleMenu({
             ),
           ),
         ),
-        visibleItems.map((item) =>
-          React.createElement(
-            Dialog.Close,
-            { key: `${item.href}-${item.label}`, asChild: true },
-            React.createElement(
-              "a",
-              {
-                id: item.id,
-                className: item.brand ? "nav-menu-item nav-menu-item-brand" : "nav-menu-item",
-                href: item.href,
-                style: item.iconBackground ? { "--dd-menu-item-hover-bg": item.iconBackground } : undefined,
-              },
+        progressSummary
+          ? React.createElement(
+              "div",
+              { className: "nav-menu-progress", "aria-label": progressSummary.ariaLabel },
+              React.createElement(
+                "div",
+                { className: "nav-menu-progress-copy" },
+                React.createElement("span", null, progressSummary.label || "Today"),
+                React.createElement("strong", null, `${progressSummary.completed ?? 0}/${progressSummary.total ?? 0}`),
+              ),
+              React.createElement(
+                "span",
+                { className: "nav-menu-progress-track", "aria-hidden": "true" },
+                React.createElement("span", {
+                  className: "nav-menu-progress-fill",
+                  style: {
+                    width: `${
+                      progressSummary.total
+                        ? Math.max(0, Math.min(100, ((progressSummary.completed ?? 0) / progressSummary.total) * 100))
+                        : 0
+                    }%`,
+                  },
+                }),
+              ),
+            )
+          : null,
+        React.createElement(
+          "div",
+          { className: "nav-menu-list" },
+          visibleItems.map((item) => {
+            const itemContent = [
               item.iconSrc
-                  ? React.createElement(
-                      "span",
+                ? React.createElement(
+                    "span",
                     {
+                      key: "icon",
                       className: "nav-menu-item-icon",
                       "aria-hidden": "true",
                       style: item.iconBackground ? { "--dd-menu-item-icon-bg": item.iconBackground } : undefined,
@@ -183,16 +204,94 @@ export function DailydabbleMenu({
                     }),
                   )
                 : null,
-              React.createElement("span", null, item.label),
-              item.completed
-                ? React.createElement("span", {
-                    className: "nav-menu-complete-check",
-                    "aria-label": "Completed",
-                    role: "img",
-                  })
-                : null,
-            ),
-          ),
+              React.createElement(
+                "span",
+                { key: "copy", className: "nav-menu-item-copy" },
+                React.createElement("span", { className: "nav-menu-item-label" }, item.label),
+                item.description
+                  ? React.createElement("span", { className: "nav-menu-item-description" }, item.description)
+                  : null,
+              ),
+              item.statusLabel
+                ? React.createElement(
+                    "span",
+                    {
+                      key: "status",
+                      className: `nav-menu-status nav-menu-status-${item.statusTone || "neutral"}`,
+                    },
+                    React.createElement("span", null, item.statusLabel),
+                    item.statusTone === "done"
+                      ? React.createElement("span", {
+                          className: "nav-menu-status-check",
+                          "aria-hidden": "true",
+                        })
+                      : null,
+                  )
+                : item.completed
+                  ? React.createElement("span", {
+                      key: "check",
+                      className: "nav-menu-complete-check",
+                      "aria-label": "Completed",
+                      role: "img",
+                    })
+                  : null,
+            ].filter(Boolean);
+
+            const itemLink = React.createElement(
+              Dialog.Close,
+              { key: `${item.href}-${item.label}-link`, asChild: true },
+              React.createElement(
+                "a",
+                {
+                  id: item.id,
+                  className: item.brand ? "nav-menu-item nav-menu-item-brand" : "nav-menu-item",
+                  href: item.href,
+                  style: item.iconBackground ? { "--dd-menu-item-hover-bg": item.iconBackground } : undefined,
+                },
+                itemContent,
+              ),
+            );
+
+            if (!item.archiveHref) {
+              return itemLink;
+            }
+
+            return React.createElement(
+              "div",
+              { key: `${item.href}-${item.label}`, className: "nav-menu-game-row" },
+              itemLink,
+              React.createElement(
+                Dialog.Close,
+                { asChild: true },
+                React.createElement(
+                  "a",
+                  {
+                    className: "nav-menu-archive-link",
+                    href: item.archiveHref,
+                    "aria-label": `${item.label} archive games`,
+                    title: `${item.label} archive games`,
+                  },
+                  React.createElement(
+                    "svg",
+                    { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                    React.createElement("path", {
+                      d: "M7 4v3M17 4v3M4.5 9.5h15M6.5 6h11A2.5 2.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-9A2.5 2.5 0 0 1 6.5 6Z",
+                      stroke: "currentColor",
+                      strokeWidth: "2",
+                      strokeLinecap: "round",
+                      strokeLinejoin: "round",
+                    }),
+                    React.createElement("path", {
+                      d: "M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01",
+                      stroke: "currentColor",
+                      strokeWidth: "2.6",
+                      strokeLinecap: "round",
+                    }),
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
         legalLinks.length
           ? React.createElement(
