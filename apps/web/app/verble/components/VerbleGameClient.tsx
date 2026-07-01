@@ -72,7 +72,6 @@ type RestoredVerbleState = {
   gameState: GameState;
   message: string;
   selectedSlot: number | null;
-  phraseGuess: string;
   wordAttempts: WordAttempt[];
   solvedWords: Record<number, string>;
   slotDrafts: SlotDrafts;
@@ -196,7 +195,6 @@ export default function VerbleGameClient({
   const [gameState, setGameState] = useState<GameState>("playing");
   const [message, setMessage] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [phraseGuess, setPhraseGuess] = useState("");
   const [wordAttempts, setWordAttempts] = useState<WordAttempt[]>([]);
   const [solvedWords, setSolvedWords] = useState<Record<number, string>>({});
   const [slotDrafts, setSlotDrafts] = useState<SlotDrafts>({});
@@ -206,8 +204,7 @@ export default function VerbleGameClient({
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
-  const [isPhraseDialogOpen, setIsPhraseDialogOpen] = useState(false);
-  const [phraseGuessError, setPhraseGuessError] = useState("");
+  const [isPhraseConfirmOpen, setIsPhraseConfirmOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
   const [revealState, setRevealState] = useState<{
@@ -263,7 +260,6 @@ export default function VerbleGameClient({
     gameState: "playing",
     message: "",
     selectedSlot: null,
-    phraseGuess: "",
     wordAttempts: [],
     solvedWords: {},
     slotDrafts: createInitialSlotDrafts(targetPuzzle.slots || []),
@@ -309,7 +305,6 @@ export default function VerbleGameClient({
           gameState: parsedState === "won" || parsedState === "lost" ? parsedState : "playing",
           message: typeof parsed.message === "string" ? parsed.message : "",
           selectedSlot: includeDraftState && typeof parsed.selectedSlot === "number" ? parsed.selectedSlot : null,
-          phraseGuess: includeDraftState && typeof parsed.phraseGuess === "string" ? parsed.phraseGuess : "",
           wordAttempts: Array.isArray(parsed.wordAttempts) ? parsed.wordAttempts : [],
           solvedWords,
           slotDrafts:
@@ -438,7 +433,6 @@ export default function VerbleGameClient({
         setArchiveLock(null);
         setGameState(restoredState.gameState);
         setMessage(restoredState.message);
-        setPhraseGuess(restoredState.phraseGuess);
         setWordAttempts(restoredState.wordAttempts);
         setSolvedWords(restoredState.solvedWords);
         setSlotDrafts(restoredState.slotDrafts);
@@ -449,8 +443,7 @@ export default function VerbleGameClient({
         setCopyStatus("");
         setIsResultOpen(restoredState.gameState !== "playing");
         setIsHowToPlayOpen(false);
-        setIsPhraseDialogOpen(false);
-        setPhraseGuessError("");
+        setIsPhraseConfirmOpen(false);
         setIsHistoryOpen(false);
         setRevealState(null);
         setHeldRevealState(null);
@@ -491,7 +484,6 @@ export default function VerbleGameClient({
         gameState,
         message,
         selectedSlot,
-        phraseGuess,
         wordAttempts,
         solvedWords,
         slotDrafts,
@@ -500,7 +492,7 @@ export default function VerbleGameClient({
         guessesUsed,
       }),
     );
-  }, [gameState, message, selectedSlot, phraseGuess, wordAttempts, solvedWords, slotDrafts, slotLocks, slotMarks, guessesUsed, progressKey, puzzle]);
+  }, [gameState, message, selectedSlot, wordAttempts, solvedWords, slotDrafts, slotLocks, slotMarks, guessesUsed, progressKey, puzzle]);
 
   useEffect(() => {
     if (!completionKey || !lockDailyCompletion || gameState === "playing" || !puzzle) return;
@@ -536,12 +528,56 @@ export default function VerbleGameClient({
   const selectedSlotMeta = puzzle?.slots.find((slot) => slot.index === selectedSlot);
   const selectedSlotDraft = selectedSlotMeta ? slotDrafts[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => "") : [];
   const selectedSlotLockState = selectedSlotMeta ? slotLocks[selectedSlotMeta.index] || Array.from({ length: selectedSlotMeta.length }, () => false) : [];
+  const buildCurrentPhraseGuess = () => {
+    if (!puzzle) return "";
+    return puzzle.slots.map((slot) => {
+      const draft = slotDrafts[slot.index] || Array.from({ length: slot.length }, () => "");
+      return `${buildSurfaceWordGuess(slot, draft)}${slot.separator}`;
+    }).join("");
+  };
+  const canSubmitFullPhraseGuess =
+    gameState === "playing"
+    && !isResolvingGuess
+    && !!puzzle
+    && puzzle.slots.every((slot) => {
+      if (solvedWords[slot.index]) {
+        return true;
+      }
+      const draft = slotDrafts[slot.index] || [];
+      return draft.length === slot.length && draft.every(Boolean);
+    });
   const canSubmitWordGuess =
     gameState === "playing"
     && !isResolvingGuess
     && Boolean(selectedSlotMeta)
     && selectedSlotDraft.length === (selectedSlotMeta?.length || 0)
     && selectedSlotDraft.every((letter) => Boolean(letter));
+  const shouldShowPickWordPulse =
+    gameState === "playing"
+    && !selectedSlotMeta
+    && !isResolvingGuess;
+
+  const moveSelectedSlot = (direction: 1 | -1) => {
+    if (!puzzle || gameState !== "playing" || isResolvingGuess) {
+      return;
+    }
+
+    const playableSlots = puzzle.slots.filter((slot) => !solvedWords[slot.index]);
+    if (playableSlots.length === 0) {
+      return;
+    }
+
+    const currentIndex = playableSlots.findIndex((slot) => slot.index === selectedSlot);
+    if (currentIndex === -1) {
+      setSelectedSlot(direction > 0 ? playableSlots[0].index : playableSlots[playableSlots.length - 1].index);
+      setMessage("");
+      return;
+    }
+
+    const nextIndex = (currentIndex + direction + playableSlots.length) % playableSlots.length;
+    setSelectedSlot(playableSlots[nextIndex].index);
+    setMessage("");
+  };
 
   const updateSelectedDraft = (updater: (current: string[], locks: boolean[]) => string[]) => {
     if (!selectedSlotMeta || selectedSlot === null || gameState !== "playing" || isResolvingGuess || Boolean(solvedWords[selectedSlot])) {
@@ -989,22 +1025,22 @@ export default function VerbleGameClient({
     }, revealTotalMs);
   };
 
-  const submitPhraseGuess = () => {
+  const submitPhraseGuess = (phraseGuessValue: string) => {
     if (!puzzle || gameState !== "playing") return;
 
-    const normalized = normalizePhraseWithPunctuation(phraseGuess);
+    const normalized = normalizePhraseWithPunctuation(phraseGuessValue);
     if (!normalized) {
-      setPhraseGuessError("Enter a phrase guess first.");
+      setMessage("Fill in the phrase before submitting.");
       return;
     }
 
-    setPhraseGuessError("");
-    setIsPhraseDialogOpen(false);
+    setIsPhraseConfirmOpen(false);
 
     const target = normalizePhraseWithPunctuation(
       puzzle.slots.map((slot) => `${slot.display}${slot.separator}`).join("")
     );
     if (normalized === target) {
+      const nextGuessesUsed = Math.min(maxGuesses, guessesUsed + 1);
       const allSolvedWords: Record<number, string> = {};
       const solvedDrafts: SlotDrafts = {};
       const solvedLocks: SlotLocks = {};
@@ -1047,6 +1083,7 @@ export default function VerbleGameClient({
         setSlotDrafts(solvedDrafts);
         setSlotLocks(solvedLocks);
         setSlotMarks(solvedMarks);
+        setGuessesUsed(nextGuessesUsed);
         setGameState("won");
         setIsResolvingGuess(false);
         setIsResultOpen(true);
@@ -1056,7 +1093,7 @@ export default function VerbleGameClient({
           puzzleDate: puzzle.puzzleDate,
           isArchive: isArchiveView,
           isWin: true,
-          guessesUsed,
+          guessesUsed: nextGuessesUsed,
           maxGuesses,
           resultPayload: {
             ...buildResultPayload({
@@ -1064,7 +1101,7 @@ export default function VerbleGameClient({
               answer: { phraseTemplate: puzzle.phraseTemplate, words: puzzle.answerWords },
               final: { type: "phrase", guess: normalized, isCorrect: true },
               isWin: true,
-              guessesUsed,
+              guessesUsed: nextGuessesUsed,
               maxGuesses,
               submittedGuesses: wordAttempts.length + 1,
               stats: { usedFullPhraseGuess: true },
@@ -1078,7 +1115,7 @@ export default function VerbleGameClient({
               slotDrafts: solvedDrafts,
               slotLocks: solvedLocks,
               slotMarks: solvedMarks,
-              guessesUsed,
+              guessesUsed: nextGuessesUsed,
             }),
           },
         });
@@ -1195,19 +1232,27 @@ export default function VerbleGameClient({
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (document.activeElement instanceof HTMLInputElement && document.activeElement.name === "phraseGuess") {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          submitPhraseGuess();
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (canSubmitFullPhraseGuess) {
+          setIsPhraseConfirmOpen(true);
+          return;
+        }
+        if (canSubmitWordGuess) {
+          void submitWordGuess();
         }
         return;
       }
 
-      if (event.key === "Enter") {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
-        if (canSubmitWordGuess) {
-          void submitWordGuess();
-        }
+        moveSelectedSlot(1);
+        return;
+      }
+
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveSelectedSlot(-1);
         return;
       }
 
@@ -1228,7 +1273,7 @@ export default function VerbleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, phraseGuess, selectedSlotMeta, solvedWords]);
+  }, [canSubmitFullPhraseGuess, canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, selectedSlotMeta, solvedWords]);
  
   const latestAttempt = wordAttempts.length > 0 ? wordAttempts[wordAttempts.length - 1] : null;
   const earlierAttempts = wordAttempts.slice(0, -1).reverse();
@@ -1278,6 +1323,15 @@ export default function VerbleGameClient({
   const statusChipLabel = shouldShowNextGameCountdown
     ? `Next game in ${nextGameCountdown || "--:--:--"}`
     : contextChipLabel;
+  const playPrompt = message || (
+    gameState !== "playing"
+      ? ""
+      : canSubmitFullPhraseGuess
+        ? "Full phrase filled. Press Enter to submit it."
+        : selectedSlotMeta
+          ? `Guess word #${selectedSlotMeta.index + 1}: ${selectedSlotMeta.length} letters.`
+          : "Tap any word to start guessing."
+  );
 
   return (
     <div className="verble-shell">
@@ -1405,7 +1459,7 @@ export default function VerbleGameClient({
                           return (
                             <span key={`${slot.index}-${index}`} className="slot-char-group">
                               <span
-                                className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
+                                className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && shouldShowPickWordPulse ? "pick-word-pulse" : ""} ${item.kind === "letter" && canSubmitFullPhraseGuess ? "phrase-ready" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
                                 style={
                                   item.kind === "letter" && activeRevealIndex
                                     ? ({
@@ -1466,20 +1520,8 @@ export default function VerbleGameClient({
             })}
           </div>
 
-          <div className="phrase-submit-row">
-            {gameState === "playing" ? (
-              <button
-                className="guess-submit-btn phrase-submit-trigger"
-                type="button"
-                onClick={() => {
-                  setPhraseGuessError("");
-                  setIsPhraseDialogOpen(true);
-                }}
-                disabled={isResolvingGuess}
-              >
-                Guess full phrase
-              </button>
-            ) : (
+          {gameState !== "playing" ? (
+            <div className="phrase-submit-row">
               <button
                 className="guess-submit-btn"
                 type="button"
@@ -1487,8 +1529,8 @@ export default function VerbleGameClient({
               >
                 Review result
               </button>
-            )}
-          </div>
+            </div>
+          ) : null}
 
           <div className="keyboard" aria-label="Global phrase keyboard">
             {ALPHA_ROWS.map((row) => (
@@ -1520,7 +1562,20 @@ export default function VerbleGameClient({
               </div>
             ))}
             <div className="keyboard-row controls">
-              <button type="button" className="key wide control-key" onClick={() => void submitWordGuess()} disabled={!canSubmitWordGuess}>Enter</button>
+              <button
+                type="button"
+                className="key wide control-key"
+                onClick={() => {
+                  if (canSubmitFullPhraseGuess) {
+                    setIsPhraseConfirmOpen(true);
+                    return;
+                  }
+                  void submitWordGuess();
+                }}
+                disabled={!canSubmitFullPhraseGuess && !canSubmitWordGuess}
+              >
+                Enter
+              </button>
               <button
                 type="button"
                 className="key wide control-key backspace-key"
@@ -1551,7 +1606,7 @@ export default function VerbleGameClient({
             </div>
           </div>
 
-          <p className="message" data-kind={gameState === "won" ? "won" : gameState === "lost" ? "lost" : globalRevealState ? "hint" : "playing"}>{message}</p>
+          <p className="message" data-kind={gameState === "won" ? "won" : gameState === "lost" ? "lost" : globalRevealState ? "hint" : "playing"}>{playPrompt}</p>
 
           {allSolved && gameState === "playing" ? <p className="message" data-kind="won">All words solved.</p> : null}
 
@@ -1610,8 +1665,8 @@ export default function VerbleGameClient({
         </section>
       </main>
 
-      {isPhraseDialogOpen && gameState === "playing" ? (
-        <div className="result-modal-backdrop" onClick={() => setIsPhraseDialogOpen(false)}>
+      {isPhraseConfirmOpen && gameState === "playing" ? (
+        <div className="result-modal-backdrop" onClick={() => setIsPhraseConfirmOpen(false)}>
           <section
             className="result-modal-panel phrase-guess-modal-panel"
             role="dialog"
@@ -1622,53 +1677,36 @@ export default function VerbleGameClient({
             <button
               className="result-modal-close"
               type="button"
-              onClick={() => setIsPhraseDialogOpen(false)}
-              aria-label="Close full phrase guess dialog"
+              onClick={() => setIsPhraseConfirmOpen(false)}
+              aria-label="Close full phrase confirmation"
             >
               ×
             </button>
             <h2 className="result-modal-title phrase-guess-title" id="phrase-guess-title">
-              Guess the full phrase
+              Submit full phrase?
             </h2>
             <p className="result-modal-copy phrase-guess-warning">
               Warning: a correct phrase wins immediately, but a miss ends the game.
             </p>
-            <form
-              className="phrase-guess-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitPhraseGuess();
-              }}
-            >
-              <input
-                id="phraseGuess"
-                className="guess-input phrase-submit-input"
-                type="text"
-                name="phraseGuess"
-                aria-label="Full phrase"
-                value={phraseGuess}
-                onChange={(event) => {
-                  setPhraseGuess(event.target.value);
-                  setPhraseGuessError("");
-                }}
-                placeholder="Type the whole phrase"
-                autoComplete="off"
-                autoFocus
-              />
-              {phraseGuessError ? <p className="phrase-guess-error">{phraseGuessError}</p> : null}
+            <div className="phrase-guess-form">
+              <p className="phrase-guess-preview">{buildCurrentPhraseGuess()}</p>
               <div className="phrase-guess-actions">
                 <button
                   className="guess-submit-btn phrase-guess-secondary"
                   type="button"
-                  onClick={() => setIsPhraseDialogOpen(false)}
+                  onClick={() => setIsPhraseConfirmOpen(false)}
                 >
                   Keep solving
                 </button>
-                <button className="guess-submit-btn" type="submit">
-                  Submit
+                <button
+                  className="guess-submit-btn"
+                  type="button"
+                  onClick={() => submitPhraseGuess(buildCurrentPhraseGuess())}
+                >
+                  Submit phrase
                 </button>
               </div>
-            </form>
+            </div>
           </section>
         </div>
       ) : null}
@@ -1683,7 +1721,8 @@ export default function VerbleGameClient({
             "Green letters are correct. Yellow letters are in the word, but in another spot. Gray letters are not in that word.",
             "Green and yellow letters will fill every matching spot across the phrase.",
             "The keyboard tracks the whole phrase, so a letter may show yellow if it appears in another word.",
-            "You can guess the full phrase, but a miss ends the game.",
+            "If every tile is filled, Enter submits the full phrase after confirmation.",
+            "A full phrase miss ends the game.",
             `Solve the phrase in ${maxGuesses} guesses.`,
           ]}
           onClose={() => setIsHowToPlayOpen(false)}

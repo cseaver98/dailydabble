@@ -251,6 +251,26 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.42);
 }
 
+.verble-shell .slot-tile.pick-word-pulse:not(.fixed):not(.reveal):not(.solved) {
+  animation: verble-pick-word-pulse 1.65s ease-in-out infinite;
+}
+
+@keyframes verble-pick-word-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.46), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verble-shell .slot-tile.pick-word-pulse:not(.fixed):not(.reveal):not(.solved) {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.42), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+  }
+}
+
 .verble-shell .slot-word-button.solved .slot-tile:not(.fixed),
 .verble-shell .slot-tile.solved {
   background: #65b84d;
@@ -533,6 +553,10 @@
 .verble-shell .message[data-kind="lost"] { color: #b02500; }
 .verble-shell .message[data-kind="hint"] { color: #2f672d; }
 
+.verble-shell .slot-tile.phrase-ready:not(.fixed):not(.reveal) {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.42), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+}
+
 .verble-shell .result-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -749,9 +773,24 @@
   font-weight: 800;
 }
 
+.verble-shell .phrase-guess-preview {
+  margin: 0;
+  border-radius: 0.85rem;
+  border: 1px solid var(--outline-soft);
+  background: var(--surface-low);
+  color: var(--text);
+  padding: 0.72rem 0.82rem;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
 .verble-shell .phrase-guess-actions {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 0.15rem;
 }
