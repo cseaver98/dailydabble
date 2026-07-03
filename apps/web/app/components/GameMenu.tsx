@@ -2,6 +2,7 @@
 
 import { games } from "@/lib/games";
 import { DailydabbleMenu } from "@dailydabble/ui";
+import { usePathname } from "next/navigation";
 import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
 
 type GameMenuProps = {
@@ -22,6 +23,8 @@ export default function GameMenu({
   const currentGame = games.find((game) => game.href === todayHref);
   const completedGames = useTodayCompletionStatus();
   const completedCount = games.filter((game) => completedGames[game.slug]).length;
+  const pathname = usePathname();
+  const hideTodayOption = hideToday || pathname?.startsWith(archiveHref);
 
   return (
     <DailydabbleMenu
@@ -34,7 +37,7 @@ export default function GameMenu({
         ariaLabel: `${completedCount} of ${games.length} games completed today`,
       }}
       items={[
-        { label: "Today", href: todayHref, id: "todayGameBtn", hidden: hideToday, iconBackground: currentGame?.iconBackground },
+        { label: "Today", href: todayHref, id: "todayGameBtn", hidden: hideTodayOption, iconBackground: currentGame?.iconBackground },
         ...games.map((game) => ({
           label: game.name,
           href: game.href,
@@ -50,6 +53,7 @@ export default function GameMenu({
       legalLinks={[
         { label: "Stats", href: "/account/stats" },
         { label: "Account", href: "/account" },
+        { label: "Terms", href: "/terms" },
         { label: "Privacy", href: "/privacy" },
       ]}
     />

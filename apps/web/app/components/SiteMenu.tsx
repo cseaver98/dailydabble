@@ -34,6 +34,7 @@ export default function SiteMenu() {
       legalLinks={[
         { label: "Stats", href: "/account/stats" },
         { label: "Account", href: "/account" },
+        { label: "Terms", href: "/terms" },
         { label: "Privacy", href: "/privacy" },
       ]}
     />
