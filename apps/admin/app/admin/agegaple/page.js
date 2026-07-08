@@ -16,6 +16,17 @@ const statusLabel = (status) => {
   if (status === "used_today") return "today";
   return status;
 };
+const hasCompleteImageAttribution = (details, personKey) => {
+  const prefix = personKey === "personA" ? "personAImage" : "personBImage";
+  const pendingImage = details?.[prefix];
+  return Boolean(
+    (pendingImage?.url || pendingImage?.thumbUrl || details?.[`${prefix}Url`]) &&
+      (pendingImage?.sourcePageUrl || details?.[`${prefix}SourcePageUrl`]) &&
+      (pendingImage?.license || details?.[`${prefix}License`]) &&
+      (pendingImage?.author || details?.[`${prefix}Author`]) &&
+      (pendingImage?.attributionText || details?.[`${prefix}AttributionText`]),
+  );
+};
 
 export default function AgegapleAdminTab() {
   const router = useRouter();
@@ -244,19 +255,29 @@ export default function AgegapleAdminTab() {
       }
       const metadata = payload.metadata || {};
       setDetailsForm((current) => current ? {
-        ...current,
-        [imageField]: {
-          url: metadata.imageUrl || "",
-          fileTitle: metadata.fileTitle || "",
-          thumbUrl: metadata.thumbUrl || "",
-          sourcePageUrl: metadata.sourcePageUrl || sourceUrl,
-          license: metadata.license || "",
-          licenseUrl: metadata.licenseUrl || "",
-          author: metadata.author || "",
-          attributionText: metadata.attributionText || "",
-          metadata: metadata.rawMetadata || {},
-        },
-        licenseVerifiedAt: null,
+        ...(() => {
+          const next = {
+            ...current,
+            [imageField]: {
+              url: metadata.imageUrl || "",
+              fileTitle: metadata.fileTitle || "",
+              thumbUrl: metadata.thumbUrl || "",
+              sourcePageUrl: metadata.sourcePageUrl || sourceUrl,
+              license: metadata.license || "",
+              licenseUrl: metadata.licenseUrl || "",
+              author: metadata.author || "",
+              attributionText: metadata.attributionText || "",
+              metadata: metadata.rawMetadata || {},
+            },
+          };
+          return {
+            ...next,
+            licenseVerifiedAt:
+              hasCompleteImageAttribution(next, "personA") && hasCompleteImageAttribution(next, "personB")
+                ? new Date().toISOString()
+                : null,
+          };
+        })(),
       } : current);
     } catch (lookupError) {
       setDetailsError(lookupError instanceof Error ? lookupError.message : `Could not load ${label} Commons metadata.`);
@@ -373,13 +394,22 @@ export default function AgegapleAdminTab() {
       if (!response.ok) {
         throw new Error(payload.error || "Failed to load candidate details");
       }
-      setDetailsForm(payload.details ? {
-        ...payload.details,
-        personACommonsUrl: "",
-        personBCommonsUrl: "",
-        personAImage: null,
-        personBImage: null,
-      } : null);
+      if (payload.details) {
+        const hasVerifiedAttribution =
+          Boolean(payload.details.licenseVerifiedAt) ||
+          (hasCompleteImageAttribution(payload.details, "personA") &&
+            hasCompleteImageAttribution(payload.details, "personB"));
+        setDetailsForm({
+          ...payload.details,
+          licenseVerifiedAt: hasVerifiedAttribution ? payload.details.licenseVerifiedAt || new Date().toISOString() : null,
+          personACommonsUrl: "",
+          personBCommonsUrl: "",
+          personAImage: null,
+          personBImage: null,
+        });
+      } else {
+        setDetailsForm(null);
+      }
     } catch (loadError) {
       setDetailsError(loadError instanceof Error ? loadError.message : "Could not load candidate details.");
     } finally {
