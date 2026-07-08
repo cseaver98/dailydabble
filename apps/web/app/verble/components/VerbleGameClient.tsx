@@ -1330,7 +1330,7 @@ export default function VerbleGameClient({
         ? "Full phrase filled. Press Enter to submit it."
         : selectedSlotMeta
           ? `Guess word #${selectedSlotMeta.index + 1}: ${selectedSlotMeta.length} letters.`
-          : "Tap any word to start guessing."
+          : "Tap any word to start guessing, or guess the full phrase if you know it."
   );
 
   return (
