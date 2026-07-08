@@ -68,6 +68,19 @@ export function DailydabbleMenu({
   const menuWrapRef = React.useRef(null);
   const visibleItems = items.filter((item) => !item.hidden);
 
+  React.useEffect(() => {
+    const iconSources = Array.from(new Set(visibleItems.map((item) => item.iconSrc).filter(Boolean)));
+    const preloadedImages = iconSources.map((src) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = src;
+      return image;
+    });
+    return () => {
+      preloadedImages.length = 0;
+    };
+  }, [visibleItems]);
+
   const updateMenuTop = React.useCallback(() => {
     const nav = menuWrapRef.current?.closest(".dd-nav");
     setMenuTop(nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0);
@@ -200,7 +213,8 @@ export function DailydabbleMenu({
                     React.createElement("img", {
                       src: item.iconSrc,
                       alt: "",
-                      loading: "lazy",
+                      loading: "eager",
+                      decoding: "async",
                     }),
                   )
                 : null,
