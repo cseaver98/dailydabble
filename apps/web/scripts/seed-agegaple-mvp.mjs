@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -645,7 +646,15 @@ const loadUsedCoupleKeys = async () => {
   return { usedQidKeys, usedNameKeys };
 };
 
-const parseBatchSize = () => {
+const parseBatchSize = (value) => {
+  if (value !== undefined) {
+    const parsed = Number(value);
+    if (!validBatchSizes.has(parsed)) {
+      throw new Error("Invalid batch size value. Allowed: 1,5,10,15,20");
+    }
+    return parsed;
+  }
+
   const arg = process.argv.find((value) => value.startsWith("--batch-size="));
   if (!arg) {
     return 1;
@@ -659,7 +668,15 @@ const parseBatchSize = () => {
   return parsed;
 };
 
-const parsePoolSize = () => {
+const parsePoolSize = (value) => {
+  if (value !== undefined) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 50 && parsed <= 3000) {
+      return Math.floor(parsed);
+    }
+    throw new Error("Invalid pool size value. Allowed range: 50-3000");
+  }
+
   const arg = process.argv.find((value) => value.startsWith("--pool-size="));
   if (arg) {
     const parsed = Number(arg.split("=")[1]);
@@ -676,11 +693,16 @@ const parsePoolSize = () => {
   return 280;
 };
 
-const parsePersonName = () => {
+const parsePersonName = (value) => {
+  if (value !== undefined) {
+    const normalized = String(value ?? "").trim();
+    return normalized || null;
+  }
+
   const arg = process.argv.find((value) => value.startsWith("--person-name="));
   const raw = arg ? arg.slice("--person-name=".length) : process.env.SEED_PERSON_NAME;
-  const value = String(raw ?? "").trim();
-  return value || null;
+  const normalized = String(raw ?? "").trim();
+  return normalized || null;
 };
 
 const parseIntInRange = (value, min, max, fallback) => {
@@ -1064,10 +1086,15 @@ const meetsNotability = (item, thresholds) => {
   return primary >= thresholds.minPrimarySitelinks && combined >= thresholds.minCombinedSitelinks;
 };
 
-const run = async () => {
-  const targetBatchSize = parseBatchSize();
-  const poolSize = parsePoolSize();
-  const personName = parsePersonName();
+export const runAgegapleSeed = async ({
+  batchSize,
+  poolSize: requestedPoolSize,
+  personName: requestedPersonName,
+  log = console.log,
+} = {}) => {
+  const targetBatchSize = parseBatchSize(batchSize);
+  const poolSize = parsePoolSize(requestedPoolSize);
+  const personName = parsePersonName(requestedPersonName);
   const thresholds = parseNotabilityThresholds();
   const { usedQidKeys, usedNameKeys } = await loadUsedCoupleKeys();
 
@@ -1099,7 +1126,7 @@ const run = async () => {
   }
 
   if (selectedCouples.length === 0) {
-    console.log(
+    log(
       targetedResult
         ? `No new eligible relationships found for ${targetedResult.target.label}. Existing candidates may already cover them.`
         : "No new eligible couples found from Wikidata for this run. Increase --pool-size or lower notability thresholds.",
@@ -1140,21 +1167,23 @@ const run = async () => {
     usedQidKeys.add(coupleKey);
     usedNameKeys.add(normalizeNameKey(item.personA.name, item.personB.name));
 
-    console.log(
+    log(
       `Seeded ${item.personA.name} + ${item.personB.name}: candidate ${candidateId} created for image curation (pending review).`,
     );
   }
 
   const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
-  console.log(
+  log(
     targetedResult
       ? `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s) for ${targetedResult.target.label} (${targetedResult.target.qid}), requested ${targetBatchSize}.`
       : `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s), requested ${targetBatchSize}, pool=${poolSize}, primary>=${thresholds.minPrimarySitelinks}, combined>=${thresholds.minCombinedSitelinks}.`,
   );
 };
 
-run().catch((error) => {
-  console.error("Seed failed:", error.message);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  runAgegapleSeed().catch((error) => {
+    console.error("Seed failed:", error.message);
+    process.exit(1);
+  });
+}

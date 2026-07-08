@@ -1,29 +1,15 @@
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
 import { NextResponse } from "next/server";
+import { runAgegapleSeed } from "../../../../../web/scripts/seed-agegaple-mvp.mjs";
 
 export const runtime = "nodejs";
 
-const execFileAsync = promisify(execFile);
 const validBatchSizes = new Set([1, 5, 10, 15, 20]);
-
-const findAgegapleCwd = (): string => {
-  const candidates = [
-    process.cwd(),
-    resolve(process.cwd(), ".."),
-    resolve(process.cwd(), "../.."),
-  ] as const;
-
-  const match = candidates.find((cwd) => existsSync(resolve(cwd, "apps/web/scripts/seed-agegaple-mvp.mjs")));
-  if (!match) {
-    throw new Error("Could not locate Agegaple seed script directory");
-  }
-
-  return resolve(match, "apps/web");
-};
+const runAgegapleSeedWithOptions = runAgegapleSeed as (options: {
+  batchSize: number;
+  poolSize: number;
+  personName?: string | null;
+  log: (line: string) => void;
+}) => Promise<void>;
 
 const runSeedScript = async ({
   batchSize,
@@ -32,33 +18,17 @@ const runSeedScript = async ({
   batchSize: number;
   personName?: string | null;
 }): Promise<{ stdout: string; stderr: string }> => {
-  const cwd = findAgegapleCwd();
   const poolSize = Math.max(120, Math.min(360, batchSize * 48));
-  const args = [
-    "scripts/seed-agegaple-mvp.mjs",
-    `--batch-size=${batchSize}`,
-    `--pool-size=${poolSize}`,
-  ];
-  if (existsSync(resolve(cwd, ".env.local"))) {
-    args.unshift("--env-file=.env.local");
-  }
-  if (personName) {
-    args.push(`--person-name=${personName}`);
-  }
+  const output: string[] = [];
 
-  const { stdout, stderr } = await execFileAsync(
-    "node",
-    args,
-    {
-      cwd,
-      env: process.env,
-      maxBuffer: 1024 * 1024,
-      timeout: 90_000,
-      killSignal: "SIGTERM",
-    },
-  );
+  await runAgegapleSeedWithOptions({
+    batchSize,
+    poolSize,
+    personName,
+    log: (line: string) => output.push(line),
+  });
 
-  return { stdout: stdout.trim(), stderr: stderr.trim() };
+  return { stdout: output.join("\n").trim(), stderr: "" };
 };
 
 export async function POST(request: Request) {
