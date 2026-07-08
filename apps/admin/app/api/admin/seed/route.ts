@@ -35,11 +35,13 @@ const runSeedScript = async ({
   const cwd = findAgegapleCwd();
   const poolSize = Math.max(120, Math.min(360, batchSize * 48));
   const args = [
-    "--env-file=.env.local",
     "scripts/seed-agegaple-mvp.mjs",
     `--batch-size=${batchSize}`,
     `--pool-size=${poolSize}`,
   ];
+  if (existsSync(resolve(cwd, ".env.local"))) {
+    args.unshift("--env-file=.env.local");
+  }
   if (personName) {
     args.push(`--person-name=${personName}`);
   }
