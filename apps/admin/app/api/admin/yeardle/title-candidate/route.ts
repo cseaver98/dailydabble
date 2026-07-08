@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerKey, getSupabaseUrl } from "@/lib/supabase/env";
+import { fetchCommonsImageMetadata } from "@/lib/wikimedia-commons";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,12 @@ type ManualCandidate = {
   title: string;
   imageUrl: string;
   imageAlt: string;
+  imageSourcePageUrl?: string | null;
+  imageFileTitle?: string | null;
+  imageLicense?: string | null;
+  imageLicenseUrl?: string | null;
+  imageAuthor?: string | null;
+  imageAttributionText?: string | null;
   wikipediaUrl: string | null;
   keyFigures: string;
   description: string;
@@ -282,6 +289,9 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
   const title = String(summary?.title || page.title).trim();
   const description = String(summary?.extract || "").trim();
   const imageUrl = String(summary?.thumbnail?.source || summary?.originalimage?.source || "").trim();
+  const commonsMetadata = imageUrl
+    ? await fetchCommonsImageMetadata(imageUrl).catch(() => null)
+    : null;
 
   const fallbackSummary = `Review and edit this candidate for ${title}.`;
   const normalizedDescription = (description || fallbackSummary).slice(0, 600);
@@ -290,8 +300,14 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
 
   return {
     title,
-    imageUrl,
+    imageUrl: commonsMetadata?.thumbUrl || commonsMetadata?.imageUrl || imageUrl,
     imageAlt: `${title} historical image`,
+    imageSourcePageUrl: commonsMetadata?.sourcePageUrl ?? null,
+    imageFileTitle: commonsMetadata?.fileTitle ?? null,
+    imageLicense: commonsMetadata?.license ?? null,
+    imageLicenseUrl: commonsMetadata?.licenseUrl ?? null,
+    imageAuthor: commonsMetadata?.author ?? null,
+    imageAttributionText: commonsMetadata?.attributionText ?? null,
     wikipediaUrl: summary?.content_urls?.desktop?.page ?? page.canonicalUrl,
     keyFigures: inferKeyFigures(title, normalizedDescription),
     description: normalizedDescription,
@@ -372,6 +388,13 @@ export async function POST(request: Request) {
           event_day: eventDay,
           image_url: candidate.imageUrl,
           image_alt: candidate.imageAlt,
+          image_source_page_url: candidate.imageSourcePageUrl || null,
+          image_file_title: candidate.imageFileTitle || null,
+          image_license: candidate.imageLicense || null,
+          image_license_url: candidate.imageLicenseUrl || null,
+          image_author: candidate.imageAuthor || null,
+          image_attribution_text: candidate.imageAttributionText || null,
+          image_license_verified_at: candidate.imageAttributionText ? new Date().toISOString() : null,
           wikipedia_url: candidate.wikipediaUrl,
           hint_category: null,
           hint_region: null,

@@ -17,6 +17,8 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const WIKIDATA_SPARQL_ENDPOINT = "https://query.wikidata.org/sparql";
+const WIKIDATA_API_ENDPOINT = "https://www.wikidata.org/w/api.php";
+const COMMONS_API_ENDPOINT = "https://commons.wikimedia.org/w/api.php";
 const validBatchSizes = new Set([1, 5, 10, 15, 20]);
 const relationshipTypeFromWikidata = ({ predicateUri, hasEndDate }) => {
   const predicateCode = String(predicateUri ?? "").split("/").pop();
@@ -128,6 +130,58 @@ const computeAgeGapYears = (aBirthDate, bBirthDate) => {
   return Number((diffMs / (1000 * 60 * 60 * 24 * 365.2425)).toFixed(2));
 };
 
+const currentYear = () => new Date().getUTCFullYear();
+
+const stripHtml = (value) => {
+  const normalized = String(value ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized || null;
+};
+
+const normalizeCommonsFileTitle = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const url = new URL(raw);
+    const filePathMatch = decodeURIComponent(url.pathname).match(/\/Special:FilePath\/(.+)$/);
+    if (filePathMatch?.[1]) {
+      return `File:${filePathMatch[1].replaceAll("_", " ")}`;
+    }
+    const wikiFileMatch = decodeURIComponent(url.pathname).match(/\/wiki\/(File:.+)$/);
+    if (wikiFileMatch?.[1]) {
+      return wikiFileMatch[1].replaceAll("_", " ");
+    }
+  } catch {
+    // Plain Commons filenames are handled below.
+  }
+
+  const normalized = raw.replaceAll("_", " ");
+  if (!normalized) {
+    return null;
+  }
+  return normalized.startsWith("File:") ? normalized : `File:${normalized}`;
+};
+
+const parsePhotoYear = (value) => {
+  const match = String(value ?? "").match(/\b(18\d{2}|19\d{2}|20\d{2}|21\d{2}|2200)\b/);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  return Number.isInteger(year) && year >= 1850 && year <= 2200 ? year : null;
+};
+
 const shuffle = (arr) => {
   const copy = [...arr];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -201,38 +255,42 @@ const normalizeWikipediaTitle = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const fetchWikipediaSummary = async (title) => {
-  const normalizedTitle = normalizeWikipediaTitle(title);
-  if (!normalizedTitle) {
+const getWikipediaSummarySettings = () => ({
+  attempts: 3,
+  baseDelayMs: 500,
+  maxDelayMs: 3500,
+  requestTimeoutMs: 15000,
+});
+
+const wikipediaHeaders = {
+  Accept: "application/json",
+  "Api-User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+  "User-Agent": "AgegapleSeeder/1.0 (editorial context)",
+};
+
+const normalizeWikipediaSummaryPayload = (summaryPayload) => {
+  const summary = String(summaryPayload?.extract ?? "").trim();
+  if (!summary) {
     return null;
   }
 
-  const summarySettings = {
-    attempts: 2,
-    baseDelayMs: 250,
-    maxDelayMs: 900,
-    requestTimeoutMs: 9000,
+  return {
+    summary,
+    pageUrl: String(summaryPayload?.content_urls?.desktop?.page ?? summaryPayload?.fullurl ?? "").trim() || null,
   };
+};
 
-  const encoded = encodeURIComponent(normalizedTitle);
+const fetchWikipediaSummaryByTitle = async (title) => {
+  const encoded = encodeURIComponent(title);
   try {
     const summaryPayload = await fetchJsonWithRetry(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Api-User-Agent": "AgegapleSeeder/1.0 (editorial context)",
-          "User-Agent": "AgegapleSeeder/1.0 (editorial context)",
-        },
-      },
-      summarySettings,
+      { headers: wikipediaHeaders },
+      getWikipediaSummarySettings(),
     );
 
-    const summary = String(summaryPayload?.extract ?? "").trim();
-    const pageUrl = String(summaryPayload?.content_urls?.desktop?.page ?? "").trim() || null;
-    if (summary) {
-      return { summary, pageUrl };
-    }
+    const normalized = normalizeWikipediaSummaryPayload(summaryPayload);
+    if (normalized) return normalized;
   } catch {
     // Fallback to the query API when REST summary is unavailable.
   }
@@ -240,14 +298,8 @@ const fetchWikipediaSummary = async (title) => {
   try {
     const queryPayload = await fetchJsonWithRetry(
       `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|info&inprop=url&explaintext=1&exintro=1&redirects=1&titles=${encoded}&format=json`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Api-User-Agent": "AgegapleSeeder/1.0 (editorial context)",
-          "User-Agent": "AgegapleSeeder/1.0 (editorial context)",
-        },
-      },
-      summarySettings,
+      { headers: wikipediaHeaders },
+      getWikipediaSummarySettings(),
     );
 
     const pages = queryPayload?.query?.pages ?? {};
@@ -256,16 +308,55 @@ const fetchWikipediaSummary = async (title) => {
       return null;
     }
 
-    const summary = String(firstPage.extract ?? "").trim();
-    const pageUrl = String(firstPage.fullurl ?? "").trim() || null;
-    if (!summary) {
-      return null;
-    }
-
-    return { summary, pageUrl };
+    return normalizeWikipediaSummaryPayload(firstPage);
   } catch {
     return null;
   }
+};
+
+const fetchWikipediaSummaryBySearch = async (query) => {
+  const encoded = encodeURIComponent(query);
+  try {
+    const queryPayload = await fetchJsonWithRetry(
+      `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encoded}&gsrlimit=1&prop=extracts|info&inprop=url&explaintext=1&exintro=1&redirects=1&format=json`,
+      { headers: wikipediaHeaders },
+      getWikipediaSummarySettings(),
+    );
+    const pages = queryPayload?.query?.pages ?? {};
+    const firstPage = Object.values(pages).find((entry) => entry && typeof entry === "object");
+    if (!firstPage || typeof firstPage !== "object") {
+      return null;
+    }
+
+    return normalizeWikipediaSummaryPayload(firstPage);
+  } catch {
+    return null;
+  }
+};
+
+const fetchWikipediaSummary = async (...titleCandidates) => {
+  const candidates = Array.from(
+    new Set(
+      titleCandidates
+        .flat()
+        .map((title) => normalizeWikipediaTitle(title))
+        .filter(Boolean)
+        .flatMap((title) => [title, titleToDisplayName(title)])
+        .filter(Boolean),
+    ),
+  );
+
+  for (const candidate of candidates) {
+    const summary = await fetchWikipediaSummaryByTitle(candidate);
+    if (summary) return summary;
+  }
+
+  for (const candidate of candidates) {
+    const summary = await fetchWikipediaSummaryBySearch(candidate);
+    if (summary) return summary;
+  }
+
+  return null;
 };
 
 const relationshipLabelByType = {
@@ -277,10 +368,9 @@ const relationshipLabelByType = {
 
 const buildCandidateEditorialMetadata = async ({ personA, personB, relationshipType }) => {
   const relationshipLabel = relationshipLabelByType[relationshipType] ?? "connected";
-  const [personASummary, personBSummary, coupleSummary] = await Promise.all([
-    fetchWikipediaSummary(personA.wikipedia_title || personA.name),
-    fetchWikipediaSummary(personB.wikipedia_title || personB.name),
-    fetchWikipediaSummary(`${personA.name} and ${personB.name}`),
+  const [personASummary, personBSummary] = await Promise.all([
+    fetchWikipediaSummary(personA.wikipedia_title, personA.name),
+    fetchWikipediaSummary(personB.wikipedia_title, personB.name),
   ]);
 
   return {
@@ -289,9 +379,6 @@ const buildCandidateEditorialMetadata = async ({ personA, personB, relationshipT
     editorialPersonABioUrl: personASummary?.pageUrl ?? null,
     editorialPersonBBio: personBSummary?.summary ?? `${personB.name} is a notable public figure.`,
     editorialPersonBBioUrl: personBSummary?.pageUrl ?? null,
-    editorialCoupleContext:
-      coupleSummary?.summary ?? `${personA.name} and ${personB.name} are ${relationshipLabel}.`,
-    editorialCoupleContextUrl: coupleSummary?.pageUrl ?? null,
   };
 };
 
@@ -327,20 +414,108 @@ const findOrCreateCouple = async ({ personAId, personBId, relationshipType }) =>
   return data.id;
 };
 
-const upsertImage = async ({
+const buildFallbackCommonsMetadata = ({ fileTitle, directUrl }) => {
+  const normalizedTitle = normalizeCommonsFileTitle(fileTitle);
+  if (!normalizedTitle || !directUrl) {
+    return null;
+  }
+  const sourcePageUrl = `https://commons.wikimedia.org/wiki/${encodeURIComponent(normalizedTitle.replaceAll(" ", "_"))}`;
+  return {
+    fileTitle: normalizedTitle,
+    imageUrl: directUrl,
+    thumbUrl: directUrl,
+    sourcePageUrl,
+    license: "Wikimedia Commons (verify)",
+    licenseUrl: null,
+    author: null,
+    attributionText: `${normalizedTitle} | Wikimedia Commons | verify license before approval`,
+    photoYear: currentYear(),
+    rawMetadata: { needs_manual_verification: "true" },
+    usedFallbackPhotoYear: true,
+    usedFallbackMetadata: true,
+  };
+};
+
+const fetchCommonsImageMetadata = async ({ fileTitle, directUrl }) => {
+  const normalizedTitle = normalizeCommonsFileTitle(fileTitle);
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  try {
+    const search = new URLSearchParams({
+      action: "query",
+      format: "json",
+      formatversion: "2",
+      prop: "imageinfo",
+      titles: normalizedTitle,
+      iiprop: "url|extmetadata",
+      iiurlwidth: "900",
+    });
+    const payload = await fetchJsonWithRetry(
+      `${COMMONS_API_ENDPOINT}?${search.toString()}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Api-User-Agent": "AgegapleSeeder/2.0 (Commons image metadata)",
+          "User-Agent": "AgegapleSeeder/2.0 (Commons image metadata)",
+        },
+      },
+      {
+        attempts: 2,
+        baseDelayMs: 250,
+        maxDelayMs: 1000,
+        requestTimeoutMs: 9000,
+      },
+    );
+    const page = Object.values(payload?.query?.pages ?? {})[0];
+    const imageInfo = page?.imageinfo?.[0];
+    if (!page?.title || !imageInfo?.url) {
+      return null;
+    }
+
+    const extmetadata = imageInfo.extmetadata ?? {};
+    const rawMetadata = Object.fromEntries(
+      Object.entries(extmetadata).map(([key, item]) => [key, stripHtml(item?.value) ?? ""]),
+    );
+    const objectName = stripHtml(extmetadata.ObjectName?.value);
+    const author = stripHtml(extmetadata.Artist?.value) ?? stripHtml(extmetadata.Credit?.value);
+    const license = stripHtml(extmetadata.LicenseShortName?.value) ?? stripHtml(extmetadata.UsageTerms?.value);
+    const licenseUrl = stripHtml(extmetadata.LicenseUrl?.value);
+    const dateTimeOriginal = stripHtml(extmetadata.DateTimeOriginal?.value);
+    const photoYear = parsePhotoYear(dateTimeOriginal) ?? currentYear();
+    const sourcePageUrl =
+      imageInfo.descriptionurl ??
+      `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title).replaceAll(" ", "_"))}`;
+    const attributionText = [objectName ?? page.title, author, license].filter(Boolean).join(" | ");
+
+    return {
+      fileTitle: page.title,
+      imageUrl: imageInfo.url,
+      thumbUrl: imageInfo.thumburl ?? imageInfo.url,
+      sourcePageUrl,
+      license,
+      licenseUrl,
+      author,
+      attributionText,
+      photoYear,
+      rawMetadata,
+      usedFallbackPhotoYear: !parsePhotoYear(dateTimeOriginal),
+      usedFallbackMetadata: false,
+    };
+  } catch {
+    return buildFallbackCommonsMetadata({ fileTitle: normalizedTitle, directUrl });
+  }
+};
+
+const upsertPersonImage = async ({
   subjectId,
-  fileTitle,
-  imageUrl,
-  thumbUrl,
-  license,
-  author,
-  attribution,
-  isUsable = true,
+  metadata,
 }) => {
   const { data: existing, error: findError } = await supabase
     .from("images")
     .select("id")
-    .eq("file_title", fileTitle)
+    .eq("file_title", metadata.fileTitle)
     .limit(1)
     .maybeSingle();
 
@@ -350,15 +525,18 @@ const upsertImage = async ({
     const { error: updateError } = await supabase
       .from("images")
       .update({
-        subject_type: "couple",
+        subject_type: "person",
         subject_id: subjectId,
-        source: "wikidata_seed",
-        image_url: imageUrl,
-        thumb_url: thumbUrl,
-        license,
-        author,
-        attribution_text: attribution,
-        is_usable: isUsable,
+        source: "wikimedia_commons",
+        image_url: metadata.imageUrl,
+        thumb_url: metadata.thumbUrl,
+        source_page_url: metadata.sourcePageUrl,
+        license: metadata.license,
+        license_url: metadata.licenseUrl,
+        author: metadata.author,
+        attribution_text: metadata.attributionText,
+        metadata_json: metadata.rawMetadata ?? {},
+        is_usable: true,
       })
       .eq("id", existing.id);
 
@@ -368,17 +546,20 @@ const upsertImage = async ({
 
   const { data, error } = await supabase
     .from("images")
-    .insert({
-      subject_type: "couple",
+      .insert({
+      subject_type: "person",
       subject_id: subjectId,
-      source: "wikidata_seed",
-      file_title: fileTitle,
-      image_url: imageUrl,
-      thumb_url: thumbUrl,
-      license,
-      author,
-      attribution_text: attribution,
-      is_usable: isUsable,
+      source: "wikimedia_commons",
+      file_title: metadata.fileTitle,
+      image_url: metadata.imageUrl,
+      thumb_url: metadata.thumbUrl,
+      source_page_url: metadata.sourcePageUrl,
+      license: metadata.license,
+      license_url: metadata.licenseUrl,
+      author: metadata.author,
+      attribution_text: metadata.attributionText,
+      metadata_json: metadata.rawMetadata ?? {},
+      is_usable: true,
     })
     .select("id")
     .single();
@@ -387,7 +568,13 @@ const upsertImage = async ({
   return data.id;
 };
 
-const findOrCreateCandidate = async ({ coupleId, imageId, ageGap, qualityScore, editorialMetadata }) => {
+const findOrCreateCandidate = async ({
+  coupleId,
+  ageGap,
+  qualityScore,
+  editorialMetadata,
+  reviewNotes,
+}) => {
   const { data: existing, error: findError } = await supabase
     .from("puzzle_candidates")
     .select("id")
@@ -402,16 +589,17 @@ const findOrCreateCandidate = async ({ coupleId, imageId, ageGap, qualityScore, 
     .from("puzzle_candidates")
     .insert({
       couple_id: coupleId,
-      image_id: imageId,
+      person_a_image_id: null,
+      person_b_image_id: null,
+      person_a_photo_year: null,
+      person_b_photo_year: null,
       computed_age_gap_years: ageGap,
       quality_score: qualityScore,
-      editorial_relationship_note: editorialMetadata.editorialRelationshipNote,
+      review_notes: reviewNotes,
       editorial_person_a_bio: editorialMetadata.editorialPersonABio,
       editorial_person_a_bio_url: editorialMetadata.editorialPersonABioUrl,
       editorial_person_b_bio: editorialMetadata.editorialPersonBBio,
       editorial_person_b_bio_url: editorialMetadata.editorialPersonBBioUrl,
-      editorial_couple_context: editorialMetadata.editorialCoupleContext,
-      editorial_couple_context_url: editorialMetadata.editorialCoupleContextUrl,
       status: "pending_review",
       reviewed_at: null,
     })
@@ -486,6 +674,13 @@ const parsePoolSize = () => {
   }
 
   return 280;
+};
+
+const parsePersonName = () => {
+  const arg = process.argv.find((value) => value.startsWith("--person-name="));
+  const raw = arg ? arg.slice("--person-name=".length) : process.env.SEED_PERSON_NAME;
+  const value = String(raw ?? "").trim();
+  return value || null;
 };
 
 const parseIntInRange = (value, min, max, fallback) => {
@@ -586,6 +781,123 @@ WHERE {
 LIMIT ${limit}
 `;
 
+const fetchWikidataPersonByName = async (personName) => {
+  const search = new URLSearchParams({
+    action: "wbsearchentities",
+    format: "json",
+    language: "en",
+    uselang: "en",
+    type: "item",
+    limit: "8",
+    search: personName,
+  });
+  const payload = await fetchJsonWithRetry(
+    `${WIKIDATA_API_ENDPOINT}?${search.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "AgegapleSeeder/1.0 (targeted relationship search)",
+      },
+    },
+    {
+      attempts: 3,
+      baseDelayMs: 350,
+      maxDelayMs: 1500,
+      requestTimeoutMs: 10000,
+    },
+  );
+  const candidates = (payload?.search ?? []).filter((entry) => /^Q\d+$/.test(String(entry?.id ?? "")));
+  if (candidates.length === 0) {
+    throw new Error(`Could not find a Wikidata person match for "${personName}"`);
+  }
+
+  const ids = candidates.map((entry) => `wd:${entry.id}`).join(" ");
+  const query = `
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+SELECT ?person WHERE {
+  VALUES ?person { ${ids} }
+  ?person wdt:P31 wd:Q5 .
+}
+LIMIT 1
+`;
+  const entityPayload = await fetchJsonWithRetry(
+    `${WIKIDATA_SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Accept: "application/sparql-results+json",
+        "User-Agent": "AgegapleSeeder/1.0 (targeted relationship search)",
+      },
+    },
+    parseWikidataFetchSettings(),
+  );
+  const qid = qidFromEntityUri(entityPayload?.results?.bindings?.[0]?.person?.value);
+  if (!qid) {
+    throw new Error(`Could not find a human Wikidata match for "${personName}"`);
+  }
+
+  const matched = candidates.find((entry) => entry.id === qid);
+  return {
+    qid,
+    label: String(matched?.label ?? personName).trim() || personName,
+  };
+};
+
+const buildTargetPersonCoupleSparql = ({ qid, limit }) => `
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX ps: <http://www.wikidata.org/prop/statement/>
+PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
+PREFIX schema: <http://schema.org/>
+
+SELECT
+  ?person
+  ?personBirth
+  ?personArticle
+  ?personSitelinks
+  ?partner
+  ?partnerBirth
+  ?partnerArticle
+  ?partnerSitelinks
+  ?relationshipPredicate
+  ?relationshipEndDate
+WHERE {
+  VALUES ?person { wd:${qid} }
+  VALUES (?relationshipProp ?relationshipPredicate) {
+    (p:P26 ps:P26)
+    (p:P451 ps:P451)
+  }
+  {
+    ?person ?relationshipProp ?relationshipStatement .
+    ?relationshipStatement ?relationshipPredicate ?partner .
+  }
+  UNION
+  {
+    ?partner ?relationshipProp ?relationshipStatement .
+    ?relationshipStatement ?relationshipPredicate ?person .
+  }
+  FILTER(?person != ?partner)
+  OPTIONAL { ?relationshipStatement pq:P582 ?relationshipEndDate . }
+
+  ?person wdt:P31 wd:Q5 ;
+          wdt:P569 ?personBirth ;
+          wikibase:sitelinks ?personSitelinks .
+  ?partner wdt:P31 wd:Q5 ;
+           wdt:P569 ?partnerBirth ;
+           wikibase:sitelinks ?partnerSitelinks .
+
+  ?personArticle schema:about ?person ;
+                 schema:isPartOf <https://en.wikipedia.org/> .
+  ?partnerArticle schema:about ?partner ;
+                  schema:isPartOf <https://en.wikipedia.org/> .
+
+  FILTER(YEAR(?personBirth) >= 1900)
+  FILTER(YEAR(?partnerBirth) >= 1900)
+}
+LIMIT ${limit}
+`;
+
 const getQualityScore = ({ relationshipType, ageGap }) => {
   let score = 76;
   if (relationshipType === "spouse") {
@@ -603,47 +915,7 @@ const getQualityScore = ({ relationshipType, ageGap }) => {
   return Math.max(60, Math.min(95, score));
 };
 
-const fetchDynamicCouplePool = async (limit) => {
-  const fetchSettings = parseWikidataFetchSettings();
-  const limitCandidates = Array.from(
-    new Set([
-      Math.max(50, Math.floor(limit)),
-      Math.max(80, Math.floor(limit * 0.65)),
-      120,
-      80,
-    ]),
-  ).filter((value) => Number.isFinite(value) && value > 0);
-
-  let payload = null;
-  let lastError = null;
-
-  for (const candidateLimit of limitCandidates) {
-    try {
-      const query = buildDynamicCoupleSparql(candidateLimit);
-      const url = `${WIKIDATA_SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`;
-      payload = await fetchJsonWithRetry(
-        url,
-        {
-          headers: {
-            Accept: "application/sparql-results+json",
-            "User-Agent": "AgegapleSeeder/1.0 (https://github.com/)",
-          },
-        },
-        fetchSettings,
-      );
-      break;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (!payload) {
-    throw new Error(
-      `Failed to load dynamic pool from Wikidata: ${lastError instanceof Error ? lastError.message : "unknown error"}`,
-    );
-  }
-
-  const bindings = payload?.results?.bindings ?? [];
+const normalizeCouplePoolBindings = (bindings) => {
   const unique = new Map();
 
   for (const row of bindings) {
@@ -716,7 +988,71 @@ const fetchDynamicCouplePool = async (limit) => {
     });
   }
 
-  return shuffle(Array.from(unique.values()));
+  return Array.from(unique.values());
+};
+
+const fetchSparqlBindings = async ({ query, errorLabel }) => {
+  const payload = await fetchJsonWithRetry(
+    `${WIKIDATA_SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Accept: "application/sparql-results+json",
+        "User-Agent": "AgegapleSeeder/1.0 (https://github.com/)",
+      },
+    },
+    parseWikidataFetchSettings(),
+  );
+  const bindings = payload?.results?.bindings ?? [];
+  if (!Array.isArray(bindings)) {
+    throw new Error(`Failed to load ${errorLabel} from Wikidata`);
+  }
+  return bindings;
+};
+
+const fetchDynamicCouplePool = async (limit) => {
+  const limitCandidates = Array.from(
+    new Set([
+      Math.max(50, Math.floor(limit)),
+      Math.max(80, Math.floor(limit * 0.65)),
+      120,
+      80,
+    ]),
+  ).filter((value) => Number.isFinite(value) && value > 0);
+
+  let bindings = null;
+  let lastError = null;
+
+  for (const candidateLimit of limitCandidates) {
+    try {
+      bindings = await fetchSparqlBindings({
+        query: buildDynamicCoupleSparql(candidateLimit),
+        errorLabel: "dynamic pool",
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!bindings) {
+    throw new Error(
+      `Failed to load dynamic pool from Wikidata: ${lastError instanceof Error ? lastError.message : "unknown error"}`,
+    );
+  }
+
+  return shuffle(normalizeCouplePoolBindings(bindings));
+};
+
+const fetchTargetPersonCouplePool = async ({ personName, limit }) => {
+  const target = await fetchWikidataPersonByName(personName);
+  const bindings = await fetchSparqlBindings({
+    query: buildTargetPersonCoupleSparql({ qid: target.qid, limit }),
+    errorLabel: `relationships for ${target.label}`,
+  });
+  return {
+    target,
+    pool: normalizeCouplePoolBindings(bindings),
+  };
 };
 
 const meetsNotability = (item, thresholds) => {
@@ -731,14 +1067,19 @@ const meetsNotability = (item, thresholds) => {
 const run = async () => {
   const targetBatchSize = parseBatchSize();
   const poolSize = parsePoolSize();
+  const personName = parsePersonName();
   const thresholds = parseNotabilityThresholds();
   const { usedQidKeys, usedNameKeys } = await loadUsedCoupleKeys();
 
-  const dynamicPool = await fetchDynamicCouplePool(poolSize);
+  const targetedResult = personName
+    ? await fetchTargetPersonCouplePool({ personName, limit: Math.max(poolSize, 50) })
+    : null;
+  const dynamicPool = targetedResult ? targetedResult.pool : await fetchDynamicCouplePool(poolSize);
   const selectedCouples = [];
+  const candidateBufferSize = Math.max(targetBatchSize * 8, targetBatchSize);
   const seenInRun = new Set();
   for (const item of dynamicPool) {
-    if (selectedCouples.length >= targetBatchSize) {
+    if (selectedCouples.length >= candidateBufferSize) {
       break;
     }
 
@@ -748,7 +1089,7 @@ const run = async () => {
       usedQidKeys.has(qidKey) ||
       usedNameKeys.has(nameKey) ||
       seenInRun.has(qidKey) ||
-      !meetsNotability(item, thresholds)
+      (!targetedResult && !meetsNotability(item, thresholds))
     ) {
       continue;
     }
@@ -759,13 +1100,19 @@ const run = async () => {
 
   if (selectedCouples.length === 0) {
     console.log(
-      "No new eligible couples found from Wikidata for this run. Increase --pool-size or lower notability thresholds.",
+      targetedResult
+        ? `No new eligible relationships found for ${targetedResult.target.label}. Existing candidates may already cover them.`
+        : "No new eligible couples found from Wikidata for this run. Increase --pool-size or lower notability thresholds.",
     );
     return;
   }
 
   let createdCount = 0;
   for (const item of selectedCouples) {
+    if (createdCount >= targetBatchSize) {
+      break;
+    }
+
     const personAId = await upsertPerson(item.personA);
     const personBId = await upsertPerson(item.personB);
     const coupleId = await findOrCreateCouple({
@@ -775,18 +1122,6 @@ const run = async () => {
     });
 
     const coupleKey = buildCoupleKey(item.personA.wikidata_qid, item.personB.wikidata_qid);
-    const placeholderFileTitle = `wikidata-placeholder-${coupleKey}.svg`;
-    const placeholderImageId = await upsertImage({
-      subjectId: coupleId,
-      fileTitle: placeholderFileTitle,
-      imageUrl: "/agegaple-mark.svg",
-      thumbUrl: "/agegaple-mark.svg",
-      license: "Manual placeholder",
-      author: "Agegaple",
-      attribution: "Placeholder image from dynamic seed. Add/curate couple photos in admin review.",
-      isUsable: false,
-    });
-
     const ageGap = computeAgeGapYears(item.personA.birth_date, item.personB.birth_date);
     const editorialMetadata = await buildCandidateEditorialMetadata({
       personA: item.personA,
@@ -795,10 +1130,10 @@ const run = async () => {
     });
     const candidateId = await findOrCreateCandidate({
       coupleId,
-      imageId: placeholderImageId,
       ageGap,
       qualityScore: item.qualityScore,
       editorialMetadata,
+      reviewNotes: "Needs Wikimedia Commons portraits and photo years before approval.",
     });
 
     createdCount += 1;
@@ -806,14 +1141,16 @@ const run = async () => {
     usedNameKeys.add(normalizeNameKey(item.personA.name, item.personB.name));
 
     console.log(
-      `Seeded ${item.personA.name} + ${item.personB.name}: candidate ${candidateId} created with placeholder image (pending review).`,
+      `Seeded ${item.personA.name} + ${item.personB.name}: candidate ${candidateId} created for image curation (pending review).`,
     );
   }
 
   const timeZone = process.env.TIMEZONE ?? "America/New_York";
   const today = getDateInTimeZone(timeZone);
   console.log(
-    `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s), requested ${targetBatchSize}, pool=${poolSize}, primary>=${thresholds.minPrimarySitelinks}, combined>=${thresholds.minCombinedSitelinks}.`,
+    targetedResult
+      ? `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s) for ${targetedResult.target.label} (${targetedResult.target.qid}), requested ${targetBatchSize}.`
+      : `Seed complete on ${today} (${timeZone}). Created ${createdCount} candidate(s), requested ${targetBatchSize}, pool=${poolSize}, primary>=${thresholds.minPrimarySitelinks}, combined>=${thresholds.minCombinedSitelinks}.`,
   );
 };
 

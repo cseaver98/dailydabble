@@ -54,13 +54,16 @@ export async function PATCH(request: Request, context: RouteContext) {
       personBBirthDate: payload.personBBirthDate ? String(payload.personBBirthDate) : null,
       personBWikipediaTitle: payload.personBWikipediaTitle ? String(payload.personBWikipediaTitle) : null,
       relationshipType: payload.relationshipType,
+      personAPhotoYear: payload.personAPhotoYear ?? null,
+      personBPhotoYear: payload.personBPhotoYear ?? null,
+      personAImage: payload.personAImage ?? null,
+      personBImage: payload.personBImage ?? null,
+      licenseVerified: Boolean(payload.licenseVerified),
       reviewNotes: payload.reviewNotes ? String(payload.reviewNotes) : null,
       editorialPersonABio: payload.editorialPersonABio ? String(payload.editorialPersonABio) : null,
       editorialPersonABioUrl: payload.editorialPersonABioUrl ? String(payload.editorialPersonABioUrl) : null,
       editorialPersonBBio: payload.editorialPersonBBio ? String(payload.editorialPersonBBio) : null,
       editorialPersonBBioUrl: payload.editorialPersonBBioUrl ? String(payload.editorialPersonBBioUrl) : null,
-      editorialCoupleContext: payload.editorialCoupleContext ? String(payload.editorialCoupleContext) : null,
-      editorialCoupleContextUrl: payload.editorialCoupleContextUrl ? String(payload.editorialCoupleContextUrl) : null,
     });
 
     return NextResponse.json({ ok: true });

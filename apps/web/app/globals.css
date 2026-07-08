@@ -268,3 +268,25 @@ body {
     box-shadow: inset 0 0 0 999px rgba(44, 47, 49, 0.03);
   }
 }
+
+:is(.agegaple-shell, .doodle-shell, .equadle-shell, .moviedle-shell, .sportle-shell, .verble-shell, .yeardle-shell)
+  :is(.guess-submit-btn, .guess-input, .agegaple-guess-input):disabled {
+  cursor: not-allowed !important;
+  opacity: 0.68 !important;
+  filter: grayscale(0.28) saturate(0.78) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+:is(.agegaple-shell, .doodle-shell, .equadle-shell, .moviedle-shell, .sportle-shell, .verble-shell, .yeardle-shell)
+  :is(.guess-input, .agegaple-guess-input):disabled {
+  background: color-mix(in srgb, var(--surface-container-low, #eff1f4) 76%, white) !important;
+  border-color: var(--surface-container, var(--outline-soft, #d8dce2)) !important;
+  color: var(--outline, var(--muted, #75777a)) !important;
+  -webkit-text-fill-color: var(--outline, var(--muted, #75777a)) !important;
+}
+
+:is(.agegaple-shell, .doodle-shell, .equadle-shell, .moviedle-shell, .sportle-shell, .verble-shell, .yeardle-shell)
+  .guess-submit-btn:disabled {
+  color: #ffffff !important;
+}

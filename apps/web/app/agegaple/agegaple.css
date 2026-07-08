@@ -144,6 +144,129 @@
   display: block;
 }
 
+.agegaple-shell .agegaple-duo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 320px));
+  gap: 1rem;
+  justify-content: center;
+}
+
+.agegaple-shell .agegaple-person-card {
+  overflow: hidden;
+  border: 2px solid var(--surface-container);
+  border-radius: 1rem;
+  background: var(--surface-container-lowest);
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.agegaple-shell .agegaple-person-card:hover {
+  transform: translateY(-1px);
+}
+
+.agegaple-shell .agegaple-person-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.72rem 0.36rem;
+  color: var(--foreground);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.18rem;
+  font-weight: 950;
+  line-height: 1.12;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.agegaple-shell .agegaple-person-header span {
+  display: inline-block;
+  max-width: none;
+  transform-origin: center;
+  white-space: nowrap;
+}
+
+.agegaple-shell .agegaple-person-image-frame {
+  background: var(--surface-container-low);
+  padding: 0 0.36rem 0.36rem;
+}
+
+.agegaple-shell .agegaple-person-image {
+  display: block;
+  width: 100%;
+  height: clamp(250px, 42vh, 400px);
+  object-fit: contain;
+  border-radius: 0.72rem;
+  background: transparent;
+}
+
+.agegaple-shell .agegaple-guess-input {
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--surface-container);
+  background: var(--surface-container-lowest);
+  color: var(--foreground);
+  padding: 0.66rem 0.88rem;
+  font-size: 1rem;
+}
+
+.agegaple-shell .agegaple-guess-input::placeholder {
+  color: var(--outline);
+  opacity: 1;
+}
+
+.agegaple-shell .agegaple-feedback {
+  margin: 0;
+  border-radius: 0.85rem;
+  background: var(--surface-container-low);
+  color: var(--foreground);
+  padding: 0.55rem 0.65rem;
+  font-size: 0.88rem;
+}
+
+.agegaple-shell .agegaple-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.agegaple-shell .agegaple-result-person {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--outline);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.agegaple-shell .agegaple-result-person p {
+  margin: 0;
+}
+
+.agegaple-shell .agegaple-result-person strong {
+  color: var(--foreground);
+}
+
+.agegaple-shell .agegaple-result-metrics {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.1rem 0;
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.agegaple-shell .agegaple-result-metrics strong {
+  color: var(--foreground);
+}
+
+.agegaple-shell .agegaple-result-attribution {
+  margin: 0.15rem 0 0;
+  color: var(--outline);
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 .agegaple-shell .no-native-spinner {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -183,7 +306,6 @@
   margin: 0;
   font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
   font-size: 0.8rem;
-  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--outline);
@@ -428,6 +550,8 @@
 }
 
 .agegaple-shell .result-modal-actions {
+  border-top: 1px solid var(--surface-container);
+  padding-top: 0.75rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
@@ -557,6 +681,21 @@
 
   .agegaple-shell .archive-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .agegaple-shell .agegaple-duo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .agegaple-shell .agegaple-person-image {
+    height: clamp(190px, 34vh, 330px);
+  }
+
+  .agegaple-shell .agegaple-person-header {
+    min-height: 2rem;
+    padding: 0.42rem 0.45rem 0.3rem;
+    font-size: 1rem;
   }
 
   .agegaple-shell .result-modal-actions {

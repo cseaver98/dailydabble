@@ -99,11 +99,6 @@ export default function EditorialDrawer({
           </div>
           <div className="max-h-[45vh] space-y-2 overflow-y-auto px-4 pb-4 pt-3">
             <p>{context.relationshipNote}</p>
-            {context.coupleContext && (
-              <p>
-                {context.coupleContext}
-              </p>
-            )}
             {context.personABio && (
               <p>
                 <span className="font-semibold">{personAName}:</span> {context.personABio}

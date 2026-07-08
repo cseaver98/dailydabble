@@ -57,6 +57,8 @@ export default function YeardleAdminTab() {
   const [isLookingUpManualCandidate, setIsLookingUpManualCandidate] = useState(false);
   const [isAddingManualCandidate, setIsAddingManualCandidate] = useState(false);
   const [isUploadingManualCandidateImage, setIsUploadingManualCandidateImage] = useState(false);
+  const [manualCommonsUrl, setManualCommonsUrl] = useState("");
+  const [isLookingUpManualImage, setIsLookingUpManualImage] = useState(false);
 
   const [items, setItems] = useState([]);
   const [queueHealth, setQueueHealth] = useState(null);
@@ -71,6 +73,16 @@ export default function YeardleAdminTab() {
   const [savingCandidateId, setSavingCandidateId] = useState("");
   const [photoPreviewCandidate, setPhotoPreviewCandidate] = useState(null);
   const [photoDraftUrl, setPhotoDraftUrl] = useState("");
+  const [photoDraftAlt, setPhotoDraftAlt] = useState("");
+  const [photoDraftSourcePageUrl, setPhotoDraftSourcePageUrl] = useState("");
+  const [photoDraftFileTitle, setPhotoDraftFileTitle] = useState("");
+  const [photoDraftLicense, setPhotoDraftLicense] = useState("");
+  const [photoDraftLicenseUrl, setPhotoDraftLicenseUrl] = useState("");
+  const [photoDraftAuthor, setPhotoDraftAuthor] = useState("");
+  const [photoDraftAttributionText, setPhotoDraftAttributionText] = useState("");
+  const [photoDraftLicenseVerified, setPhotoDraftLicenseVerified] = useState(false);
+  const [photoCommonsUrl, setPhotoCommonsUrl] = useState("");
+  const [isLookingUpPhotoImage, setIsLookingUpPhotoImage] = useState(false);
   const [savingPhotoCandidateId, setSavingPhotoCandidateId] = useState("");
   const [uploadingPhotoCandidateId, setUploadingPhotoCandidateId] = useState("");
   const [deletingPhotoCandidateId, setDeletingPhotoCandidateId] = useState("");
@@ -138,6 +150,7 @@ export default function YeardleAdminTab() {
       setManualYear(payload?.candidate?.eventYearGuess ? String(payload.candidate.eventYearGuess) : "");
       setManualMonth(payload?.candidate?.eventMonthGuess ? String(payload.candidate.eventMonthGuess) : "");
       setManualDay(payload?.candidate?.eventDayGuess ? String(payload.candidate.eventDayGuess) : "");
+      setManualCommonsUrl(String(payload?.candidate?.imageSourcePageUrl || payload?.candidate?.imageUrl || ""));
       setIsEditingManualCandidate(false);
       setMessage("Candidate preview ready.");
     } catch (lookupError) {
@@ -269,11 +282,61 @@ export default function YeardleAdminTab() {
       }
 
       updateManualCandidateField("imageUrl", payload.url);
+      updateManualCandidateField("imageSourcePageUrl", "");
+      updateManualCandidateField("imageFileTitle", "");
+      updateManualCandidateField("imageLicense", "");
+      updateManualCandidateField("imageLicenseUrl", "");
+      updateManualCandidateField("imageAuthor", "");
+      updateManualCandidateField("imageAttributionText", "");
       setMessage("Image uploaded and ready for this candidate.");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
     } finally {
       setIsUploadingManualCandidateImage(false);
+    }
+  };
+
+  const lookupManualCommonsImage = async () => {
+    if (!manualCandidate) {
+      return;
+    }
+    const sourceUrl = String(manualCommonsUrl || manualCandidate.imageUrl || "").trim();
+    if (!sourceUrl) {
+      setError("Paste a Wikimedia Commons file URL.");
+      return;
+    }
+
+    setIsLookingUpManualImage(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/images/commons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.metadata) {
+        throw new Error(payload.error || "Could not load Commons image metadata.");
+      }
+      const metadata = payload.metadata;
+      setManualCandidate((current) => current ? {
+        ...current,
+        imageUrl: metadata.thumbUrl || metadata.imageUrl || current.imageUrl,
+        imageAlt: metadata.objectName || metadata.fileTitle || current.imageAlt,
+        imageSourcePageUrl: metadata.sourcePageUrl || sourceUrl,
+        imageFileTitle: metadata.fileTitle || "",
+        imageLicense: metadata.license || "",
+        imageLicenseUrl: metadata.licenseUrl || "",
+        imageAuthor: metadata.author || "",
+        imageAttributionText: metadata.attributionText || "",
+      } : current);
+      setManualCommonsUrl(metadata.sourcePageUrl || sourceUrl);
+      setMessage("Wikimedia image metadata filled.");
+    } catch (lookupError) {
+      setError(lookupError instanceof Error ? lookupError.message : "Could not load Commons image metadata.");
+    } finally {
+      setIsLookingUpManualImage(false);
     }
   };
 
@@ -382,11 +445,29 @@ export default function YeardleAdminTab() {
   const openPhotoPreview = (candidate) => {
     setPhotoPreviewCandidate(candidate);
     setPhotoDraftUrl(String(candidate?.image_url || ""));
+    setPhotoDraftAlt(String(candidate?.image_alt || `${candidate?.title || "Yeardle event"} historical image`));
+    setPhotoDraftSourcePageUrl(String(candidate?.image_source_page_url || ""));
+    setPhotoDraftFileTitle(String(candidate?.image_file_title || ""));
+    setPhotoDraftLicense(String(candidate?.image_license || ""));
+    setPhotoDraftLicenseUrl(String(candidate?.image_license_url || ""));
+    setPhotoDraftAuthor(String(candidate?.image_author || ""));
+    setPhotoDraftAttributionText(String(candidate?.image_attribution_text || ""));
+    setPhotoDraftLicenseVerified(Boolean(candidate?.image_license_verified_at));
+    setPhotoCommonsUrl(String(candidate?.image_source_page_url || ""));
   };
 
   const closePhotoPreview = () => {
     setPhotoPreviewCandidate(null);
     setPhotoDraftUrl("");
+    setPhotoDraftAlt("");
+    setPhotoDraftSourcePageUrl("");
+    setPhotoDraftFileTitle("");
+    setPhotoDraftLicense("");
+    setPhotoDraftLicenseUrl("");
+    setPhotoDraftAuthor("");
+    setPhotoDraftAttributionText("");
+    setPhotoDraftLicenseVerified(false);
+    setPhotoCommonsUrl("");
   };
 
   const savePreviewPhoto = async () => {
@@ -405,7 +486,18 @@ export default function YeardleAdminTab() {
       const response = await fetch("/api/admin/yeardle", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: photoPreviewCandidate.id, imageUrl: normalizedImageUrl }),
+        body: JSON.stringify({
+          eventId: photoPreviewCandidate.id,
+          imageUrl: normalizedImageUrl,
+          imageAlt: photoDraftAlt.trim() || `${photoPreviewCandidate.title} historical image`,
+          imageSourcePageUrl: photoDraftSourcePageUrl.trim() || null,
+          imageFileTitle: photoDraftFileTitle.trim() || null,
+          imageLicense: photoDraftLicense.trim() || null,
+          imageLicenseUrl: photoDraftLicenseUrl.trim() || null,
+          imageAuthor: photoDraftAuthor.trim() || null,
+          imageAttributionText: photoDraftAttributionText.trim() || null,
+          imageLicenseVerified: photoDraftLicenseVerified,
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -414,7 +506,18 @@ export default function YeardleAdminTab() {
 
       setMessage("Candidate image updated.");
       await load({ page: currentPage, status: statusFilter });
-      setPhotoPreviewCandidate((current) => (current ? { ...current, image_url: normalizedImageUrl } : current));
+      setPhotoPreviewCandidate((current) => (current ? {
+        ...current,
+        image_url: normalizedImageUrl,
+        image_alt: photoDraftAlt.trim() || `${current.title} historical image`,
+        image_source_page_url: photoDraftSourcePageUrl.trim() || null,
+        image_file_title: photoDraftFileTitle.trim() || null,
+        image_license: photoDraftLicense.trim() || null,
+        image_license_url: photoDraftLicenseUrl.trim() || null,
+        image_author: photoDraftAuthor.trim() || null,
+        image_attribution_text: photoDraftAttributionText.trim() || null,
+        image_license_verified_at: photoDraftLicenseVerified ? new Date().toISOString() : null,
+      } : current));
       setPhotoDraftUrl(normalizedImageUrl);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not update image.");
@@ -443,11 +546,60 @@ export default function YeardleAdminTab() {
       }
 
       setPhotoDraftUrl(String(payload.url));
+      setPhotoDraftSourcePageUrl("");
+      setPhotoDraftFileTitle("");
+      setPhotoDraftLicense("");
+      setPhotoDraftLicenseUrl("");
+      setPhotoDraftAuthor("");
+      setPhotoDraftAttributionText("");
+      setPhotoDraftLicenseVerified(false);
       setMessage("Image uploaded. Click save photo to apply.");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Could not upload image.");
     } finally {
       setUploadingPhotoCandidateId("");
+    }
+  };
+
+  const lookupPhotoCommonsImage = async () => {
+    if (!photoPreviewCandidate) {
+      return;
+    }
+    const sourceUrl = String(photoCommonsUrl || photoDraftUrl || "").trim();
+    if (!sourceUrl) {
+      setError("Paste a Wikimedia Commons file URL.");
+      return;
+    }
+
+    setIsLookingUpPhotoImage(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/images/commons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.metadata) {
+        throw new Error(payload.error || "Could not load Commons image metadata.");
+      }
+      const metadata = payload.metadata;
+      setPhotoDraftUrl(metadata.thumbUrl || metadata.imageUrl || photoDraftUrl);
+      setPhotoDraftAlt(metadata.objectName || metadata.fileTitle || `${photoPreviewCandidate.title} historical image`);
+      setPhotoDraftSourcePageUrl(metadata.sourcePageUrl || sourceUrl);
+      setPhotoDraftFileTitle(metadata.fileTitle || "");
+      setPhotoDraftLicense(metadata.license || "");
+      setPhotoDraftLicenseUrl(metadata.licenseUrl || "");
+      setPhotoDraftAuthor(metadata.author || "");
+      setPhotoDraftAttributionText(metadata.attributionText || "");
+      setPhotoDraftLicenseVerified(false);
+      setPhotoCommonsUrl(metadata.sourcePageUrl || sourceUrl);
+      setMessage("Wikimedia image metadata filled. Review it, then save photo.");
+    } catch (lookupError) {
+      setError(lookupError instanceof Error ? lookupError.message : "Could not load Commons image metadata.");
+    } finally {
+      setIsLookingUpPhotoImage(false);
     }
   };
 
@@ -594,6 +746,43 @@ export default function YeardleAdminTab() {
                       style={{ marginLeft: ".35rem", minWidth: 320 }}
                     />
                   </label>
+                  <div style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".55rem", background: "#f8fafc", display: "grid", gap: ".4rem" }}>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Wikimedia Commons URL
+                      <input
+                        type="text"
+                        value={manualCommonsUrl}
+                        onChange={(event) => setManualCommonsUrl(event.target.value)}
+                        placeholder="https://commons.wikimedia.org/wiki/File:..."
+                        style={{ marginLeft: ".35rem", minWidth: 360 }}
+                      />
+                    </label>
+                    <div style={{ display: "flex", gap: ".4rem", alignItems: "center", flexWrap: "wrap" }}>
+                      <button
+                        className="admin-btn"
+                        type="button"
+                        onClick={() => void lookupManualCommonsImage()}
+                        disabled={isLookingUpManualImage}
+                      >
+                        {isLookingUpManualImage ? "Looking up..." : "Use Wikimedia image"}
+                      </button>
+                      {manualCandidate.imageLicense ? (
+                        <span style={{ color: "#5b6168", fontSize: ".82rem", fontWeight: 700 }}>
+                          {manualCandidate.imageLicense}{manualCandidate.imageAuthor ? ` | ${manualCandidate.imageAuthor}` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                    <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
+                      Attribution
+                      <input
+                        type="text"
+                        value={manualCandidate.imageAttributionText || ""}
+                        onChange={(event) => updateManualCandidateField("imageAttributionText", event.target.value)}
+                        placeholder="Title | Author | License"
+                        style={{ marginLeft: ".35rem", minWidth: 360 }}
+                      />
+                    </label>
+                  </div>
                   <div style={{ display: "flex", gap: ".4rem", alignItems: "center", flexWrap: "wrap" }}>
                     <label className="admin-btn" style={{ cursor: "pointer" }}>
                       {isUploadingManualCandidateImage ? "Uploading..." : "Upload JPG/PNG"}
@@ -622,6 +811,11 @@ export default function YeardleAdminTab() {
                   {manualCandidate.keyFigures ? (
                     <p style={{ margin: 0, color: "#5b6168", fontSize: ".82rem" }}>
                       Key figures: {manualCandidate.keyFigures}
+                    </p>
+                  ) : null}
+                  {manualCandidate.imageAttributionText ? (
+                    <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".78rem" }}>
+                      Image: {manualCandidate.imageAttributionText}
                     </p>
                   ) : null}
                 </>
@@ -755,6 +949,10 @@ export default function YeardleAdminTab() {
                 Scheduled: <b>{item.nextScheduledDate}</b>
               </p>
             ) : null}
+            <p style={{ margin: ".2rem 0 0", color: item.image_license_verified_at ? "#2f672d" : "#8b2d2d", fontSize: ".82rem", fontWeight: 800 }}>
+              Image attribution: {item.image_license_verified_at ? "verified" : "needs review"}
+              {item.image_license ? ` | ${item.image_license}` : ""}
+            </p>
 
             {editingCandidateId === item.id && editingCandidateDraft ? (
               <div style={{ marginTop: ".5rem", display: "grid", gap: ".4rem", maxWidth: 760 }}>
@@ -955,6 +1153,24 @@ export default function YeardleAdminTab() {
 
             <div style={{ marginTop: ".75rem", display: "grid", gap: ".5rem" }}>
               <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Wikimedia Commons URL
+                <input
+                  value={photoCommonsUrl}
+                  onChange={(event) => setPhotoCommonsUrl(event.target.value)}
+                  placeholder="https://commons.wikimedia.org/wiki/File:..."
+                  style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                />
+              </label>
+              <button
+                className="admin-btn"
+                type="button"
+                onClick={() => void lookupPhotoCommonsImage()}
+                disabled={isLookingUpPhotoImage}
+                style={{ justifySelf: "start" }}
+              >
+                {isLookingUpPhotoImage ? "Looking up..." : "Use Wikimedia image + attribution"}
+              </button>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
                 Image URL (hotlink)
                 <input
                   value={photoDraftUrl}
@@ -962,6 +1178,85 @@ export default function YeardleAdminTab() {
                   placeholder="https://..."
                   style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
                 />
+              </label>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Image alt text
+                <input
+                  value={photoDraftAlt}
+                  onChange={(event) => setPhotoDraftAlt(event.target.value)}
+                  placeholder={`${photoPreviewCandidate.title} historical image`}
+                  style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                />
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: ".5rem" }}>
+                <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                  Source page URL
+                  <input
+                    value={photoDraftSourcePageUrl}
+                    onChange={(event) => {
+                      setPhotoDraftSourcePageUrl(event.target.value);
+                      setPhotoDraftLicenseVerified(false);
+                    }}
+                    placeholder="https://commons.wikimedia.org/wiki/File:..."
+                    style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                  License
+                  <input
+                    value={photoDraftLicense}
+                    onChange={(event) => {
+                      setPhotoDraftLicense(event.target.value);
+                      setPhotoDraftLicenseVerified(false);
+                    }}
+                    placeholder="CC BY-SA 4.0"
+                    style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                  License URL
+                  <input
+                    value={photoDraftLicenseUrl}
+                    onChange={(event) => {
+                      setPhotoDraftLicenseUrl(event.target.value);
+                      setPhotoDraftLicenseVerified(false);
+                    }}
+                    placeholder="https://creativecommons.org/..."
+                    style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                  Author
+                  <input
+                    value={photoDraftAuthor}
+                    onChange={(event) => {
+                      setPhotoDraftAuthor(event.target.value);
+                      setPhotoDraftLicenseVerified(false);
+                    }}
+                    placeholder="Photographer / creator"
+                    style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                  />
+                </label>
+              </div>
+              <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                Attribution text
+                <input
+                  value={photoDraftAttributionText}
+                  onChange={(event) => {
+                    setPhotoDraftAttributionText(event.target.value);
+                    setPhotoDraftLicenseVerified(false);
+                  }}
+                  placeholder="Image title | Author | License"
+                  style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                />
+              </label>
+              <label style={{ display: "flex", gap: ".45rem", alignItems: "center", fontWeight: 800, color: "#2f672d" }}>
+                <input
+                  type="checkbox"
+                  checked={photoDraftLicenseVerified}
+                  onChange={(event) => setPhotoDraftLicenseVerified(event.target.checked)}
+                />
+                Image source, author, license, and attribution verified
               </label>
               <div style={{ display: "flex", gap: ".45rem", alignItems: "center", flexWrap: "wrap" }}>
                 <label className="admin-btn" style={{ cursor: uploadingPhotoCandidateId ? "default" : "pointer", opacity: uploadingPhotoCandidateId ? 0.65 : 1 }}>

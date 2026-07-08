@@ -665,6 +665,14 @@
   font-size: 0.85rem;
 }
 
+.yeardle-shell .result-modal-attribution {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 .yeardle-shell .result-modal-stat-line {
   margin: 0;
   font-weight: 400;

@@ -9,8 +9,6 @@ export type EditorialContext = {
   personABioUrl: string | null;
   personBBio: string | null;
   personBBioUrl: string | null;
-  coupleContext: string | null;
-  coupleContextUrl: string | null;
 };
 
 export type PuzzlePublic = {
@@ -19,8 +17,12 @@ export type PuzzlePublic = {
   personAName: string;
   personBName: string;
   relationshipType: RelationshipType;
-  imageUrl: string;
-  imageAlt: string;
+  personAImageUrl: string;
+  personAImageAlt: string;
+  personAPhotoYear: number;
+  personBImageUrl: string;
+  personBImageAlt: string;
+  personBPhotoYear: number;
   editorialContext: EditorialContext;
 };
 
@@ -44,10 +46,17 @@ export type ReviewCandidate = {
   roundedAgeGapYears: number;
   personABirthDate: string;
   personBBirthDate: string;
-  imageUrl: string;
-  imageId: string;
-  imageAlt: string;
-  license: string;
+  personAImageId: string | null;
+  personAImageUrl: string | null;
+  personAImageAlt: string | null;
+  personAPhotoYear: number | null;
+  personAImageLicense: string | null;
+  personBImageId: string | null;
+  personBImageUrl: string | null;
+  personBImageAlt: string | null;
+  personBPhotoYear: number | null;
+  personBImageLicense: string | null;
+  licenseVerifiedAt: string | null;
   qualityScore: number;
   status: CandidateStatus;
   createdAt: string;
@@ -71,13 +80,32 @@ export type ReviewCandidateDetails = {
   personBBirthDate: string | null;
   personBWikipediaTitle: string | null;
   relationshipType: RelationshipType;
+  personAImageId: string | null;
+  personAImageUrl: string | null;
+  personAImageThumbUrl: string | null;
+  personAImageSourcePageUrl: string | null;
+  personAImageFileTitle: string | null;
+  personAImageLicense: string | null;
+  personAImageLicenseUrl: string | null;
+  personAImageAuthor: string | null;
+  personAImageAttributionText: string | null;
+  personAPhotoYear: number | null;
+  personBImageId: string | null;
+  personBImageUrl: string | null;
+  personBImageThumbUrl: string | null;
+  personBImageSourcePageUrl: string | null;
+  personBImageFileTitle: string | null;
+  personBImageLicense: string | null;
+  personBImageLicenseUrl: string | null;
+  personBImageAuthor: string | null;
+  personBImageAttributionText: string | null;
+  personBPhotoYear: number | null;
+  licenseVerifiedAt: string | null;
   reviewNotes: string | null;
   editorialPersonABio: string | null;
   editorialPersonABioUrl: string | null;
   editorialPersonBBio: string | null;
   editorialPersonBBioUrl: string | null;
-  editorialCoupleContext: string | null;
-  editorialCoupleContextUrl: string | null;
 };
 
 export type ReviewCandidateDetailsUpdate = {
@@ -89,13 +117,36 @@ export type ReviewCandidateDetailsUpdate = {
   personBBirthDate: string | null;
   personBWikipediaTitle: string | null;
   relationshipType: RelationshipType;
+  personAPhotoYear: number | null;
+  personBPhotoYear: number | null;
+  personAImage?: {
+    url?: string | null;
+    fileTitle?: string | null;
+    thumbUrl?: string | null;
+    sourcePageUrl?: string | null;
+    license?: string | null;
+    licenseUrl?: string | null;
+    author?: string | null;
+    attributionText?: string | null;
+    metadata?: Record<string, unknown> | null;
+  } | null;
+  personBImage?: {
+    url?: string | null;
+    fileTitle?: string | null;
+    thumbUrl?: string | null;
+    sourcePageUrl?: string | null;
+    license?: string | null;
+    licenseUrl?: string | null;
+    author?: string | null;
+    attributionText?: string | null;
+    metadata?: Record<string, unknown> | null;
+  } | null;
+  licenseVerified: boolean;
   reviewNotes: string | null;
   editorialPersonABio: string | null;
   editorialPersonABioUrl: string | null;
   editorialPersonBBio: string | null;
   editorialPersonBBioUrl: string | null;
-  editorialCoupleContext: string | null;
-  editorialCoupleContextUrl: string | null;
 };
 
 export type QueueHealth = {

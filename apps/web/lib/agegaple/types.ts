@@ -2,14 +2,22 @@ export type RelationshipType = "spouse" | "couple" | "former_spouse" | "former_c
 
 export type CandidateStatus = "pending_review" | "approved" | "rejected";
 
+export type AgegapleSubjectKey = "person_a" | "person_b";
+
 export type EditorialContext = {
   relationshipNote: string;
   personABio: string | null;
   personABioUrl: string | null;
   personBBio: string | null;
   personBBioUrl: string | null;
-  coupleContext: string | null;
-  coupleContextUrl: string | null;
+};
+
+export type PuzzlePersonPublic = {
+  key: AgegapleSubjectKey;
+  name: string;
+  imageUrl: string;
+  imageAlt: string;
+  photoYear: number;
 };
 
 export type PuzzlePublic = {
@@ -19,53 +27,30 @@ export type PuzzlePublic = {
   personAName: string;
   personBName: string;
   relationshipType: RelationshipType;
-  imageUrl: string;
-  imageAlt: string;
+  personA: PuzzlePersonPublic;
+  personB: PuzzlePersonPublic;
   editorialContext: EditorialContext;
 };
 
 export type PuzzleAnswer = {
   puzzleId: string;
+  guessType: "age_gap";
   guessYears: number;
   exactAgeGapYears: number;
   roundedAgeGapYears: number;
   absErrorYears: number;
+  isCorrect: boolean;
   personABirthDate: string;
   personBBirthDate: string;
+  personAAgeInPhotoYear: number;
+  personBAgeInPhotoYear: number;
   attribution: string;
 };
 
-export type ReviewCandidate = {
-  id: string;
-  coupleId: string;
-  couple: string;
-  relationshipType: RelationshipType;
-  exactAgeGapYears: number;
-  roundedAgeGapYears: number;
-  personABirthDate: string;
-  personBBirthDate: string;
-  imageUrl: string;
-  imageId: string;
-  imageAlt: string;
-  license: string;
-  qualityScore: number;
-  status: CandidateStatus;
-  createdAt: string;
-  usedCount: number;
-  lastUsedPuzzleDate: string | null;
-  isUsedToday: boolean;
-  isUpNext: boolean;
-};
-
-export type QueueHealth = {
-  approvedTotal: number;
-  approvedUnused: number;
-  approvedUsed: number;
-  pending: number;
-  rejected: number;
-  runwayDays: number;
-  lowQueueThreshold: number;
-  isLow: boolean;
+export type RoundGuessFeedback = {
+  puzzleId: string;
+  guessType: "round";
+  gap: PuzzleAnswer;
 };
 
 export type ArchivePuzzleListItem = {

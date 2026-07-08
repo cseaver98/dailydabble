@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const validBatchSizes = new Set([1, 5, 10, 15, 20]);
 
 const findAgegapleCwd = (): string => {
@@ -25,11 +25,28 @@ const findAgegapleCwd = (): string => {
   return resolve(match, "apps/web");
 };
 
-const runSeedScript = async (batchSize: number): Promise<{ stdout: string; stderr: string }> => {
+const runSeedScript = async ({
+  batchSize,
+  personName,
+}: {
+  batchSize: number;
+  personName?: string | null;
+}): Promise<{ stdout: string; stderr: string }> => {
   const cwd = findAgegapleCwd();
   const poolSize = Math.max(120, Math.min(360, batchSize * 48));
-  const { stdout, stderr } = await execAsync(
-    `node --env-file=.env.local scripts/seed-agegaple-mvp.mjs --batch-size=${batchSize} --pool-size=${poolSize}`,
+  const args = [
+    "--env-file=.env.local",
+    "scripts/seed-agegaple-mvp.mjs",
+    `--batch-size=${batchSize}`,
+    `--pool-size=${poolSize}`,
+  ];
+  if (personName) {
+    args.push(`--person-name=${personName}`);
+  }
+
+  const { stdout, stderr } = await execFileAsync(
+    "node",
+    args,
     {
       cwd,
       env: process.env,
@@ -44,17 +61,22 @@ const runSeedScript = async (batchSize: number): Promise<{ stdout: string; stder
 
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json().catch(() => ({}))) as { batchSize?: number };
+    const payload = (await request.json().catch(() => ({}))) as { batchSize?: number; personName?: string };
     const batchSize = Number(payload.batchSize ?? 1);
+    const personName = String(payload.personName ?? "").trim();
     if (!validBatchSizes.has(batchSize)) {
       return NextResponse.json({ error: "Invalid batch size" }, { status: 400 });
     }
+    if (personName && personName.length < 2) {
+      return NextResponse.json({ error: "Person name must be at least 2 characters" }, { status: 400 });
+    }
 
-    const result = await runSeedScript(batchSize);
+    const result = await runSeedScript({ batchSize, personName });
 
     return NextResponse.json({
       ok: true,
       batchSize,
+      personName: personName || null,
       output: result.stdout,
     });
   } catch (error) {

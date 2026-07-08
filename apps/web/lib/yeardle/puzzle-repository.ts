@@ -33,6 +33,11 @@ type EventRow = {
   event_day?: number | null;
   image_url: string;
   image_alt?: string | null;
+  image_source_page_url?: string | null;
+  image_license?: string | null;
+  image_license_url?: string | null;
+  image_author?: string | null;
+  image_attribution_text?: string | null;
   wikipedia_url?: string | null;
   hint_description?: string | null;
   created_at?: string | null;
@@ -48,6 +53,11 @@ export type YeardlePuzzle = {
   eventDay: number | null | undefined;
   imageUrl: string;
   imageAlt: string;
+  imageSourcePageUrl: string | null | undefined;
+  imageLicense: string | null | undefined;
+  imageLicenseUrl: string | null | undefined;
+  imageAuthor: string | null | undefined;
+  imageAttributionText: string | null | undefined;
   wikipediaUrl: string | null | undefined;
   editorialContext: { description: string };
   maxGuesses: number;
@@ -78,6 +88,11 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, eventRow: EventRow): Promise<
     eventDay: eventRow.event_day,
     imageUrl: eventRow.image_url,
     imageAlt: eventRow.image_alt || `Historical event image for ${eventRow.title}`,
+    imageSourcePageUrl: eventRow.image_source_page_url,
+    imageLicense: eventRow.image_license,
+    imageLicenseUrl: eventRow.image_license_url,
+    imageAuthor: eventRow.image_author,
+    imageAttributionText: eventRow.image_attribution_text,
     wikipediaUrl: eventRow.wikipedia_url,
     editorialContext: {
       description: eventRow.hint_description || "No description provided.",
@@ -105,7 +120,7 @@ const getPuzzleByScheduleDate = async (date: string): Promise<YeardlePuzzle | nu
 
   const { data: eventRow, error: eventError } = await supabase
     .from("events")
-    .select("id,title,event_year,event_month,event_day,image_url,image_alt,wikipedia_url,hint_description")
+    .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_license,image_license_url,image_author,image_attribution_text,wikipedia_url,hint_description")
     .eq("id", scheduleRow.event_id)
     .maybeSingle<EventRow>();
 
@@ -125,8 +140,13 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<YeardleP
 
   const { data: approvedRows, error: approvedError } = await supabase
     .from("events")
-    .select("id,title,event_year,event_month,event_day,image_url,image_alt,wikipedia_url,hint_description,created_at")
+    .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_license,image_license_url,image_author,image_attribution_text,wikipedia_url,hint_description,created_at")
     .eq("status", "approved")
+    .not("image_license_verified_at", "is", null)
+    .not("image_source_page_url", "is", null)
+    .not("image_license", "is", null)
+    .not("image_author", "is", null)
+    .not("image_attribution_text", "is", null)
     .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);

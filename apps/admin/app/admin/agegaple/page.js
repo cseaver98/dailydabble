@@ -30,6 +30,7 @@ export default function AgegapleAdminTab() {
   const [seedError, setSeedError] = useState("");
   const [seedOutput, setSeedOutput] = useState("");
   const [isSeeding, setIsSeeding] = useState(false);
+  const [seedPersonName, setSeedPersonName] = useState("");
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isCreatingManual, setIsCreatingManual] = useState(false);
   const [manualError, setManualError] = useState("");
@@ -41,15 +42,16 @@ export default function AgegapleAdminTab() {
     personBBirthDate: "",
     personBWikipediaTitle: "",
     relationshipType: "couple",
-    imageUrl: "",
-    imageTitle: "",
-    attributionText: "",
+    personAPhotoYear: "",
+    personBPhotoYear: "",
+    personACommonsUrl: "",
+    personBCommonsUrl: "",
+    personAImage: null,
+    personBImage: null,
     editorialPersonABio: "",
     editorialPersonABioUrl: "",
     editorialPersonBBio: "",
     editorialPersonBBioUrl: "",
-    editorialCoupleContext: "",
-    editorialCoupleContextUrl: "",
   });
 
   const [galleryCandidateId, setGalleryCandidateId] = useState(null);
@@ -158,7 +160,7 @@ export default function AgegapleAdminTab() {
       const response = await fetch("/api/admin/seed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchSize }),
+        body: JSON.stringify({ batchSize, personName: seedPersonName.trim() || undefined }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -176,6 +178,89 @@ export default function AgegapleAdminTab() {
 
   const patchManualField = (field, value) => {
     setManualForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const lookupCommonsImage = async (personKey) => {
+    const urlField = personKey === "personA" ? "personACommonsUrl" : "personBCommonsUrl";
+    const imageField = personKey === "personA" ? "personAImage" : "personBImage";
+    const label = personKey === "personA" ? "Person A" : "Person B";
+    const sourceUrl = manualForm[urlField].trim();
+    if (!sourceUrl) {
+      setManualError(`${label} Commons URL is required.`);
+      return;
+    }
+
+    setManualError("");
+    try {
+      const response = await fetch("/api/admin/images/commons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Commons lookup failed");
+      }
+      const metadata = payload.metadata || {};
+      patchManualField(imageField, {
+        url: metadata.imageUrl || "",
+        fileTitle: metadata.fileTitle || "",
+        thumbUrl: metadata.thumbUrl || "",
+        sourcePageUrl: metadata.sourcePageUrl || sourceUrl,
+        license: metadata.license || "",
+        licenseUrl: metadata.licenseUrl || "",
+        author: metadata.author || "",
+        attributionText: metadata.attributionText || "",
+        metadata: metadata.rawMetadata || {},
+      });
+    } catch (lookupError) {
+      setManualError(lookupError instanceof Error ? lookupError.message : `Could not load ${label} Commons metadata.`);
+    }
+  };
+
+  const lookupDetailsCommonsImage = async (personKey) => {
+    if (!detailsForm) {
+      return;
+    }
+    const urlField = personKey === "personA" ? "personACommonsUrl" : "personBCommonsUrl";
+    const imageField = personKey === "personA" ? "personAImage" : "personBImage";
+    const label = personKey === "personA" ? "Person A" : "Person B";
+    const sourceUrl = String(detailsForm[urlField] || "").trim();
+    if (!sourceUrl) {
+      setDetailsError(`${label} Commons URL is required.`);
+      return;
+    }
+
+    setDetailsError("");
+    try {
+      const response = await fetch("/api/admin/images/commons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Commons lookup failed");
+      }
+      const metadata = payload.metadata || {};
+      setDetailsForm((current) => current ? {
+        ...current,
+        [imageField]: {
+          url: metadata.imageUrl || "",
+          fileTitle: metadata.fileTitle || "",
+          thumbUrl: metadata.thumbUrl || "",
+          sourcePageUrl: metadata.sourcePageUrl || sourceUrl,
+          license: metadata.license || "",
+          licenseUrl: metadata.licenseUrl || "",
+          author: metadata.author || "",
+          attributionText: metadata.attributionText || "",
+          metadata: metadata.rawMetadata || {},
+        },
+        licenseVerifiedAt: null,
+      } : current);
+    } catch (lookupError) {
+      setDetailsError(lookupError instanceof Error ? lookupError.message : `Could not load ${label} Commons metadata.`);
+    }
   };
 
   const createManualCandidate = async () => {
@@ -200,15 +285,16 @@ export default function AgegapleAdminTab() {
         personBName: "",
         personBBirthDate: "",
         personBWikipediaTitle: "",
-        imageUrl: "",
-        imageTitle: "",
-        attributionText: "",
+        personAPhotoYear: "",
+        personBPhotoYear: "",
+        personACommonsUrl: "",
+        personBCommonsUrl: "",
+        personAImage: null,
+        personBImage: null,
         editorialPersonABio: "",
         editorialPersonABioUrl: "",
         editorialPersonBBio: "",
         editorialPersonBBioUrl: "",
-        editorialCoupleContext: "",
-        editorialCoupleContextUrl: "",
       }));
       await load({ page: 1, status: "pending_review" });
       setStatusFilter("pending_review");
@@ -287,7 +373,13 @@ export default function AgegapleAdminTab() {
       if (!response.ok) {
         throw new Error(payload.error || "Failed to load candidate details");
       }
-      setDetailsForm(payload.details || null);
+      setDetailsForm(payload.details ? {
+        ...payload.details,
+        personACommonsUrl: "",
+        personBCommonsUrl: "",
+        personAImage: null,
+        personBImage: null,
+      } : null);
     } catch (loadError) {
       setDetailsError(loadError instanceof Error ? loadError.message : "Could not load candidate details.");
     } finally {
@@ -317,7 +409,10 @@ export default function AgegapleAdminTab() {
       const response = await fetch(`/api/admin/candidates/${encodeURIComponent(detailsCandidateId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(detailsForm),
+        body: JSON.stringify({
+          ...detailsForm,
+          licenseVerified: Boolean(detailsForm.licenseVerifiedAt),
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -481,13 +576,25 @@ export default function AgegapleAdminTab() {
                 ))}
               </select>
             </label>
+            <label style={{ display: "grid", gap: ".25rem", fontWeight: 700, fontSize: ".9rem" }}>
+              Person name
+              <input
+                value={seedPersonName}
+                onChange={(event) => setSeedPersonName(event.target.value)}
+                placeholder="Optional, e.g. Javier Bardem"
+                style={{ minWidth: 240, border: "1px solid #d8dce2", borderRadius: 10, padding: ".48rem .6rem" }}
+              />
+            </label>
             <button className="admin-btn primary" type="button" onClick={() => void runSeed()} disabled={isSeeding}>
-              {isSeeding ? "Seeding..." : `Start Batch Seed (${batchSize})`}
+              {isSeeding ? "Seeding..." : seedPersonName.trim() ? `Seed Relationships (${batchSize})` : `Start Batch Seed (${batchSize})`}
             </button>
             <button className="admin-btn" type="button" onClick={() => setIsManualModalOpen(true)}>
               Create candidate
             </button>
           </div>
+          <p style={{ margin: ".5rem 0 0", color: "#64748b", fontSize: ".86rem" }}>
+            Leave person name blank for the general pool, or enter a person to create candidates from their Wikidata relationships.
+          </p>
         </div>
 
         {seedError ? <p style={{ marginTop: ".55rem", color: "#b42318", fontWeight: 700 }}>{seedError}</p> : null}
@@ -516,11 +623,36 @@ export default function AgegapleAdminTab() {
                 padding: ".75rem",
               }}
             >
-              <div style={{ display: "grid", gap: ".7rem", gridTemplateColumns: "1fr" }}>
+              <div style={{ display: "grid", gap: ".7rem", gridTemplateColumns: "170px 1fr" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".35rem" }}>
+                  {[
+                    { src: item.personAImageUrl, alt: item.personAImageAlt, year: item.personAPhotoYear, license: item.personAImageLicense },
+                    { src: item.personBImageUrl, alt: item.personBImageAlt, year: item.personBPhotoYear, license: item.personBImageLicense },
+                  ].map((image, imageIndex) => (
+                    <div key={`${item.id}-image-${imageIndex}`} style={{ display: "grid", gap: ".25rem" }}>
+                      <img
+                        src={image.src || PLACEHOLDER_IMAGE}
+                        alt={image.alt || "Candidate portrait"}
+                        style={{ width: "100%", aspectRatio: "3 / 4", objectFit: "cover", borderRadius: 10, background: "#f8fafc" }}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = PLACEHOLDER_IMAGE;
+                        }}
+                      />
+                      <p style={{ margin: 0, color: "#5b6168", fontSize: ".72rem", fontWeight: 700, textAlign: "center" }}>
+                        {image.year || "Year?"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
                 <div>
                   <p style={{ margin: 0, fontWeight: 900, fontSize: "1rem" }}>{item.couple}</p>
                   <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".88rem" }}>
                     Gap: {item.roundedAgeGapYears} years | Score: {item.qualityScore} | Status: {statusLabel(item.status)}
+                  </p>
+                  <p style={{ margin: ".18rem 0", color: "#5b6168", fontSize: ".83rem" }}>
+                    Licenses: {item.personAImageLicense || "Unknown"} / {item.personBImageLicense || "Unknown"} | Verified:{" "}
+                    <b>{item.licenseVerifiedAt ? "yes" : "no"}</b>
                   </p>
                   <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
                     Scheduled:{" "}
@@ -531,7 +663,6 @@ export default function AgegapleAdminTab() {
                     </b>
                   </p>
                   <div style={{ marginTop: ".45rem", display: "flex", flexWrap: "wrap", gap: ".35rem" }}>
-                    <button className="admin-btn" type="button" onClick={() => openGallery(item.id)}>Manage photo</button>
                     <button className="admin-btn" type="button" onClick={() => void openDetails(item.id)}>Edit details</button>
                     {statuses.map((status) => (
                       (() => {
@@ -678,6 +809,105 @@ export default function AgegapleAdminTab() {
                     <option value="former_spouse">former spouse</option>
                     <option value="former_couple">former couple</option>
                   </select>
+                </label>
+
+                <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+                  <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                    Person A photo year
+                    <input
+                      type="number"
+                      value={detailsForm.personAPhotoYear || ""}
+                      onChange={(event) => patchDetailsField("personAPhotoYear", event.target.value ? Number(event.target.value) : null)}
+                      style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                    Person B photo year
+                    <input
+                      type="number"
+                      value={detailsForm.personBPhotoYear || ""}
+                      onChange={(event) => patchDetailsField("personBPhotoYear", event.target.value ? Number(event.target.value) : null)}
+                      style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+                  {[
+                    {
+                      key: "personA",
+                      name: detailsForm.personAName,
+                      title: "Person A image",
+                      urlField: "personACommonsUrl",
+                      pendingImage: detailsForm.personAImage,
+                      imageUrl: detailsForm.personAImage?.thumbUrl || detailsForm.personAImage?.url || detailsForm.personAImageThumbUrl || detailsForm.personAImageUrl,
+                      fileTitle: detailsForm.personAImage?.fileTitle || detailsForm.personAImageFileTitle,
+                      license: detailsForm.personAImage?.license || detailsForm.personAImageLicense,
+                      author: detailsForm.personAImage?.author || detailsForm.personAImageAuthor,
+                      sourcePageUrl: detailsForm.personAImage?.sourcePageUrl || detailsForm.personAImageSourcePageUrl,
+                    },
+                    {
+                      key: "personB",
+                      name: detailsForm.personBName,
+                      title: "Person B image",
+                      urlField: "personBCommonsUrl",
+                      pendingImage: detailsForm.personBImage,
+                      imageUrl: detailsForm.personBImage?.thumbUrl || detailsForm.personBImage?.url || detailsForm.personBImageThumbUrl || detailsForm.personBImageUrl,
+                      fileTitle: detailsForm.personBImage?.fileTitle || detailsForm.personBImageFileTitle,
+                      license: detailsForm.personBImage?.license || detailsForm.personBImageLicense,
+                      author: detailsForm.personBImage?.author || detailsForm.personBImageAuthor,
+                      sourcePageUrl: detailsForm.personBImage?.sourcePageUrl || detailsForm.personBImageSourcePageUrl,
+                    },
+                  ].map((image, imageIndex) => (
+                    <div key={`details-image-${imageIndex}`} style={{ border: "1px solid #d8dce2", borderRadius: 12, padding: ".55rem", background: "#f8fafc", display: "grid", gap: ".45rem" }}>
+                      <p style={{ margin: 0, fontWeight: 900 }}>{image.title}</p>
+                      <img
+                        src={image.imageUrl || PLACEHOLDER_IMAGE}
+                        alt={image.fileTitle || image.name || "Candidate portrait"}
+                        style={{ width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 10, background: "#fff" }}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = PLACEHOLDER_IMAGE;
+                        }}
+                      />
+                      <p style={{ margin: ".45rem 0 0", fontWeight: 800 }}>{image.name}</p>
+                      <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".82rem" }}>{image.fileTitle || "Untitled Commons image"}</p>
+                      <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".82rem" }}>{image.license || "Unknown license"}{image.author ? ` | ${image.author}` : ""}</p>
+                      {image.pendingImage ? (
+                        <p style={{ margin: 0, color: "#b45309", fontSize: ".82rem", fontWeight: 800 }}>
+                          New image selected. Save details to replace current portrait.
+                        </p>
+                      ) : null}
+                      {image.sourcePageUrl ? (
+                        <a href={image.sourcePageUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: ".25rem", fontSize: ".82rem", fontWeight: 800, color: "#2f672d" }}>
+                          Open source page
+                        </a>
+                      ) : null}
+                      <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                        Replace with Wikimedia Commons URL
+                        <input
+                          value={detailsForm[image.urlField] || ""}
+                          onChange={(event) => patchDetailsField(image.urlField, event.target.value)}
+                          placeholder="https://commons.wikimedia.org/wiki/File:..."
+                          style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                        />
+                      </label>
+                      <div>
+                        <button className="admin-btn" type="button" onClick={() => void lookupDetailsCommonsImage(image.key)}>
+                          Autofill replacement
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <label style={{ display: "flex", alignItems: "center", gap: ".45rem", fontWeight: 800 }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(detailsForm.licenseVerifiedAt)}
+                    onChange={(event) => patchDetailsField("licenseVerifiedAt", event.target.checked ? new Date().toISOString() : null)}
+                  />
+                  Image licenses verified for this candidate
                 </label>
 
                 <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
@@ -904,9 +1134,63 @@ export default function AgegapleAdminTab() {
                 </select>
               </label>
               <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
-                Image URL (optional)
-                <input value={manualForm.imageUrl} onChange={(event) => patchManualField("imageUrl", event.target.value)} placeholder="https://..." />
+                Person A photo year
+                <input type="number" value={manualForm.personAPhotoYear} onChange={(event) => patchManualField("personAPhotoYear", event.target.value)} placeholder="2012" />
               </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Person B photo year
+                <input type="number" value={manualForm.personBPhotoYear} onChange={(event) => patchManualField("personBPhotoYear", event.target.value)} placeholder="2012" />
+              </label>
+            </div>
+            <div style={{ marginTop: ".65rem", display: "grid", gap: ".65rem", gridTemplateColumns: "1fr 1fr" }}>
+              {[
+                {
+                  key: "personA",
+                  title: "Person A Commons image",
+                  urlField: "personACommonsUrl",
+                  image: manualForm.personAImage,
+                },
+                {
+                  key: "personB",
+                  title: "Person B Commons image",
+                  urlField: "personBCommonsUrl",
+                  image: manualForm.personBImage,
+                },
+              ].map((section) => (
+                <div key={section.key} style={{ border: "1px solid #d8dce2", borderRadius: 14, padding: ".65rem", background: "#f8fafc", display: "grid", gap: ".5rem" }}>
+                  <p style={{ margin: 0, fontWeight: 900 }}>{section.title}</p>
+                  <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                    Wikimedia Commons URL
+                    <input
+                      value={manualForm[section.urlField]}
+                      onChange={(event) => patchManualField(section.urlField, event.target.value)}
+                      placeholder="https://commons.wikimedia.org/wiki/File:..."
+                    />
+                  </label>
+                  <div>
+                    <button className="admin-btn" type="button" onClick={() => void lookupCommonsImage(section.key)}>
+                      Autofill metadata
+                    </button>
+                  </div>
+                  {section.image ? (
+                    <div style={{ display: "grid", gap: ".35rem" }}>
+                      <img
+                        src={section.image.thumbUrl || section.image.url || PLACEHOLDER_IMAGE}
+                        alt={section.image.fileTitle || section.title}
+                        style={{ width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 10, background: "#fff" }}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = PLACEHOLDER_IMAGE;
+                        }}
+                      />
+                      <p style={{ margin: 0, color: "#2c2f31", fontSize: ".86rem", fontWeight: 800 }}>{section.image.fileTitle || "Untitled image"}</p>
+                      <p style={{ margin: 0, color: "#5b6168", fontSize: ".8rem" }}>{section.image.license || "Unknown license"}{section.image.author ? ` | ${section.image.author}` : ""}</p>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, color: "#5b6168", fontSize: ".82rem" }}>Optional now. You can add or replace this image from candidate details later.</p>
+                  )}
+                </div>
+              ))}
             </div>
             <div style={{ marginTop: ".55rem", display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
               <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>

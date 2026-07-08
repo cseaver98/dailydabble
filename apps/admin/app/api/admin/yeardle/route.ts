@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseYeardleAdmin();
     const { data: eventRows, error: eventsError } = await supabase
       .from("events")
-      .select("id,title,event_year,event_month,event_day,image_url,hint_person,hint_description,wikipedia_url,status,created_at")
+      .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_file_title,image_license,image_license_url,image_author,image_attribution_text,image_license_verified_at,hint_person,hint_description,wikipedia_url,status,created_at")
       .order("created_at", { ascending: false })
       .limit(5000);
     if (eventsError) {
@@ -64,6 +64,14 @@ export async function GET(request: Request) {
         event_month: number | null;
         event_day: number | null;
         image_url: string;
+        image_alt: string | null;
+        image_source_page_url: string | null;
+        image_file_title: string | null;
+        image_license: string | null;
+        image_license_url: string | null;
+        image_author: string | null;
+        image_attribution_text: string | null;
+        image_license_verified_at: string | null;
         hint_person: string | null;
         hint_description: string | null;
         wikipedia_url: string | null;
@@ -165,6 +173,14 @@ export async function PATCH(request: Request) {
       eventId?: string;
       status?: CandidateStatus;
       imageUrl?: string;
+      imageAlt?: string;
+      imageSourcePageUrl?: string | null;
+      imageFileTitle?: string | null;
+      imageLicense?: string | null;
+      imageLicenseUrl?: string | null;
+      imageAuthor?: string | null;
+      imageAttributionText?: string | null;
+      imageLicenseVerified?: boolean;
       clearImage?: boolean;
       candidate?: {
         title?: string;
@@ -179,6 +195,22 @@ export async function PATCH(request: Request) {
     const eventId = String(payload.eventId || "");
     const status = String(payload.status || "").trim() as CandidateStatus;
     const imageUrl = String(payload.imageUrl || "").trim();
+    const imageAlt = String(payload.imageAlt || "").trim();
+    const imageSourcePageUrl = payload.imageSourcePageUrl == null ? null : String(payload.imageSourcePageUrl || "").trim();
+    const imageFileTitle = payload.imageFileTitle == null ? null : String(payload.imageFileTitle || "").trim();
+    const imageLicense = payload.imageLicense == null ? null : String(payload.imageLicense || "").trim();
+    const imageLicenseUrl = payload.imageLicenseUrl == null ? null : String(payload.imageLicenseUrl || "").trim();
+    const imageAuthor = payload.imageAuthor == null ? null : String(payload.imageAuthor || "").trim();
+    const imageAttributionText = payload.imageAttributionText == null ? null : String(payload.imageAttributionText || "").trim();
+    const hasImageMetadata =
+      payload.imageSourcePageUrl !== undefined ||
+      payload.imageFileTitle !== undefined ||
+      payload.imageLicense !== undefined ||
+      payload.imageLicenseUrl !== undefined ||
+      payload.imageAuthor !== undefined ||
+      payload.imageAttributionText !== undefined ||
+      payload.imageLicenseVerified !== undefined ||
+      payload.imageAlt !== undefined;
     const clearImage = Boolean(payload.clearImage);
     const candidate = payload.candidate && typeof payload.candidate === "object" ? payload.candidate : null;
     const hasStatus = Boolean(status);
@@ -186,7 +218,7 @@ export async function PATCH(request: Request) {
     const hasClearImage = clearImage;
     const hasCandidate = Boolean(candidate);
 
-    if (!eventId || (!hasStatus && !hasImageUrl && !hasClearImage && !hasCandidate)) {
+    if (!eventId || (!hasStatus && !hasImageUrl && !hasClearImage && !hasCandidate && !hasImageMetadata)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
     if (hasImageUrl && hasClearImage) {
@@ -206,6 +238,23 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Image URL must use http or https" }, { status: 400 });
       }
     }
+    const validateOptionalUrl = (value: string | null, label: string): NextResponse | null => {
+      if (!value) return null;
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(value);
+      } catch {
+        return NextResponse.json({ error: `${label} must be a valid URL.` }, { status: 400 });
+      }
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        return NextResponse.json({ error: `${label} must use http or https.` }, { status: 400 });
+      }
+      return null;
+    };
+    const sourcePageError = validateOptionalUrl(imageSourcePageUrl, "Image source page URL");
+    if (sourcePageError) return sourcePageError;
+    const licenseUrlError = validateOptionalUrl(imageLicenseUrl, "Image license URL");
+    if (licenseUrlError) return licenseUrlError;
     if (hasCandidate) {
       const title = String(candidate?.title || "").trim();
       const eventYear = Number(candidate?.eventYear);
@@ -244,15 +293,88 @@ export async function PATCH(request: Request) {
     const reviewedAt = hasStatus ? (status === "pending_review" ? null : new Date().toISOString()) : undefined;
     const supabase = getSupabaseYeardleAdmin();
     const updatePayload: Record<string, string | number | null> = {};
+    if (hasStatus && status === "approved") {
+      const { data: currentEvent, error: currentEventError } = await supabase
+        .from("events")
+        .select("image_url,image_source_page_url,image_license,image_author,image_attribution_text,image_license_verified_at")
+        .eq("id", eventId)
+        .maybeSingle<{
+          image_url: string | null;
+          image_source_page_url: string | null;
+          image_license: string | null;
+          image_author: string | null;
+          image_attribution_text: string | null;
+          image_license_verified_at: string | null;
+        }>();
+      if (currentEventError) {
+        throw new Error(`Failed checking event image attribution: ${currentEventError.message}`);
+      }
+      const effectiveSourcePageUrl = imageSourcePageUrl ?? currentEvent?.image_source_page_url ?? null;
+      const effectiveLicense = imageLicense ?? currentEvent?.image_license ?? null;
+      const effectiveAuthor = imageAuthor ?? currentEvent?.image_author ?? null;
+      const effectiveAttributionText = imageAttributionText ?? currentEvent?.image_attribution_text ?? null;
+      const effectiveVerifiedAt =
+        payload.imageLicenseVerified === true
+          ? new Date().toISOString()
+          : payload.imageLicenseVerified === false
+            ? null
+            : currentEvent?.image_license_verified_at ?? null;
+      if (
+        !currentEvent?.image_url ||
+        !effectiveSourcePageUrl ||
+        !effectiveLicense ||
+        !effectiveAuthor ||
+        !effectiveAttributionText ||
+        !effectiveVerifiedAt
+      ) {
+        return NextResponse.json(
+          { error: "Verify image source, author, license, and attribution before approving this Yeardle candidate." },
+          { status: 400 },
+        );
+      }
+    }
     if (hasStatus) {
       updatePayload.status = status;
       updatePayload.reviewed_at = reviewedAt ?? null;
     }
     if (hasImageUrl) {
       updatePayload.image_url = imageUrl;
+      updatePayload.image_license_verified_at = null;
+    }
+    if (payload.imageAlt !== undefined) {
+      updatePayload.image_alt = imageAlt || null;
+    }
+    if (payload.imageSourcePageUrl !== undefined) {
+      updatePayload.image_source_page_url = imageSourcePageUrl || null;
+    }
+    if (payload.imageFileTitle !== undefined) {
+      updatePayload.image_file_title = imageFileTitle || null;
+    }
+    if (payload.imageLicense !== undefined) {
+      updatePayload.image_license = imageLicense || null;
+    }
+    if (payload.imageLicenseUrl !== undefined) {
+      updatePayload.image_license_url = imageLicenseUrl || null;
+    }
+    if (payload.imageAuthor !== undefined) {
+      updatePayload.image_author = imageAuthor || null;
+    }
+    if (payload.imageAttributionText !== undefined) {
+      updatePayload.image_attribution_text = imageAttributionText || null;
+    }
+    if (payload.imageLicenseVerified !== undefined) {
+      updatePayload.image_license_verified_at = payload.imageLicenseVerified ? new Date().toISOString() : null;
     }
     if (hasClearImage) {
       updatePayload.image_url = null;
+      updatePayload.image_alt = null;
+      updatePayload.image_source_page_url = null;
+      updatePayload.image_file_title = null;
+      updatePayload.image_license = null;
+      updatePayload.image_license_url = null;
+      updatePayload.image_author = null;
+      updatePayload.image_attribution_text = null;
+      updatePayload.image_license_verified_at = null;
     }
     if (hasCandidate) {
       updatePayload.title = String(candidate?.title || "").trim();

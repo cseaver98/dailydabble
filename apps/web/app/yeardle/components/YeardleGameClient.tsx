@@ -39,6 +39,11 @@ type YeardlePuzzle = {
   eventDay?: number | null;
   imageUrl?: string;
   imageAlt?: string;
+  imageSourcePageUrl?: string | null;
+  imageLicense?: string | null;
+  imageLicenseUrl?: string | null;
+  imageAuthor?: string | null;
+  imageAttributionText?: string | null;
   wikipediaUrl?: string;
   editorialContext?: { description?: string | null };
   galleryImages?: Array<{ imageUrl?: string; imageAlt?: string }>;
@@ -361,6 +366,7 @@ export default function YeardleGameClient({
   }));
   const activeImage = normalizedGallery[0];
   const imageSrc = !imageFailed && activeImage?.imageUrl ? activeImage.imageUrl : "/event-placeholder.svg";
+  const imageAttributionLabel = puzzle?.imageAttributionText || [puzzle?.imageAuthor, puzzle?.imageLicense].filter(Boolean).join(" | ");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -710,15 +716,14 @@ export default function YeardleGameClient({
               />
             ) : null}
             <p className="result-modal-answer">{resultAnswerLabel}</p>
-            {monthDayLabel ? (
-              <p className="result-modal-copy">
-                This event happened on {monthDayLabel}
-                {typeof puzzle?.eventYear === "number" && Number.isFinite(puzzle.eventYear) ? `, ${puzzle.eventYear}` : ""}.
-              </p>
-            ) : null}
             {puzzle?.editorialContext?.description ? (
               <p className="result-modal-copy result-modal-detail">
                 <strong>Description:</strong> {puzzle.editorialContext.description}
+              </p>
+            ) : null}
+            {imageAttributionLabel ? (
+              <p className="result-modal-attribution">
+                Attribution: {imageAttributionLabel}
               </p>
             ) : null}
             <div className="result-modal-actions">

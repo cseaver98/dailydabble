@@ -22,15 +22,34 @@ type PostPayload = {
   personBBirthDate?: string;
   personBWikipediaTitle?: string;
   relationshipType?: "spouse" | "couple" | "former_spouse" | "former_couple";
-  imageUrl?: string;
-  imageTitle?: string;
-  attributionText?: string;
+  personAPhotoYear?: number | string;
+  personBPhotoYear?: number | string;
+  personAImage?: {
+    url?: string;
+    fileTitle?: string;
+    thumbUrl?: string;
+    sourcePageUrl?: string;
+    license?: string;
+    licenseUrl?: string;
+    author?: string;
+    attributionText?: string;
+    metadata?: Record<string, unknown>;
+  };
+  personBImage?: {
+    url?: string;
+    fileTitle?: string;
+    thumbUrl?: string;
+    sourcePageUrl?: string;
+    license?: string;
+    licenseUrl?: string;
+    author?: string;
+    attributionText?: string;
+    metadata?: Record<string, unknown>;
+  };
   editorialPersonABio?: string;
   editorialPersonABioUrl?: string;
   editorialPersonBBio?: string;
   editorialPersonBBioUrl?: string;
-  editorialCoupleContext?: string;
-  editorialCoupleContextUrl?: string;
 };
 
 const validStatuses: CandidateStatus[] = ["pending_review", "approved"];
@@ -94,15 +113,14 @@ export async function POST(request: Request) {
       personBBirthDate: String(payload.personBBirthDate ?? ""),
       personBWikipediaTitle: payload.personBWikipediaTitle,
       relationshipType: relationshipType as "spouse" | "couple" | "former_spouse" | "former_couple",
-      imageUrl: String(payload.imageUrl ?? ""),
-      imageTitle: payload.imageTitle,
-      attributionText: payload.attributionText,
+      personAPhotoYear: payload.personAPhotoYear ?? "",
+      personBPhotoYear: payload.personBPhotoYear ?? "",
+      personAImage: payload.personAImage ?? {},
+      personBImage: payload.personBImage ?? {},
       editorialPersonABio: payload.editorialPersonABio,
       editorialPersonABioUrl: payload.editorialPersonABioUrl,
       editorialPersonBBio: payload.editorialPersonBBio,
       editorialPersonBBioUrl: payload.editorialPersonBBioUrl,
-      editorialCoupleContext: payload.editorialCoupleContext,
-      editorialCoupleContextUrl: payload.editorialCoupleContextUrl,
     });
 
     return NextResponse.json({ ok: true, candidateId });

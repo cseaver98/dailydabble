@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerKey, getSupabaseUrl } from "@/lib/supabase/env";
+import { fetchCommonsImageMetadata } from "@/lib/wikimedia-commons";
 
 export const runtime = "nodejs";
 
@@ -204,6 +205,13 @@ export async function POST(request: Request) {
 
       const sourceKey = `${slugify(chosen.pageTitle)}-${chosen.year}`;
       const hintDescription = chosen.description.slice(0, 280);
+      const commonsMetadata = await fetchCommonsImageMetadata(chosen.imageUrl).catch(() => null);
+      const hasVerifiedImageAttribution = Boolean(
+        commonsMetadata?.sourcePageUrl &&
+        commonsMetadata?.license &&
+        commonsMetadata?.author &&
+        commonsMetadata?.attributionText,
+      );
 
       const { data: upsertedEvent, error: upsertError } = await supabase
         .from("events")
@@ -212,16 +220,23 @@ export async function POST(request: Request) {
             source_key: sourceKey,
             title: chosen.pageTitle,
             event_year: chosen.year,
-            image_url: chosen.imageUrl,
-            image_alt: `${chosen.pageTitle} historical image`,
+            image_url: commonsMetadata?.thumbUrl || commonsMetadata?.imageUrl || chosen.imageUrl,
+            image_alt: commonsMetadata?.objectName || `${chosen.pageTitle} historical image`,
+            image_source_page_url: commonsMetadata?.sourcePageUrl || null,
+            image_file_title: commonsMetadata?.fileTitle || null,
+            image_license: commonsMetadata?.license || null,
+            image_license_url: commonsMetadata?.licenseUrl || null,
+            image_author: commonsMetadata?.author || null,
+            image_attribution_text: commonsMetadata?.attributionText || null,
+            image_license_verified_at: hasVerifiedImageAttribution ? new Date().toISOString() : null,
             wikipedia_url: chosen.wikiUrl,
             hint_category: null,
             hint_region: null,
             hint_era: null,
             hint_person: inferKeyFigures(chosen.pageTitle, chosen.text),
             hint_description: hintDescription,
-            status: "approved",
-            reviewed_at: new Date().toISOString(),
+            status: hasVerifiedImageAttribution ? "approved" : "pending_review",
+            reviewed_at: hasVerifiedImageAttribution ? new Date().toISOString() : null,
           },
           { onConflict: "source_key" },
         )
