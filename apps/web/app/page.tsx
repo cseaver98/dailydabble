@@ -68,24 +68,27 @@ function HomeContent() {
   useEffect(() => {
     const load = async () => {
       try {
-        const accessRes = await fetch("/api/account/access", { method: "GET" });
+        const [accessRes, statusRes, sessionRes] = await Promise.all([
+          fetch("/api/account/access", { method: "GET" }),
+          fetch("/api/completions/today", { method: "GET" }),
+          fetch("/api/auth/session", { method: "GET" }),
+        ]);
+
         const accessPayload = (await accessRes.json()) as AccessResponse & { error?: string };
         if (!accessRes.ok || accessPayload.error) {
           throw new Error(accessPayload.error ?? "Failed to load account access");
         }
 
-        const statusRes = await fetch("/api/completions/today", { method: "GET" });
         const payload = (await statusRes.json()) as StatusResponse & { error?: string };
         if (!statusRes.ok || payload.error) {
           throw new Error(payload.error ?? "Failed to load status");
         }
 
+        const sessionPayload = (await sessionRes.json()) as SessionResponse;
+
         setStatus(payload.status);
         setGameStatuses(payload.gameStatuses ?? {});
         setAccess(accessPayload);
-
-        const sessionRes = await fetch("/api/auth/session", { method: "GET" });
-        const sessionPayload = (await sessionRes.json()) as SessionResponse;
         setNeedsDisplayName(Boolean(sessionPayload.user?.needsDisplayName));
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
