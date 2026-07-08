@@ -70,6 +70,15 @@ type ImageRow = {
   is_usable?: boolean;
 };
 
+const hasCompleteImageAttribution = (image: ImageRow | null): boolean =>
+  Boolean(
+    image?.image_url &&
+      image?.source_page_url &&
+      image?.license &&
+      image?.author &&
+      image?.attribution_text,
+  );
+
 type CandidateDetailsRow = {
   id: string;
   couple_id: string;
@@ -862,7 +871,9 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
 
 export const updateCandidateStatus = async (id: string, status: CandidateStatus): Promise<void> => {
   const supabase = getSupabaseAdmin();
-  const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
+  const nowIso = new Date().toISOString();
+  const reviewedAt = status === "pending_review" ? null : nowIso;
+  const statusUpdate: Record<string, string | null> = { status, reviewed_at: reviewedAt };
 
   if (status === "approved") {
     const { data, error } = await supabase
@@ -883,8 +894,14 @@ export const updateCandidateStatus = async (id: string, status: CandidateStatus)
     if (!row.person_a_photo_year || !row.person_b_photo_year) {
       throw new Error("Add both photo years before approving this candidate");
     }
-    if (!row.license_verified_at) {
+    const hasVerifiedLicense = Boolean(row.license_verified_at);
+    const hasCompleteAttribution =
+      hasCompleteImageAttribution(row.person_a_image) && hasCompleteImageAttribution(row.person_b_image);
+    if (!hasVerifiedLicense && !hasCompleteAttribution) {
       throw new Error("Open details and check image licenses verified before approving");
+    }
+    if (!hasVerifiedLicense && hasCompleteAttribution) {
+      statusUpdate.license_verified_at = nowIso;
     }
     if (!row.person_a_image.is_usable || !row.person_b_image.is_usable) {
       throw new Error("Both person images must be usable before approval");
@@ -893,7 +910,7 @@ export const updateCandidateStatus = async (id: string, status: CandidateStatus)
 
   const { error } = await supabase
     .from("puzzle_candidates")
-    .update({ status, reviewed_at: reviewedAt })
+    .update(statusUpdate)
     .eq("id", id);
 
   if (error) {
