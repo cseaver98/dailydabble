@@ -53,6 +53,7 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [gameStatuses, setGameStatuses] = useState<StatusResponse["gameStatuses"]>({});
   const [access, setAccess] = useState<AccessResponse | null>(null);
@@ -67,32 +68,45 @@ function HomeContent() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const [accessRes, statusRes, sessionRes] = await Promise.all([
-          fetch("/api/account/access", { method: "GET" }),
-          fetch("/api/completions/today", { method: "GET" }),
-          fetch("/api/auth/session", { method: "GET" }),
-        ]);
+      const accessRequest = fetch("/api/account/access", { method: "GET" });
+      const statusRequest = fetch("/api/completions/today", { method: "GET" });
+      const sessionRequest = fetch("/api/auth/session", { method: "GET" });
 
+      const loadAccess = async () => {
+        const accessRes = await accessRequest;
         const accessPayload = (await accessRes.json()) as AccessResponse & { error?: string };
         if (!accessRes.ok || accessPayload.error) {
           throw new Error(accessPayload.error ?? "Failed to load account access");
         }
+        setAccess(accessPayload);
+      };
 
+      const loadStatus = async () => {
+        const statusRes = await statusRequest;
         const payload = (await statusRes.json()) as StatusResponse & { error?: string };
         if (!statusRes.ok || payload.error) {
           throw new Error(payload.error ?? "Failed to load status");
         }
-
-        const sessionPayload = (await sessionRes.json()) as SessionResponse;
-
         setStatus(payload.status);
         setGameStatuses(payload.gameStatuses ?? {});
-        setAccess(accessPayload);
+      };
+
+      const loadSession = async () => {
+        const sessionRes = await sessionRequest;
+        const sessionPayload = (await sessionRes.json()) as SessionResponse;
         setNeedsDisplayName(Boolean(sessionPayload.user?.needsDisplayName));
+      };
+
+      try {
+        await Promise.all([
+          loadAccess(),
+          loadStatus().finally(() => setStatusLoading(false)),
+          loadSession(),
+        ]);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
+        setStatusLoading(false);
       } finally {
         setLoading(false);
       }
@@ -254,7 +268,7 @@ function HomeContent() {
             const complete = Boolean(status[game.slug]);
             const lockedFromStarting = isGuestLocked && !complete;
             const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
-            const statusLabel = loading
+            const statusLabel = statusLoading
               ? "Loading"
               : complete
                 ? "Completed"
@@ -410,16 +424,16 @@ function HomeContent() {
                     <h2 className="font-headline text-3xl font-bold text-[#2c2f31]">{game.name}</h2>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wider ${
-                        loading ? "normal-case" : "uppercase"
+                        statusLoading ? "normal-case" : "uppercase"
                       } ${
-                        loading
+                        statusLoading
                           ? "bg-[#eff1f4] text-[#595c5e]"
                           : complete
                           ? "bg-[#d1ffc7] text-[#114c15]"
                           : "bg-[#fff2a6] text-[#4b3f00]"
                       }`}
                     >
-                      <span>{loading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
+                      <span>{statusLoading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
                       {complete ? (
                         <span
                           aria-hidden
