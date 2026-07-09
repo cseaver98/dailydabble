@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createArchiveLockedResponse, hasArchiveUnlockCookie, isLockedArchiveGameNumber } from "@/lib/archive-lock";
+import { createArchiveLockedResponse, shouldLockArchivePuzzleRequest } from "@/lib/archive-lock";
 
 import { getPuzzleByDate } from "@/lib/agegaple/puzzle-repository";
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
     }
-    if (isLockedArchiveGameNumber(puzzle.archiveGameNumber) && !hasArchiveUnlockCookie(request)) {
+    if (await shouldLockArchivePuzzleRequest({ request, archiveGameNumber: puzzle.archiveGameNumber })) {
       return createArchiveLockedResponse("Agegaple", date);
     }
 

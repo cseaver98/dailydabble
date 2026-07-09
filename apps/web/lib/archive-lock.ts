@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSubscriptionAccess, getSubscriptionFeatureFlags } from "@/lib/subscriptions";
+import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
 export const ARCHIVE_UNLOCK_COOKIE = "dailydabble_archive_game_one_unlock";
 const ARCHIVE_UNLOCK_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
@@ -37,3 +39,40 @@ export const createArchiveLockedResponse = (gameLabel: string, date: string) =>
     },
     { status: 423 },
   );
+
+export async function getCurrentArchiveSubscriptionAccess() {
+  const flags = getSubscriptionFeatureFlags();
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      subscriptionsLaunched: flags.archiveSubscriptionsEnabled,
+      canAccessArchive: false,
+      isSubscriber: false,
+    };
+  }
+
+  const access = await getSubscriptionAccess(user.id);
+  return {
+    subscriptionsLaunched: access.flags.archiveSubscriptionsEnabled,
+    canAccessArchive: access.canAccessArchive,
+    isSubscriber: access.isSubscriber,
+  };
+}
+
+export async function shouldLockArchivePuzzleRequest({
+  request,
+  archiveGameNumber,
+}: {
+  request: Pick<NextRequest, "cookies">;
+  archiveGameNumber?: number | null;
+}) {
+  const archiveAccess = await getCurrentArchiveSubscriptionAccess();
+
+  if (archiveAccess.subscriptionsLaunched) {
+    return !archiveAccess.canAccessArchive;
+  }
+
+  return isLockedArchiveGameNumber(archiveGameNumber) && !hasArchiveUnlockCookie(request);
+}

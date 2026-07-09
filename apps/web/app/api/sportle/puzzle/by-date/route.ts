@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createArchiveLockedResponse, hasArchiveUnlockCookie, isLockedArchiveGameNumber } from "../../../../../lib/archive-lock";
+import { createArchiveLockedResponse, shouldLockArchivePuzzleRequest } from "../../../../../lib/archive-lock";
 import { getSportlePuzzleByDate } from "../../../../../lib/sportle/puzzle-repository";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: `No Sportle puzzle scheduled for ${date}` }, { status: 404 });
     }
-    if (isLockedArchiveGameNumber(puzzle.archiveGameNumber) && !hasArchiveUnlockCookie(request)) {
+    if (await shouldLockArchivePuzzleRequest({ request, archiveGameNumber: puzzle.archiveGameNumber })) {
       return createArchiveLockedResponse("Sportle", date);
     }
 

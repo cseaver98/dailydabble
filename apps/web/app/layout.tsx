@@ -24,6 +24,15 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+const subscriberBootScript = `
+try {
+  var isSubscriber = window.localStorage.getItem("dailydabble:v1:is-subscriber") === "true";
+  document.documentElement.dataset.dailyDabbleSubscriber = isSubscriber ? "true" : "false";
+} catch (_) {
+  document.documentElement.dataset.dailyDabbleSubscriber = "false";
+}
+`;
+
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
 
 export const generateMetadata = (): Metadata => ({
@@ -60,8 +69,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${plusJakartaSans.variable} ${manrope.variable} antialiased`}>
+        <script dangerouslySetInnerHTML={{ __html: subscriberBootScript }} />
         <AuthStateStorageBoundary />
         <DailyReminderPrompt />
         {children}

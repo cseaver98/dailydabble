@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AuthDialog from "../components/AuthDialog";
+import DailyDabbleWordmark from "../components/DailyDabbleWordmark";
 
 export default function AccountLoginPanel() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -9,12 +10,14 @@ export default function AccountLoginPanel() {
   return (
     <>
       <section className="mx-auto max-w-2xl rounded-[2rem] border border-[#d8dce2] bg-white p-8 text-center shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
-        <p className="font-headline text-xs font-extrabold uppercase tracking-[0.18em] text-[#2f672d]">DailyDabble Account</p>
+        <p className="text-xs font-extrabold uppercase tracking-[0.18em]">
+          <DailyDabbleWordmark className="text-[1.15em]" /> <span className="text-[#2f672d]">Account</span>
+        </p>
         <h1 className="font-headline mt-3 text-4xl font-extrabold leading-tight text-[#2c2f31] sm:text-5xl">
           Save your stats and streaks
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base font-semibold leading-relaxed text-[#595c5e] sm:text-lg">
-          Create a free account to keep your progress across devices and unlock your DailyDabble stats.
+          Create a free account to keep your progress across devices and unlock your <DailyDabbleWordmark className="text-[1em]" /> stats.
         </p>
         <button
           type="button"

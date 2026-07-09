@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../../components/AccountNav";
+import DailyDabbleWordmark from "../../components/DailyDabbleWordmark";
 import SiteMenu from "../../components/SiteMenu";
 import AccountLoginPanel from "../AccountLoginPanel";
 import { getAccountStats } from "@/lib/account-stats";
@@ -54,7 +55,7 @@ export default async function AccountStatsPage() {
                 </Link>
               </div>
               <p className="mt-3 text-sm font-semibold text-[#595c5e]">
-                Complete every daily game to build your total <span className="font-extrabold text-[#2f672d]">DailyDabble</span> streak 🔥.
+                Complete every daily game to build your total <DailyDabbleWordmark className="text-[1em]" /> streak 🔥.
               </p>
             </div>
           </div>
@@ -136,9 +137,13 @@ export default async function AccountStatsPage() {
           <section className="mt-6 rounded-[2rem] border border-[#d8dce2] bg-[#eff1f4]/75 p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-headline text-xl font-extrabold text-[#2c2f31]">Advanced stats are coming later</p>
+                <p className="font-headline text-xl font-extrabold text-[#2c2f31]">
+                  {stats.entitlements.advancedStats ? <><DailyDabbleWordmark plus className="text-[1em]" /> stats unlocked</> : "Advanced stats are coming later"}
+                </p>
                 <p className="mt-2 text-sm font-semibold text-[#595c5e]">
-                  Percentile graphs, badge progress, and deeper breakdowns will live here when we add subscribers.
+                  {stats.entitlements.advancedStats
+                    ? "Your account has access to subscriber-only stat areas as they roll out."
+                    : "Percentile graphs, badge progress, and deeper breakdowns will live here when we add subscribers."}
                 </p>
               </div>
             </div>

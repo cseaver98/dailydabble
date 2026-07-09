@@ -29,7 +29,12 @@ export function DailydabbleNav({
           React.createElement(
             "a",
             { className: "dd-brand-link", href: homeHref },
-            React.createElement("span", { className: "dd-brand-word" }, "DailyDabble"),
+            React.createElement(
+              "span",
+              { className: "dd-brand-word" },
+              React.createElement("span", null, "DailyDabble"),
+              React.createElement("span", { className: "dd-brand-plus", "aria-hidden": "true" }, "+"),
+            ),
           ),
           subtitle
             ? React.createElement(

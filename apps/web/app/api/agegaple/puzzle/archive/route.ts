@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isArchiveLockEnabled } from "@/lib/archive-lock";
+import { getCurrentArchiveSubscriptionAccess, isArchiveLockEnabled } from "@/lib/archive-lock";
 
 import { listArchivePuzzles } from "@/lib/agegaple/puzzle-repository";
 
@@ -8,9 +8,12 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const items = await listArchivePuzzles();
+    const [items, archiveAccess] = await Promise.all([
+      listArchivePuzzles(),
+      getCurrentArchiveSubscriptionAccess(),
+    ]);
     return NextResponse.json(
-      { items, lockEnabled: isArchiveLockEnabled() },
+      { items, lockEnabled: isArchiveLockEnabled(), archiveAccess },
       {
         headers: {
           "Cache-Control": "no-store, max-age=0",

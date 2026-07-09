@@ -1,5 +1,6 @@
 import { games } from "@/lib/games";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
+import { getSubscriptionAccess } from "@/lib/subscriptions";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type GameResultRow = {
@@ -173,6 +174,7 @@ const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]
 };
 
 export async function getAccountStats(userId: string): Promise<AccountStats> {
+  const subscriptionAccess = await getSubscriptionAccess(userId);
   const { data, error } = await getSupabaseAdmin()
     .schema("core")
     .from("game_results")
@@ -226,7 +228,7 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
     },
     games: gameStats,
     entitlements: {
-      advancedStats: false,
+      advancedStats: subscriptionAccess.canAccessPremiumStats,
     },
   };
 }

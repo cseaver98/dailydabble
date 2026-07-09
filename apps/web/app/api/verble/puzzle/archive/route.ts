@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
-import { isArchiveLockEnabled } from "../../../../../lib/archive-lock";
+import { getCurrentArchiveSubscriptionAccess, isArchiveLockEnabled } from "../../../../../lib/archive-lock";
 import { listVerbleArchive } from "../../../../../lib/verble/puzzle-repository";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const items = await listVerbleArchive(120);
-    return NextResponse.json({ items, lockEnabled: isArchiveLockEnabled() });
+    const [items, archiveAccess] = await Promise.all([
+      listVerbleArchive(120),
+      getCurrentArchiveSubscriptionAccess(),
+    ]);
+    return NextResponse.json({ items, lockEnabled: isArchiveLockEnabled(), archiveAccess });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load archive";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DailyDabbleWordmark from "../components/DailyDabbleWordmark";
 
 type EmailPreferencesFormProps = {
   initialMarketingEmailOptIn: boolean;
@@ -69,7 +70,7 @@ export default function EmailPreferencesForm({
           <span>
             <span className="block text-sm font-extrabold text-[#2c2f31]">Product updates and launch news</span>
             <span className="mt-1 block text-sm font-semibold leading-relaxed text-[#666a6d]">
-              Occasional DailyDabble news, feature updates, and product announcements.
+              Occasional <DailyDabbleWordmark className="text-[1em]" /> news, feature updates, and product announcements.
             </span>
           </span>
         </label>

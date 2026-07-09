@@ -50,12 +50,30 @@
 }
 
 .dd-brand-word {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
   font-family: var(--font-headline, "Plus Jakarta Sans"), "Manrope", sans-serif;
   font-size: clamp(1.25rem, 1rem + 1vw, 1.85rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--primary, #2f672d);
+}
+
+.dd-brand-plus {
+  display: none;
+  position: absolute;
+  left: calc(100% + 0.04em);
+  bottom: 0.16em;
+  color: #b8860b;
+  font-size: 1.24em;
+  line-height: 1;
+  -webkit-text-stroke: 0.018em rgba(184, 134, 11, 0.72);
+}
+
+:root[data-daily-dabble-subscriber="true"] .dd-brand-plus {
+  display: inline-block;
 }
 
 .dd-brand-separator {

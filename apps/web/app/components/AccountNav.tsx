@@ -12,6 +12,17 @@ type AccountUser = {
   email: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  subscription?: {
+    isSubscriber?: boolean;
+  };
+};
+
+const SUBSCRIBER_STORAGE_KEY = "dailydabble:v1:is-subscriber";
+
+const publishSubscriberStatus = (isSubscriber: boolean) => {
+  document.documentElement.dataset.dailyDabbleSubscriber = isSubscriber ? "true" : "false";
+  window.localStorage.setItem(SUBSCRIBER_STORAGE_KEY, isSubscriber ? "true" : "false");
+  window.dispatchEvent(new CustomEvent("dailydabble:subscription-status", { detail: { isSubscriber } }));
 };
 
 export default function AccountNav() {
@@ -30,11 +41,13 @@ export default function AccountNav() {
       if (!isMounted) return;
       if (!response?.ok) {
         setUser(null);
+        publishSubscriberStatus(false);
         setLoading(false);
         return;
       }
       const payload = await response.json().catch(() => ({ user: null }));
       setUser(payload.user ?? null);
+      publishSubscriberStatus(Boolean(payload.user?.subscription?.isSubscriber));
       setLoading(false);
     };
 
@@ -76,6 +89,7 @@ export default function AccountNav() {
     clearLocalGameState();
     window.localStorage.setItem("dailydabble:v1:viewer", "guest");
     await fetch("/api/player", { method: "DELETE" }).catch(() => null);
+    publishSubscriberStatus(false);
     setUser(null);
     setIsMenuOpen(false);
     window.location.href = "/";
