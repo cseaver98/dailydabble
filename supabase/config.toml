@@ -227,6 +227,10 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 # Custom email templates
+[auth.email.template.confirmation]
+subject = "Confirm your DailyDabble account"
+content_path = "./supabase/templates/signup-confirmation.html"
+
 [auth.email.template.magic_link]
 subject = "Your DailyDabble login link"
 content_path = "./supabase/templates/magic-link.html"

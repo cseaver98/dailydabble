@@ -70,7 +70,7 @@ Production Supabase Auth URL config:
 - Site URL: `https://dailydabble.app`
 - Redirect URL: `https://dailydabble.app/auth/callback**`
 
-The magic link email template must use:
+The signup confirmation and magic link email templates must use:
 
 ```text
 {{ .ConfirmationURL }}
@@ -78,15 +78,17 @@ The magic link email template must use:
 
 Do not hardcode `{{ .SiteURL }}` or localhost in email templates.
 
-The repo-owned local template lives at:
+The repo-owned local templates live at:
 
 ```text
+supabase/templates/signup-confirmation.html
 supabase/templates/magic-link.html
 ```
 
 For quick browser checks without sending an email, open:
 
 ```text
+supabase/templates/signup-confirmation.preview.html
 supabase/templates/magic-link.preview.html
 ```
 
