@@ -175,7 +175,7 @@ export default function MoviedleGameClient({
   const [lockedSuggestionQuery, setLockedSuggestionQuery] = useState("");
   const [selectedStillIndex, setSelectedStillIndex] = useState(0);
   const [resultStillIndex, setResultStillIndex] = useState(0);
-  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
@@ -201,6 +201,7 @@ export default function MoviedleGameClient({
             setArchiveLock({
               title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
               description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+              mode: payload.lockMode === "subscription" ? "subscription" : "password",
             });
             setError("");
           }
@@ -564,7 +565,7 @@ export default function MoviedleGameClient({
       <div className="moviedle-shell">
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
+          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} mode={archiveLock.mode} />
         </main>
       </div>
     );

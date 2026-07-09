@@ -30,12 +30,25 @@ export const applyArchiveUnlockCookie = (response: NextResponse): NextResponse =
   return response;
 };
 
+export type ArchivePuzzleLockReason = "secret" | "subscription";
+
 export const createArchiveLockedResponse = (gameLabel: string, date: string) =>
   NextResponse.json(
     {
       locked: true,
       lockTitle: "Archive Game #1 is locked",
       lockDescription: "",
+    },
+    { status: 423 },
+  );
+
+export const createArchiveSubscriptionLockedResponse = (gameLabel: string, date: string) =>
+  NextResponse.json(
+    {
+      locked: true,
+      lockMode: "subscription",
+      lockTitle: "DailyDabble+",
+      lockDescription: "Archive games are locked behind DailyDabble+\nDailyDabble+ is coming soon.",
     },
     { status: 423 },
   );
@@ -61,7 +74,7 @@ export async function getCurrentArchiveSubscriptionAccess() {
   };
 }
 
-export async function shouldLockArchivePuzzleRequest({
+export async function getArchivePuzzleLockState({
   request,
   archiveGameNumber,
 }: {
@@ -71,8 +84,26 @@ export async function shouldLockArchivePuzzleRequest({
   const archiveAccess = await getCurrentArchiveSubscriptionAccess();
 
   if (archiveAccess.subscriptionsLaunched) {
-    return !archiveAccess.canAccessArchive;
+    return {
+      locked: !archiveAccess.canAccessArchive,
+      reason: archiveAccess.canAccessArchive ? null : "subscription" as ArchivePuzzleLockReason,
+    };
   }
 
-  return isLockedArchiveGameNumber(archiveGameNumber) && !hasArchiveUnlockCookie(request);
+  const locked = isLockedArchiveGameNumber(archiveGameNumber) && !hasArchiveUnlockCookie(request);
+  return {
+    locked,
+    reason: locked ? "secret" as ArchivePuzzleLockReason : null,
+  };
+}
+
+export async function shouldLockArchivePuzzleRequest({
+  request,
+  archiveGameNumber,
+}: {
+  request: Pick<NextRequest, "cookies">;
+  archiveGameNumber?: number | null;
+}) {
+  const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber });
+  return lockState.locked;
 }

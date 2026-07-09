@@ -17,12 +17,8 @@ export const metadata: Metadata = {
   description: "Manage your DailyDabble account.",
 };
 
-const formatProvider = (provider?: string) => {
-  if (!provider) return "Email";
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
-};
-
 const isApplePrivateRelayEmail = (email: string) => email.toLowerCase().endsWith("@privaterelay.appleid.com");
+const supportEmail = "support@dailydabble.app";
 
 const getDisplayNameHeadingClass = (displayName: string) => {
   if (displayName.length > 24) {
@@ -55,15 +51,15 @@ export default async function AccountPage() {
   const subscriptionAccess = await getSubscriptionAccess(user.id);
   const displayName = profile?.displayName ?? "Dabbler";
   const email = user.email ?? "Private email";
-  const provider = formatProvider(user.app_metadata?.provider);
   const displayedEmail = isApplePrivateRelayEmail(email) ? "Private Apple relay email" : email;
   const createdAt = user.created_at ? new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(user.created_at)) : "Unknown";
   const displayNameHeadingClass = getDisplayNameHeadingClass(displayName);
   const plusStatusLabel = subscriptionAccess.flags.subscriptionsEnabled
     ? subscriptionAccess.isSubscriber
       ? "Active"
-      : "Not subscribed"
+      : "Coming soon"
     : "Coming soon";
+  const feedbackHref = `mailto:${supportEmail}?subject=${encodeURIComponent("DailyDabble feedback or bug report")}`;
 
   return (
     <>
@@ -151,9 +147,19 @@ export default async function AccountPage() {
                   initialMarketingEmailOptIn={profile?.marketingEmailOptIn ?? false}
                   initialDailyReminderOptIn={profile?.dailyReminderOptIn ?? false}
                 />
-                <div className="rounded-2xl bg-[#f5f6f9] px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Login provider</p>
-                  <p className="mt-1 text-base font-extrabold text-[#2c2f31]">{provider}</p>
+                <div className="rounded-2xl border border-[#d8dce2] bg-[#fdfefe] px-4 py-4">
+                  <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Feedback</p>
+                  <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
+                    Found a bug or have an idea? Send us a note and we&apos;ll take a look.
+                  </p>
+                  <div className="mt-3">
+                    <a
+                      className="font-headline inline-flex h-11 items-center justify-center rounded-full bg-[#2f672d] px-5 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22]"
+                      href={feedbackHref}
+                    >
+                      Send feedback
+                    </a>
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-[#ffd2c7] bg-[#fff8f6] px-4 py-4">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#b02500]">Session</p>

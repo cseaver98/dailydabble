@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createArchiveLockedResponse, shouldLockArchivePuzzleRequest } from "../../../../../lib/archive-lock";
+import {
+  createArchiveLockedResponse,
+  createArchiveSubscriptionLockedResponse,
+  getArchivePuzzleLockState,
+} from "../../../../../lib/archive-lock";
 import { getEquadlePuzzleByDate } from "../../../../../lib/equadle/puzzle-repository";
 
 export const runtime = "nodejs";
@@ -13,8 +17,11 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: `No Equadle puzzle scheduled for ${date}` }, { status: 404 });
     }
-    if (await shouldLockArchivePuzzleRequest({ request, archiveGameNumber: puzzle.archiveGameNumber })) {
-      return createArchiveLockedResponse("Equadle", date);
+    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber });
+    if (lockState.locked) {
+      return lockState.reason === "subscription"
+        ? createArchiveSubscriptionLockedResponse("Equadle", date)
+        : createArchiveLockedResponse("Equadle", date);
     }
 
     return NextResponse.json(puzzle);

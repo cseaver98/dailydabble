@@ -317,7 +317,7 @@ export default function AgegapleGameClient({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
   const [loading, setLoading] = useState(true);
   const hasHydratedProgressRef = useRef(false);
 
@@ -329,6 +329,7 @@ export default function AgegapleGameClient({
         const response = await fetch(apiUrl, { cache: "no-store" });
         const payload = (await response.json().catch(() => ({}))) as PuzzlePublic & {
           error?: string;
+          lockMode?: string;
           lockTitle?: string;
           lockDescription?: string;
         };
@@ -339,6 +340,7 @@ export default function AgegapleGameClient({
           setArchiveLock({
             title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
             description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+            mode: payload.lockMode === "subscription" ? "subscription" : "password",
           });
           setError(null);
           return;
@@ -583,7 +585,7 @@ export default function AgegapleGameClient({
 
         <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
           {!loading && archiveLock ? (
-            <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
+            <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} mode={archiveLock.mode} />
           ) : null}
 
           {!loading && !archiveLock && !puzzle && !error ? (

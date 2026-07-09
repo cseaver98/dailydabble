@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createArchiveLockedResponse, shouldLockArchivePuzzleRequest } from "../../../../../lib/archive-lock";
+import {
+  createArchiveLockedResponse,
+  createArchiveSubscriptionLockedResponse,
+  getArchivePuzzleLockState,
+} from "../../../../../lib/archive-lock";
 import { getSportlePuzzleByDate } from "../../../../../lib/sportle/puzzle-repository";
 
 export const runtime = "nodejs";
@@ -13,8 +17,11 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: `No Sportle puzzle scheduled for ${date}` }, { status: 404 });
     }
-    if (await shouldLockArchivePuzzleRequest({ request, archiveGameNumber: puzzle.archiveGameNumber })) {
-      return createArchiveLockedResponse("Sportle", date);
+    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber });
+    if (lockState.locked) {
+      return lockState.reason === "subscription"
+        ? createArchiveSubscriptionLockedResponse("Sportle", date)
+        : createArchiveLockedResponse("Sportle", date);
     }
 
     return NextResponse.json(puzzle);

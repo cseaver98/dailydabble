@@ -3,6 +3,7 @@
 import { DailydabbleNav } from "@dailydabble/ui";
 import { useEffect, useMemo, useState } from "react";
 import AccountNav from "../../components/AccountNav";
+import ArchiveLockGate from "../../components/ArchiveLockGate";
 import GameMenu from "../../components/GameMenu";
 import LockedArchiveTile from "../../components/LockedArchiveTile";
 import useArchiveCompletionStatus from "../../components/useArchiveCompletionStatus";
@@ -13,8 +14,10 @@ import LoadingLabel from "../../components/LoadingLabel";
 type ArchiveResponse = {
   items?: ArchivePuzzleListItem[];
   lockEnabled?: boolean;
+  archiveAccess?: ArchiveAccess;
   error?: string;
 };
+type ArchiveAccess = { subscriptionsLaunched?: boolean; canAccessArchive?: boolean };
 
 const formatDateLabel = (date: string) => {
   const parsed = new Date(`${date}T00:00:00`);
@@ -27,6 +30,7 @@ const archivePageSize = 30;
 export default function ArchivePage() {
   const [items, setItems] = useState<ArchivePuzzleListItem[]>([]);
   const [lockEnabled, setLockEnabled] = useState(false);
+  const [archiveAccess, setArchiveAccess] = useState<ArchiveAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,6 +54,7 @@ export default function ArchivePage() {
 
         setItems(Array.isArray(payload.items) ? payload.items : []);
         setLockEnabled(Boolean(payload.lockEnabled));
+        setArchiveAccess(payload.archiveAccess ?? null);
       } catch (loadError) {
         if (!active) {
           return;
@@ -100,6 +105,7 @@ export default function ArchivePage() {
   useEffect(() => {
     setCurrentPage((page) => Math.min(Math.max(1, page), totalPages));
   }, [totalPages]);
+  const isSubscriptionLocked = Boolean(archiveAccess?.subscriptionsLaunched && !archiveAccess.canAccessArchive);
 
   return (
     <div className="agegaple-shell">
@@ -115,6 +121,13 @@ export default function ArchivePage() {
       />
 
       <div className="container">
+        {isSubscriptionLocked ? (
+          <ArchiveLockGate
+            archiveHref="/"
+            backLabel="Back to games"
+            mode="subscription"
+          />
+        ) : (
         <section className="card legal-card archive-card">
           <h1 className="page-title">Archive Games</h1>
 
@@ -159,6 +172,7 @@ export default function ArchivePage() {
             </div>
           ) : null}
         </section>
+        )}
       </div>
     </main>
     </div>

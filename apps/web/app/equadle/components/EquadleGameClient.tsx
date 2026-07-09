@@ -229,7 +229,7 @@ export default function EquadleGameClient({
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [revealingRowIndex, setRevealingRowIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
-  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string } | null>(null);
+  const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
@@ -255,6 +255,7 @@ export default function EquadleGameClient({
             setArchiveLock({
               title: typeof payload.lockTitle === "string" ? payload.lockTitle : "Archive Game #1 is locked",
               description: typeof payload.lockDescription === "string" ? payload.lockDescription : "Enter the shared password to open this retired archive game.",
+              mode: payload.lockMode === "subscription" ? "subscription" : "password",
             });
             setError("");
           }
@@ -635,7 +636,7 @@ export default function EquadleGameClient({
       <div className="equadle-shell">
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
-          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} />
+          <ArchiveLockGate archiveHref={archiveHref} title={archiveLock.title} description={archiveLock.description} mode={archiveLock.mode} />
         </main>
       </div>
     );

@@ -134,20 +134,20 @@ export default async function AccountStatsPage() {
             </section>
           </div>
 
-          <section className="mt-6 rounded-[2rem] border border-[#d8dce2] bg-[#eff1f4]/75 p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-headline text-xl font-extrabold text-[#2c2f31]">
-                  {stats.entitlements.advancedStats ? <><DailyDabbleWordmark plus className="text-[1em]" /> stats unlocked</> : "Advanced stats are coming later"}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-[#595c5e]">
-                  {stats.entitlements.advancedStats
-                    ? "Your account has access to subscriber-only stat areas as they roll out."
-                    : "Percentile graphs, badge progress, and deeper breakdowns will live here when we add subscribers."}
-                </p>
+          {stats.entitlements.advancedStats ? (
+            <section className="mt-6 rounded-[2rem] border border-[#d8dce2] bg-[#eff1f4]/75 p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-headline text-xl font-extrabold text-[#2c2f31]">
+                    <DailyDabbleWordmark plus className="text-[1em]" /> stats unlocked
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#595c5e]">
+                    Your account has access to subscriber-only stat areas as they roll out.
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          ) : null}
         </section>
       </main>
     </>
