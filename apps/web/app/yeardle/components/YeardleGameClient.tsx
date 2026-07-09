@@ -72,6 +72,15 @@ const formatMonthDay = (dateString: string | undefined) => {
     new Date(Date.UTC(2000, month - 1, day)),
   );
 };
+const formatEventMonthDay = (month: number | null | undefined, day: number | null | undefined) => {
+  if (typeof month !== "number" || typeof day !== "number" || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, Number(month) - 1, Number(day))),
+  );
+};
 const formatFullEventDate = (
   month: number | null | undefined,
   day: number | null | undefined,
@@ -494,7 +503,7 @@ export default function YeardleGameClient({
   const previousAttempt = attempts.length > 1 ? attempts[attempts.length - 2] : null;
   const earlierAttempts = attempts.length > 1 ? attempts.slice(0, -1).reverse() : [];
   const eventTitleLabel = puzzle?.eventTitle || "";
-  const monthDayLabel = formatMonthDay(puzzle?.puzzleDate);
+  const monthDayLabel = formatEventMonthDay(puzzle?.eventMonth, puzzle?.eventDay) || formatMonthDay(puzzle?.puzzleDate);
   const fullEventDateLabel = formatFullEventDate(puzzle?.eventMonth, puzzle?.eventDay, puzzle?.eventYear);
   const resultAnswerLabel = (() => {
     if (gameState === "won" || gameState === "lost") {
