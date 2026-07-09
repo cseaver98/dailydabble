@@ -181,7 +181,7 @@ export async function GET(request: Request) {
       (row) => row.status === "approved" && !finishedIds.has(row.id),
     ).length;
     const scheduled = new Set(((allSchedule as Array<{ movie_id: string; puzzle_date: string }> | null) ?? []).map((row) => row.movie_id)).size;
-    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
+    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 3);
 
     return NextResponse.json({
       items,
