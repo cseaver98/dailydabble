@@ -515,7 +515,7 @@ const buildOverview = async () => {
   const pendingProcessed = items.filter((item) => item.status === "pending" && item.hasProcessed).length;
   const finished = items.filter((item) => item.isFinished).length;
   const scheduled = items.filter((item) => item.scheduledPuzzleDate).length;
-  const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
+  const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 3);
 
   const queueHealth = {
     runwayDays: approvedProcessed,

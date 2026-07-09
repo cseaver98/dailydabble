@@ -17,7 +17,7 @@ const normalizeQueueHealth = (queueHealth) => {
     queueHealth.used ??
     queueHealth.finished;
   const runwayDays = queueHealth.runwayDays ?? queueHealth.approvedUnused ?? queueHealth.approvedProcessed;
-  const lowQueueThreshold = valueOrZero(queueHealth.lowQueueThreshold || 7);
+  const lowQueueThreshold = valueOrZero(queueHealth.lowQueueThreshold || 3);
   const normalizedRunwayDays = valueOrZero(runwayDays);
   const isLow = Boolean(queueHealth.isLow ?? normalizedRunwayDays < lowQueueThreshold);
 

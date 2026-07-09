@@ -253,7 +253,7 @@ export async function GET(request: Request) {
     const finished = hydrated.filter((row) => row.isFinished).length;
     const approvedUnused = hydrated.filter((row) => row.status === "approved" && !row.isFinished).length;
     const scheduled = hydrated.filter((row) => row.scheduleCount > 0).length;
-    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
+    const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 3);
 
     return NextResponse.json({
       ok: true,

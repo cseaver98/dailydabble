@@ -933,7 +933,7 @@ export const deleteReviewCandidate = async (id: string): Promise<void> => {
 
 export const getQueueHealth = async (): Promise<QueueHealth> => {
   const supabase = getSupabaseAdmin();
-  const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 7);
+  const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 3);
   const { data: candidates, error: candidatesError } = await supabase.from("puzzle_candidates").select("id,status");
   if (candidatesError) {
     throw new Error(`Failed to load candidate queue health: ${candidatesError.message}`);
