@@ -72,6 +72,10 @@
   -webkit-text-stroke: 0.018em rgba(184, 134, 11, 0.72);
 }
 
+:root[data-daily-dabble-subscriber="true"] .dd-brand-word {
+  margin-right: 0.78em;
+}
+
 :root[data-daily-dabble-subscriber="true"] .dd-brand-plus {
   display: inline-block;
 }
