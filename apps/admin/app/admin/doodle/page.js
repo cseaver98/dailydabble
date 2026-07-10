@@ -12,6 +12,8 @@ const statusLabel = {
   approved: "Approved",
   finished: "Finished",
   used_today: "Today",
+  scheduled: "Scheduled",
+  unscheduled: "Unscheduled",
   all: "All",
 };
 
@@ -482,7 +484,57 @@ export default function DoodleAdminTab() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: ".6rem", flexWrap: "wrap" }}>
                   <div>
-                    <p style={{ margin: 0, fontWeight: 900 }}>{item.slug}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: ".4rem", flexWrap: "wrap" }}>
+                      <p style={{ margin: 0, fontWeight: 900 }}>{item.slug}</p>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          borderRadius: 999,
+                          padding: ".12rem .45rem",
+                          fontSize: ".72rem",
+                          fontWeight: 900,
+                          color: item.status === "approved" ? "#1f4f1e" : "#7a4b12",
+                          background: item.status === "approved" ? "#d1ffc7" : "#fff4d6",
+                          border: `1px solid ${item.status === "approved" ? "#95d98b" : "#f2c66d"}`,
+                        }}
+                      >
+                        {statusLabel[item.status] || item.status}
+                      </span>
+                      {item.isFinished ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            borderRadius: 999,
+                            padding: ".12rem .45rem",
+                            fontSize: ".72rem",
+                            fontWeight: 900,
+                            color: "#123f6d",
+                            background: "#dbeafe",
+                            border: "1px solid #93c5fd",
+                          }}
+                        >
+                          Finished
+                        </span>
+                      ) : item.isUsedToday ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            borderRadius: 999,
+                            padding: ".12rem .45rem",
+                            fontSize: ".72rem",
+                            fontWeight: 900,
+                            color: "#991b1b",
+                            background: "#fee2e2",
+                            border: "1px solid #fecaca",
+                          }}
+                        >
+                          Today
+                        </span>
+                      ) : null}
+                    </div>
                     <p style={{ margin: ".22rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
                       Status: <b>{statusLabel[item.status] || item.status}</b> | Lifecycle: <b>{statusLabel[item.lifecycleStatus] || item.lifecycleStatus}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
                     </p>
