@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
@@ -14,6 +13,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 
@@ -809,13 +809,7 @@ export default function MoviedleGameClient({
             {revealedDetails?.summary ? (
               <p className="result-modal-copy"><strong>Summary:</strong> {revealedDetails?.summary}</p>
             ) : null}
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
-            </div>
+            <ResultDialogActions currentGameSlug="moviedle" onShare={handleShareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>

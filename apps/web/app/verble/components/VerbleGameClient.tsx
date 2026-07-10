@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
@@ -1784,13 +1784,7 @@ export default function VerbleGameClient({
                 );
               })}
             </div>
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={() => void shareResult()}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
-            </div>
+            <ResultDialogActions currentGameSlug="verble" onShare={shareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>

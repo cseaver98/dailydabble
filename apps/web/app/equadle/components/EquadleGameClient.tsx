@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
@@ -821,13 +821,7 @@ export default function EquadleGameClient({
             ) : (
               <p className="result-modal-answer">{displayEffectiveAnswer}</p>
             )}
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
-            </div>
+            <ResultDialogActions currentGameSlug="equadle" onShare={handleShareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
