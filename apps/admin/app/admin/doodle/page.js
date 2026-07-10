@@ -40,6 +40,8 @@ export default function DoodleAdminTab() {
   const [reorderMessage, setReorderMessage] = useState("");
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [deletingSlug, setDeletingSlug] = useState("");
+  const [answerDrafts, setAnswerDrafts] = useState({});
+  const [savingAnswerSlug, setSavingAnswerSlug] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -150,6 +152,56 @@ export default function DoodleAdminTab() {
       window.alert(payload.warning);
     }
     hydrateOverview(payload);
+  };
+
+  const updateAnswerDraft = (slug, field, value) => {
+    setAnswerDrafts((current) => ({
+      ...current,
+      [slug]: {
+        ...(current[slug] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveAnswerNames = async (item) => {
+    const draft = answerDrafts[item.slug] || {};
+    const answer = String(draft.answer ?? item.answer ?? "").trim();
+    const aliases = String(draft.aliases ?? (Array.isArray(item.aliases) ? item.aliases.join(", ") : "")).trim();
+    if (!answer) {
+      setLoadError("Answer is required.");
+      return;
+    }
+
+    setSavingAnswerSlug(item.slug);
+    setLoadError("");
+    try {
+      const response = await fetch("/api/admin/doodle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateAnswer",
+          slug: item.slug,
+          answer,
+          aliases,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setLoadError(payload.error || "Could not update answer names");
+        return;
+      }
+      setAnswerDrafts((current) => {
+        const next = { ...current };
+        delete next[item.slug];
+        return next;
+      });
+      hydrateOverview(payload);
+    } catch {
+      setLoadError("Could not update answer names");
+    } finally {
+      setSavingAnswerSlug("");
+    }
   };
 
   const deleteItem = async (slug) => {
@@ -544,6 +596,47 @@ export default function DoodleAdminTab() {
                     <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
                       Scheduled: <b>{item.scheduledPuzzleDate ? `${item.scheduledPuzzleDate}${item.isUsedToday ? " (Today)" : ""}` : "Not scheduled"}</b>
                     </p>
+                    <div style={{ marginTop: ".5rem", display: "grid", gap: ".4rem", maxWidth: 520 }}>
+                      <label style={{ display: "grid", gap: ".18rem", color: "#3f4750", fontSize: ".78rem", fontWeight: 800 }}>
+                        Answer
+                        <input
+                          type="text"
+                          value={answerDrafts[item.slug]?.answer ?? item.answer ?? ""}
+                          onChange={(event) => updateAnswerDraft(item.slug, "answer", event.target.value)}
+                          disabled={!item.hasProcessed || savingAnswerSlug === item.slug}
+                          style={{
+                            border: "1px solid #d8dce2",
+                            borderRadius: 10,
+                            padding: ".45rem .55rem",
+                            fontWeight: 700,
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: "grid", gap: ".18rem", color: "#3f4750", fontSize: ".78rem", fontWeight: 800 }}>
+                        Aliases
+                        <input
+                          type="text"
+                          placeholder="tv, telly"
+                          value={answerDrafts[item.slug]?.aliases ?? (Array.isArray(item.aliases) ? item.aliases.join(", ") : "")}
+                          onChange={(event) => updateAnswerDraft(item.slug, "aliases", event.target.value)}
+                          disabled={!item.hasProcessed || savingAnswerSlug === item.slug}
+                          style={{
+                            border: "1px solid #d8dce2",
+                            borderRadius: 10,
+                            padding: ".45rem .55rem",
+                          }}
+                        />
+                      </label>
+                      <button
+                        className="admin-btn"
+                        type="button"
+                        onClick={() => void saveAnswerNames(item)}
+                        disabled={!item.hasProcessed || savingAnswerSlug === item.slug}
+                        style={{ justifySelf: "start" }}
+                      >
+                        {savingAnswerSlug === item.slug ? "Saving..." : "Save answer names"}
+                      </button>
+                    </div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: ".35rem", alignItems: "start" }}>
                     <button className="admin-btn" type="button" onClick={() => void openPreview(item.slug)}>

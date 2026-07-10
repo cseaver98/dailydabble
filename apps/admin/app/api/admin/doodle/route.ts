@@ -96,6 +96,23 @@ const isValidStatus = (value: unknown): value is DoodleStatus =>
 const isValidStoredStatus = (value: unknown): value is StoredDoodleStatus =>
   typeof value === "string" && STORED_STATUS_VALUES.includes(value as StoredDoodleStatus);
 
+const normalizeAnswerText = (value: unknown): string =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const normalizeAliases = (value: unknown): string[] => {
+  const rawAliases = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(",")
+        .map((alias) => alias.trim());
+  return Array.from(new Set(rawAliases.map((alias) => normalizeAnswerText(alias)).filter(Boolean)));
+};
+
 const readJsonFile = <T>(path: string): T | null => {
   if (!existsSync(path)) {
     return null;
@@ -220,16 +237,64 @@ const updateManifestStagesForSlug = (slug: string, nextStages: unknown): void =>
   );
 };
 
+const updateManifestAnswerForSlug = (slug: string, answer: string, aliases: string[]): void => {
+  const manifestPath = resolve(getProcessedDir(), "puzzles.generated.json");
+  const parsed = readJsonFile<{
+    generatedAt?: string;
+    strategy?: string;
+    stageCount?: number;
+    items?: Array<Record<string, unknown> & { slug?: string }>;
+  }>(manifestPath);
+
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return;
+  }
+
+  let changed = false;
+  const nextItems = parsed.items.map((item) => {
+    if (item?.slug !== slug) {
+      return item;
+    }
+    changed = true;
+    return {
+      ...item,
+      answer,
+      aliases,
+    };
+  });
+
+  if (!changed) {
+    return;
+  }
+
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        generatedAt: parsed.generatedAt ?? new Date().toISOString(),
+        strategy: parsed.strategy ?? "balanced",
+        stageCount: parsed.stageCount ?? 5,
+        items: nextItems,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+};
+
 const readProcessedSummary = (
   slug: string,
-): { stageCount: number; pathCount: number; viewBox: string | null } | null => {
+): { answer: string | null; aliases: string[]; stageCount: number; pathCount: number; viewBox: string | null } | null => {
   const processedPath = resolve(getProcessedDir(), `${slug}.json`);
-  const parsed = readJsonFile<{ stageCount?: number; pathCount?: number; viewBox?: string }>(processedPath);
+  const parsed = readJsonFile<{ answer?: string; aliases?: string[]; stageCount?: number; pathCount?: number; viewBox?: string }>(processedPath);
   if (!parsed) {
     return null;
   }
 
   return {
+    answer: typeof parsed.answer === "string" ? parsed.answer : null,
+    aliases: Array.isArray(parsed.aliases) ? parsed.aliases.filter((alias): alias is string => typeof alias === "string") : [],
     stageCount: Number.isFinite(parsed.stageCount) ? Number(parsed.stageCount) : 0,
     pathCount: Number.isFinite(parsed.pathCount) ? Number(parsed.pathCount) : 0,
     viewBox: typeof parsed.viewBox === "string" ? parsed.viewBox : null,
@@ -453,7 +518,7 @@ const buildOverview = async () => {
 
   const { data: puzzleRows, error: puzzleRowsError } = await supabase
     .from("puzzles")
-    .select("id,slug,status");
+    .select("id,slug,status,answer,aliases");
 
   if (puzzleRowsError) {
     throw new Error(`Could not load doodle puzzle rows: ${puzzleRowsError.message}`);
@@ -461,8 +526,9 @@ const buildOverview = async () => {
 
   const puzzlesBySlug = new Map<string, string>();
   const puzzleStatusesBySlug = new Map<string, DoodleStatus>();
+  const puzzleAnswerBySlug = new Map<string, { answer: string | null; aliases: string[] }>();
   const puzzleIds: string[] = [];
-  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string; status?: string }> | null) ?? [])) {
+  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string; status?: string; answer?: string | null; aliases?: string[] | null }> | null) ?? [])) {
     if (typeof row.slug !== "string" || typeof row.id !== "string") {
       continue;
     }
@@ -470,6 +536,10 @@ const buildOverview = async () => {
     if (isValidStatus(row.status)) {
       puzzleStatusesBySlug.set(row.slug, row.status);
     }
+    puzzleAnswerBySlug.set(row.slug, {
+      answer: typeof row.answer === "string" ? row.answer : null,
+      aliases: Array.isArray(row.aliases) ? row.aliases.filter((alias): alias is string => typeof alias === "string") : [],
+    });
     puzzleIds.push(row.id);
   }
 
@@ -512,10 +582,13 @@ const buildOverview = async () => {
     const normalizedStatus: DoodleStatus = isFinished || scheduledPuzzleDate
       ? "approved"
       : dbStatus ?? storedStatus;
+    const dbAnswer = puzzleAnswerBySlug.get(slug) ?? null;
 
     return {
       slug,
       filename: file.filename,
+      answer: dbAnswer?.answer ?? processedSummary?.answer ?? normalizeAnswerText(slug),
+      aliases: dbAnswer?.aliases ?? processedSummary?.aliases ?? [],
       status: normalizedStatus,
       lifecycleStatus: isUsedToday ? "today" : latestUsedDate ? "finished" : nextScheduledDate ? "scheduled" : "unscheduled",
       statusUpdatedAt: state.updatedAt,
@@ -677,6 +750,8 @@ export async function PATCH(request: Request) {
       slug?: string;
       status?: string;
       action?: string;
+      answer?: string;
+      aliases?: string[] | string;
       fromIndex?: number;
       toIndex?: number;
       confirmDuplicate?: boolean;
@@ -750,6 +825,40 @@ export async function PATCH(request: Request) {
           processed,
         },
       });
+    }
+
+    if (payload.action === "updateAnswer") {
+      const answer = normalizeAnswerText(payload.answer);
+      const aliases = normalizeAliases(payload.aliases).filter((alias) => alias !== answer);
+      if (!answer) {
+        return NextResponse.json({ error: "Answer is required" }, { status: 400 });
+      }
+
+      const processedPath = resolve(getProcessedDir(), `${normalizedSlug}.json`);
+      const processed = readProcessedRecord(normalizedSlug);
+      if (!processed) {
+        return NextResponse.json({ error: "Processed doodle file not found. Run pipeline first." }, { status: 404 });
+      }
+
+      const nextProcessed = {
+        ...processed,
+        answer,
+        aliases,
+      };
+      writeFileSync(processedPath, `${JSON.stringify(nextProcessed, null, 2)}\n`, "utf8");
+      updateManifestAnswerForSlug(normalizedSlug, answer, aliases);
+
+      const supabase = getDoodleSupabaseAdmin();
+      const { error: updateError } = await supabase
+        .from("puzzles")
+        .update({ answer, aliases })
+        .eq("slug", normalizedSlug);
+      if (updateError) {
+        throw new Error(`Could not update doodle answer in Supabase: ${updateError.message}`);
+      }
+
+      const overview = await buildOverview();
+      return NextResponse.json({ ok: true, ...overview });
     }
 
     if (!isValidStatus(payload.status)) {
