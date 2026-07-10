@@ -4,6 +4,7 @@ import { games } from "@/lib/games";
 import { DailydabbleMenu } from "@dailydabble/ui";
 import { usePathname } from "next/navigation";
 import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
+import { useNextGameCountdown } from "@/lib/use-next-game-countdown";
 
 type GameMenuProps = {
   todayHref: string;
@@ -23,6 +24,8 @@ export default function GameMenu({
   const currentGame = games.find((game) => game.href === todayHref);
   const { completedGames } = useTodayCompletionStatus();
   const completedCount = games.filter((game) => completedGames[game.slug]).length;
+  const allGamesComplete = completedCount === games.length;
+  const nextGameCountdown = useNextGameCountdown(allGamesComplete);
   const pathname = usePathname();
   const hideTodayOption = hideToday || pathname?.startsWith(archiveHref);
 
@@ -35,6 +38,9 @@ export default function GameMenu({
         completed: completedCount,
         total: games.length,
         ariaLabel: `${completedCount} of ${games.length} games completed today`,
+        completionTitle: allGamesComplete ? "All games complete" : undefined,
+        completionMessage: allGamesComplete ? "Come back tomorrow to keep your streak going." : undefined,
+        completionCountdown: allGamesComplete ? `New games in ${nextGameCountdown || "--:--:--"}` : undefined,
       }}
       items={[
         { label: "Today", href: todayHref, id: "todayGameBtn", hidden: hideTodayOption, iconBackground: currentGame?.iconBackground },
