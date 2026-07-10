@@ -224,6 +224,16 @@ body {
   }
 }
 
+@media (max-width: 720px) {
+  :is(.agegaple-shell, .doodle-shell, .equadle-shell, .moviedle-shell, .sportle-shell, .verble-shell, .yeardle-shell) {
+    min-height: 100svh !important;
+  }
+
+  :is(.agegaple-shell, .doodle-shell, .equadle-shell, .moviedle-shell, .sportle-shell, .verble-shell, .yeardle-shell) main {
+    min-height: 0 !important;
+  }
+}
+
 @media (hover: none) and (pointer: coarse) {
   a[href],
   button,
