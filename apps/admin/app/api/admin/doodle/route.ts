@@ -47,6 +47,18 @@ type ProcessedDoodleRecord = {
   stageParts?: ProcessedStageSegment[][];
 };
 
+type DbDoodlePuzzleRow = {
+  id?: string;
+  slug?: string;
+  status?: string;
+  answer?: string | null;
+  aliases?: string[] | null;
+  view_box?: string | null;
+  stage_count?: number | null;
+  path_count?: number | null;
+  stages?: ProcessedStageSegment[][] | null;
+};
+
 const getDateInTimeZone = (timeZone: string): string => {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -321,6 +333,55 @@ const readProcessedRecord = (slug: string): ProcessedDoodleRecord | null => {
   return parsed;
 };
 
+const mapDbProcessedRecord = (row: DbDoodlePuzzleRow | null | undefined): ProcessedDoodleRecord | null => {
+  if (!row || typeof row.slug !== "string" || !Array.isArray(row.stages)) {
+    return null;
+  }
+
+  return {
+    slug: row.slug,
+    answer: typeof row.answer === "string" ? row.answer : undefined,
+    aliases: Array.isArray(row.aliases) ? row.aliases.filter((alias): alias is string => typeof alias === "string") : [],
+    viewBox: typeof row.view_box === "string" ? row.view_box : undefined,
+    stageCount: Number.isFinite(row.stage_count) ? Number(row.stage_count) : row.stages.length,
+    pathCount: Number.isFinite(row.path_count) ? Number(row.path_count) : 0,
+    stages: row.stages,
+  };
+};
+
+const getDbProcessedRecord = async (slug: string): Promise<ProcessedDoodleRecord | null> => {
+  const supabase = getDoodleSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("puzzles")
+    .select("slug,answer,aliases,view_box,stage_count,path_count,stages")
+    .eq("slug", slug)
+    .maybeSingle<DbDoodlePuzzleRow>();
+  if (error) {
+    throw new Error(`Could not load Doodle processed stages: ${error.message}`);
+  }
+  return mapDbProcessedRecord(data);
+};
+
+const saveDbProcessedRecord = async (slug: string, processed: ProcessedDoodleRecord, status?: DoodleStatus): Promise<void> => {
+  const supabase = getDoodleSupabaseAdmin();
+  const payload = {
+    slug,
+    answer: (processed.answer || slug).trim().toLowerCase(),
+    aliases: Array.isArray(processed.aliases) ? processed.aliases.filter((alias): alias is string => typeof alias === "string" && alias.trim().length > 0) : [],
+    view_box: typeof processed.viewBox === "string" ? processed.viewBox : "0 0 512 512",
+    stage_count: Number.isFinite(processed.stageCount) ? Number(processed.stageCount) : Array.isArray(processed.stages) ? processed.stages.length : 5,
+    path_count: Number.isFinite(processed.pathCount) ? Number(processed.pathCount) : 0,
+    stages: Array.isArray(processed.stages) ? processed.stages : [],
+    ...(status ? { status } : {}),
+    source_filename: `${slug}.svg`,
+  };
+
+  const { error } = await supabase.from("puzzles").upsert(payload, { onConflict: "slug" });
+  if (error) {
+    throw new Error(`Could not save Doodle processed stages: ${error.message}`);
+  }
+};
+
 const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<void> => {
   const supabase = getDoodleSupabaseAdmin();
 
@@ -329,7 +390,7 @@ const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<voi
     return;
   }
 
-  const processed = readProcessedRecord(slug);
+  const processed = readProcessedRecord(slug) ?? await getDbProcessedRecord(slug);
   if (
     !processed ||
     typeof processed.answer !== "string" ||
@@ -345,22 +406,7 @@ const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<voi
     ? processed.aliases.filter((alias): alias is string => typeof alias === "string" && alias.trim().length > 0)
     : [];
 
-  const upsertPayload = {
-    slug,
-    answer: processed.answer.trim().toLowerCase(),
-    aliases,
-    view_box: processed.viewBox,
-    stage_count: Number(processed.stageCount),
-    path_count: Number(processed.pathCount),
-    stages: processed.stages,
-    status,
-    source_filename: `${slug}.svg`,
-  };
-
-  const { error } = await supabase.from("puzzles").upsert(upsertPayload, { onConflict: "slug" });
-  if (error) {
-    throw new Error(`Could not sync puzzle status to Supabase: ${error.message}`);
-  }
+  await saveDbProcessedRecord(slug, { ...processed, aliases }, status);
 };
 
 const getScheduleWarning = async (slug: string): Promise<string | null> => {
@@ -556,7 +602,7 @@ const buildOverview = async () => {
 
   const { data: puzzleRows, error: puzzleRowsError } = await supabase
     .from("puzzles")
-    .select("id,slug,status,answer,aliases");
+    .select("id,slug,status,answer,aliases,view_box,stage_count,path_count,stages");
 
   if (puzzleRowsError) {
     throw new Error(`Could not load doodle puzzle rows: ${puzzleRowsError.message}`);
@@ -565,8 +611,9 @@ const buildOverview = async () => {
   const puzzlesBySlug = new Map<string, string>();
   const puzzleStatusesBySlug = new Map<string, DoodleStatus>();
   const puzzleAnswerBySlug = new Map<string, { answer: string | null; aliases: string[] }>();
+  const puzzleProcessedBySlug = new Map<string, ProcessedDoodleRecord>();
   const puzzleIds: string[] = [];
-  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string; status?: string; answer?: string | null; aliases?: string[] | null }> | null) ?? [])) {
+  for (const row of ((puzzleRows as DbDoodlePuzzleRow[] | null) ?? [])) {
     if (typeof row.slug !== "string" || typeof row.id !== "string") {
       continue;
     }
@@ -578,6 +625,10 @@ const buildOverview = async () => {
       answer: typeof row.answer === "string" ? row.answer : null,
       aliases: Array.isArray(row.aliases) ? row.aliases.filter((alias): alias is string => typeof alias === "string") : [],
     });
+    const dbProcessed = mapDbProcessedRecord(row);
+    if (dbProcessed) {
+      puzzleProcessedBySlug.set(row.slug, dbProcessed);
+    }
     puzzleIds.push(row.id);
   }
 
@@ -604,7 +655,16 @@ const buildOverview = async () => {
 
   const items = storageFiles.map((file) => {
     const slug = file.slug;
-    const processedSummary = readProcessedSummary(slug);
+    const dbProcessed = puzzleProcessedBySlug.get(slug) ?? null;
+    const processedSummary = readProcessedSummary(slug) ?? (dbProcessed
+      ? {
+          answer: dbProcessed.answer ?? null,
+          aliases: dbProcessed.aliases ?? [],
+          stageCount: Number(dbProcessed.stageCount ?? 0),
+          pathCount: Number(dbProcessed.pathCount ?? 0),
+          viewBox: dbProcessed.viewBox ?? null,
+        }
+      : null);
     const state = reviewState[slug] ?? { status: "pending" as DoodleStatus, updatedAt: nowIso };
     const puzzleId = puzzlesBySlug.get(slug) ?? null;
     const scheduleDates = puzzleId ? (scheduleDatesByPuzzleId.get(puzzleId) ?? []).sort((a, b) => a.localeCompare(b)) : [];
@@ -635,8 +695,8 @@ const buildOverview = async () => {
       stageCount: processedSummary?.stageCount ?? 0,
       pathCount: processedSummary?.pathCount ?? 0,
       viewBox: processedSummary?.viewBox ?? null,
-      previewReady: existsSync(resolve(previewDir, `${slug}.html`)),
-      inManifest: manifestSlugs.has(slug),
+      previewReady: Boolean(processedSummary) || existsSync(resolve(previewDir, `${slug}.html`)),
+      inManifest: manifestSlugs.has(slug) || Boolean(dbProcessed),
       storagePath: storagePathForSlug(slug),
       scheduledPuzzleDate,
       isUsedToday,
@@ -715,7 +775,7 @@ export async function GET(request: Request) {
           viewBox?: string;
           stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
           stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
-        }>(processedPath),
+        }>(processedPath) ?? await getDbProcessedRecord(normalized),
       };
 
       return NextResponse.json({ ok: true, item: detail });
@@ -813,7 +873,7 @@ export async function PATCH(request: Request) {
         strategy?: string;
         stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
         stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
-      }>(processedPath);
+      }>(processedPath) ?? await getDbProcessedRecord(normalizedSlug);
 
       if (!processed || !Array.isArray(processed.stages)) {
         return NextResponse.json({ error: "Processed doodle stages not found. Run pipeline first." }, { status: 404 });
@@ -840,8 +900,11 @@ export async function PATCH(request: Request) {
       }
 
       processed.stageCount = processed.stageParts?.length ?? processed.stages.length;
-      writeFileSync(processedPath, `${JSON.stringify(processed, null, 2)}\n`, "utf8");
-      updateManifestStagesForSlug(normalizedSlug, processed.stages);
+      if (shouldUseLocalDoodleFiles()) {
+        writeFileSync(processedPath, `${JSON.stringify(processed, null, 2)}\n`, "utf8");
+        updateManifestStagesForSlug(normalizedSlug, processed.stages);
+      }
+      await saveDbProcessedRecord(normalizedSlug, processed);
 
       let rawSvg = await downloadStorageSvg(normalizedSlug);
       if (!rawSvg) {
@@ -866,7 +929,7 @@ export async function PATCH(request: Request) {
       }
 
       const processedPath = resolve(getProcessedDir(), `${normalizedSlug}.json`);
-      const processed = readProcessedRecord(normalizedSlug);
+      const processed = readProcessedRecord(normalizedSlug) ?? await getDbProcessedRecord(normalizedSlug);
       if (!processed) {
         return NextResponse.json({ error: "Processed doodle file not found. Run pipeline first." }, { status: 404 });
       }
@@ -876,8 +939,11 @@ export async function PATCH(request: Request) {
         answer,
         aliases,
       };
-      writeFileSync(processedPath, `${JSON.stringify(nextProcessed, null, 2)}\n`, "utf8");
-      updateManifestAnswerForSlug(normalizedSlug, answer, aliases);
+      if (shouldUseLocalDoodleFiles()) {
+        writeFileSync(processedPath, `${JSON.stringify(nextProcessed, null, 2)}\n`, "utf8");
+        updateManifestAnswerForSlug(normalizedSlug, answer, aliases);
+      }
+      await saveDbProcessedRecord(normalizedSlug, nextProcessed);
 
       const supabase = getDoodleSupabaseAdmin();
       const { error: updateError } = await supabase
