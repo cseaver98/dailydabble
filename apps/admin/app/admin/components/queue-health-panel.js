@@ -49,25 +49,25 @@ export default function QueueHealthPanel({ queueHealth }) {
 
       <div className="admin-queue-health-grid">
         <div className="admin-queue-health-metric">
-          <span>Approved</span>
+          <span>Approved total</span>
           <strong>{health.approved}</strong>
         </div>
         <div className="admin-queue-health-metric">
-          <span>Scheduled</span>
+          <span>Used / scheduled</span>
           <strong>{health.scheduled}</strong>
         </div>
         <div className="admin-queue-health-metric">
-          <span>Runway days</span>
+          <span>Future runway</span>
           <strong>{health.runwayDays}</strong>
         </div>
       </div>
 
       {health.isLow ? (
         <p className="admin-queue-health-copy">
-          Low queue warning: runway is below {health.lowQueueThreshold} day{health.lowQueueThreshold === 1 ? "" : "s"}. Add or approve more candidates.
+          Low queue warning: future runway is below {health.lowQueueThreshold} day{health.lowQueueThreshold === 1 ? "" : "s"}. Add or approve more candidates.
         </p>
       ) : (
-        <p className="admin-queue-health-copy">Queue has enough approved runway for the current threshold.</p>
+        <p className="admin-queue-health-copy">Queue has enough future approved runway for the current threshold.</p>
       )}
     </section>
   );
