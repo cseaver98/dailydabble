@@ -7,6 +7,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
+import EquadleCalculator from "./EquadleCalculator";
 import MainNav from "./MainNav";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
@@ -227,6 +228,7 @@ export default function EquadleGameClient({
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [revealingRowIndex, setRevealingRowIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
@@ -436,18 +438,18 @@ export default function EquadleGameClient({
   const canDeleteGuess = gameState === "playing" && guess.length > 0;
 
   const appendGuessChar = useCallback((char: string) => {
-    if (gameState !== "playing") {
+    if (gameState !== "playing" || isCalculatorOpen) {
       return;
     }
     setGuess((current) => sanitizeEquationInput(`${current}${normalizeEquationInput(char)}`, guessInputLength));
-  }, [gameState, guessInputLength]);
+  }, [gameState, guessInputLength, isCalculatorOpen]);
 
   const removeGuessChar = useCallback(() => {
-    if (gameState !== "playing") {
+    if (gameState !== "playing" || isCalculatorOpen) {
       return;
     }
     setGuess((current) => current.slice(0, -1));
-  }, [gameState]);
+  }, [gameState, isCalculatorOpen]);
 
   const onSubmit = useCallback(async (event: { preventDefault: () => void }) => {
     event.preventDefault();
@@ -560,7 +562,7 @@ export default function EquadleGameClient({
   }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, isArchiveView, lockDailyCompletion, maxGuesses, puzzle]);
 
   useEffect(() => {
-    if (gameState !== "playing") {
+    if (gameState !== "playing" || isCalculatorOpen) {
       return;
     }
 
@@ -586,7 +588,7 @@ export default function EquadleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [appendGuessChar, canSubmitGuess, gameState, onSubmit, removeGuessChar]);
+  }, [appendGuessChar, canSubmitGuess, gameState, isCalculatorOpen, onSubmit, removeGuessChar]);
 
   const answerEquation = resolvedAnswer || puzzle?.answer || "";
   const effectiveAnswer = answerEquation || "Unavailable";
@@ -776,11 +778,25 @@ export default function EquadleGameClient({
                 </div>
               ))}
             </div>
+            <button
+              aria-label="Open calculator"
+              className="calculator-trigger"
+              onClick={() => setIsCalculatorOpen(true)}
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="5" y="2.75" width="14" height="18.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M8 6.5h8v3H8z" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 17h.01M12 17h.01M15.5 17h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
 
           {gameState === "playing" && message ? <p className="message" data-kind={gameState}>{message}</p> : null}
         </section>
       </main>
+
+      <EquadleCalculator isOpen={isCalculatorOpen} onClose={() => setIsCalculatorOpen(false)} />
 
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>

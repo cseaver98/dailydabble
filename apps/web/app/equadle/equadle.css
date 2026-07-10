@@ -59,6 +59,218 @@
   gap: 0.85rem;
 }
 
+.equadle-shell .calculator-trigger {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand-strong) 25%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 45%, white);
+  color: var(--brand-strong);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.equadle-shell .calculator-trigger svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.equadle-shell .calculator-trigger:hover {
+  background: color-mix(in srgb, var(--brand-soft) 72%, white);
+  transform: translateY(-1px);
+}
+
+.equadle-shell .calculator-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(26, 22, 22, 0.48);
+  animation: equadle-calculator-fade-in 160ms ease both;
+}
+
+.equadle-shell .calculator-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  width: min(390px, 92vw);
+  height: 100dvh;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  background: #fff;
+  padding: 1.2rem;
+  box-shadow: -20px 0 50px rgba(44, 47, 49, 0.2);
+  animation: equadle-calculator-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.equadle-shell .calculator-backdrop[data-state="closing"] {
+  animation: equadle-calculator-fade-out 180ms ease both;
+}
+
+.equadle-shell .calculator-drawer[data-state="closing"] {
+  animation: equadle-calculator-slide-out 180ms ease-in both;
+}
+
+.equadle-shell .calculator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.equadle-shell .calculator-header h2,
+.equadle-shell .calculator-kicker {
+  margin: 0;
+}
+
+.equadle-shell .calculator-header h2 {
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.equadle-shell .calculator-kicker {
+  color: var(--brand-strong);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equadle-shell .calculator-close {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--surface-container, var(--outline-soft));
+  border-radius: 999px;
+  background: var(--surface-container-lowest, var(--surface));
+  color: var(--foreground, var(--text));
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 200ms ease;
+}
+
+.equadle-shell .calculator-close:hover {
+  background: var(--surface-container-high, var(--surface-high));
+}
+
+.equadle-shell .calculator-display {
+  display: flex;
+  min-height: 7.5rem;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  overflow: hidden;
+  border: 1px solid var(--outline-soft);
+  border-radius: 1rem;
+  background: var(--surface-low);
+  padding: 1rem;
+}
+
+.equadle-shell .calculator-display span {
+  min-height: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.equadle-shell .calculator-display strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: clamp(1.75rem, 8vw, 2.55rem);
+  font-weight: 850;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.equadle-shell .calculator-utility-row,
+.equadle-shell .calculator-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.equadle-shell .calculator-utility-row {
+  grid-template-columns: 1fr 4rem;
+}
+
+.equadle-shell .calculator-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.equadle-shell .calculator-utility-row button,
+.equadle-shell .calculator-grid button {
+  min-height: 3.5rem;
+  border: 1px solid var(--outline-soft);
+  border-radius: 0.85rem;
+  background: var(--surface-low);
+  color: var(--text);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 850;
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.equadle-shell .calculator-utility-row button {
+  min-height: 2.8rem;
+  color: var(--brand-strong);
+  font-size: 0.85rem;
+}
+
+.equadle-shell .calculator-grid button.operator {
+  background: color-mix(in srgb, var(--brand-soft) 52%, white);
+  color: var(--brand-strong);
+  font-size: 1.3rem;
+}
+
+.equadle-shell .calculator-grid button.equals {
+  border-color: var(--brand-strong);
+  background: var(--brand-strong);
+  color: white;
+  font-size: 1.3rem;
+}
+
+.equadle-shell .calculator-utility-row button:hover,
+.equadle-shell .calculator-grid button:hover {
+  transform: translateY(-1px);
+  background: var(--surface-high);
+}
+
+.equadle-shell .calculator-grid button.equals:hover {
+  background: color-mix(in srgb, var(--brand-strong) 86%, black);
+}
+
+@keyframes equadle-calculator-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes equadle-calculator-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes equadle-calculator-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes equadle-calculator-slide-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
 .equadle-shell .game-meta-row {
   display: grid;
   gap: 0.5rem;
