@@ -21,7 +21,7 @@ export default function GameMenu({
   menuId = "navMenu",
 }: GameMenuProps) {
   const currentGame = games.find((game) => game.href === todayHref);
-  const completedGames = useTodayCompletionStatus();
+  const { completedGames } = useTodayCompletionStatus();
   const completedCount = games.filter((game) => completedGames[game.slug]).length;
   const pathname = usePathname();
   const hideTodayOption = hideToday || pathname?.startsWith(archiveHref);
