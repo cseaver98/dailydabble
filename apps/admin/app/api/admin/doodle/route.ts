@@ -581,6 +581,33 @@ const deleteStorageSvg = async (slug: string): Promise<void> => {
   }
 };
 
+const deleteDbPuzzleBySlug = async (slug: string): Promise<boolean> => {
+  const supabase = getDoodleSupabaseAdmin();
+  const { data: puzzle, error: lookupError } = await supabase
+    .from("puzzles")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle<{ id: string }>();
+  if (lookupError) {
+    throw new Error(`Could not load Doodle puzzle for deletion: ${lookupError.message}`);
+  }
+  if (!puzzle?.id) {
+    return false;
+  }
+
+  const { error: scheduleError } = await supabase.from("daily_schedule").delete().eq("puzzle_id", puzzle.id);
+  if (scheduleError) {
+    throw new Error(`Could not delete Doodle schedule rows: ${scheduleError.message}`);
+  }
+
+  const { error: puzzleError } = await supabase.from("puzzles").delete().eq("id", puzzle.id);
+  if (puzzleError) {
+    throw new Error(`Could not delete Doodle puzzle row: ${puzzleError.message}`);
+  }
+
+  return true;
+};
+
 const writeLocalRaw = (slug: string, content: string): void => {
   if (!shouldUseLocalDoodleFiles()) {
     return;
@@ -1004,11 +1031,16 @@ export async function DELETE(request: Request) {
       rawSvg = readLocalRawSvg(normalizedSlug);
     }
 
-    if (!rawSvg) {
+    const dbProcessed = await getDbProcessedRecord(normalizedSlug);
+
+    if (!rawSvg && !dbProcessed) {
       return NextResponse.json({ error: "Doodle file not found" }, { status: 404 });
     }
 
-    await deleteStorageSvg(normalizedSlug);
+    if (rawSvg) {
+      await deleteStorageSvg(normalizedSlug);
+    }
+    const deletedDbPuzzle = await deleteDbPuzzleBySlug(normalizedSlug);
 
     const rawPath = localRawPathForSlug(normalizedSlug);
     if (shouldUseLocalDoodleFiles() && existsSync(rawPath) && statSync(rawPath).isFile()) {
@@ -1032,7 +1064,7 @@ export async function DELETE(request: Request) {
     }
 
     const overview = await buildOverview();
-    return NextResponse.json({ ok: true, deletedSlug: normalizedSlug, ...overview });
+    return NextResponse.json({ ok: true, deletedSlug: normalizedSlug, deletedDbPuzzle, ...overview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not delete doodle";
     return NextResponse.json({ error: message }, { status: 500 });
