@@ -280,16 +280,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.3rem;
-  height: 2.3rem;
-  border: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--surface-container, rgba(171, 173, 176, 0.28));
   border-radius: 999px;
-  background: var(--surface-container-low, #eff1f4);
+  background: var(--surface-container-lowest, #fff);
   color: var(--foreground, #2c2f31);
   cursor: pointer;
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: 1.125rem;
+  font-weight: 700;
   line-height: 1;
+  transition: background-color 200ms ease;
 }
 
 .nav-menu-close:hover,
