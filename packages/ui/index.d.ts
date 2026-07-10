@@ -37,6 +37,8 @@ export type DailydabbleMenuProgressSummary = {
   completionTitle?: string;
   completionMessage?: string;
   completionCountdown?: string;
+  completionActionLabel?: string;
+  completionActionHref?: string;
 };
 
 export type DailydabbleUnavailableProps = {

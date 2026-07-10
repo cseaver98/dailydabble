@@ -53,7 +53,7 @@ export default function EmailPreferencesForm({
   };
 
   return (
-    <section className="rounded-2xl bg-[#f5f6f9] px-4 py-4">
+    <section id="email-preferences" className="scroll-mt-24 rounded-2xl bg-[#f5f6f9] px-4 py-4">
       <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Email preferences</p>
       <div className="mt-4 grid gap-3">
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white px-4 py-3">

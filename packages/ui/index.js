@@ -212,11 +212,25 @@ export function DailydabbleMenu({
                     progressSummary.completionMessage
                       ? React.createElement("p", null, progressSummary.completionMessage)
                       : null,
-                    progressSummary.completionCountdown
+                    progressSummary.completionCountdown ||
+                    (progressSummary.completionActionLabel && progressSummary.completionActionHref)
                       ? React.createElement(
-                          "strong",
-                          { className: "nav-menu-progress-countdown" },
-                          progressSummary.completionCountdown,
+                          "div",
+                          { className: "nav-menu-progress-footer" },
+                          progressSummary.completionCountdown
+                            ? React.createElement(
+                                "strong",
+                                { className: "nav-menu-progress-countdown" },
+                                progressSummary.completionCountdown,
+                              )
+                            : null,
+                          progressSummary.completionActionLabel && progressSummary.completionActionHref
+                            ? React.createElement(
+                                "a",
+                                { className: "nav-menu-progress-action", href: progressSummary.completionActionHref },
+                                progressSummary.completionActionLabel,
+                              )
+                            : null,
                         )
                       : null,
                   )
