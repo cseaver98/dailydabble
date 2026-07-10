@@ -26,6 +26,45 @@ const normalizeAliases = (aliases: string[]): string[] =>
     .map((item) => normalizeName(item))
     .filter(Boolean);
 
+const getScheduleWarning = async (supabase: ReturnType<typeof getSupabaseSportleAdmin>, athleteId: string) => {
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("athlete_id", athleteId)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Sportle schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Sportle athlete has already been scheduled or played (${scheduledDate}).` : null;
+};
+
+const getDuplicateWarning = async (supabase: ReturnType<typeof getSupabaseSportleAdmin>, athleteId: string) => {
+  const { data: athlete, error: athleteError } = await supabase
+    .from("athletes")
+    .select("sport,full_name")
+    .eq("id", athleteId)
+    .maybeSingle<{ sport: string; full_name: string }>();
+  if (athleteError) {
+    throw new Error(`Failed to check Sportle athlete duplicates: ${athleteError.message}`);
+  }
+  if (!athlete?.sport || !athlete.full_name) return null;
+  const { data, error } = await supabase
+    .from("athletes")
+    .select("id,full_name")
+    .eq("sport", athlete.sport)
+    .neq("id", athleteId);
+  if (error) {
+    throw new Error(`Failed to check Sportle athlete duplicates: ${error.message}`);
+  }
+  const targetName = normalizeName(athlete.full_name);
+  const hasDuplicate = ((data as Array<{ id: string; full_name: string }> | null) ?? []).some(
+    (row) => normalizeName(row.full_name) === targetName,
+  );
+  return hasDuplicate ? "Heads up: this Sportle athlete already exists as another candidate." : null;
+};
+
 type WikipediaSummary = {
   description?: string | null;
   extract?: string | null;
@@ -260,6 +299,21 @@ export async function POST(request: Request) {
       }
 
       const normalized = normalizeName(fullName);
+      const { data: existing, error: existingError } = await supabase
+        .from("athletes")
+        .select("id")
+        .eq("sport", sport)
+        .eq("full_name_normalized", normalized)
+        .limit(1);
+      if (existingError) {
+        throw new Error(`Failed to check existing Sportle athletes: ${existingError.message}`);
+      }
+      if ((existing ?? []).length > 0) {
+        return NextResponse.json(
+          { duplicateWarning: "This Sportle athlete already exists as another candidate." },
+          { status: 409 },
+        );
+      }
       const { data, error } = await supabase
         .from("athletes")
         .insert({
@@ -308,6 +362,21 @@ export async function POST(request: Request) {
       const normalized = normalizeName(fullName);
       const sourceKey = `${sport}-${normalized.replace(/\s+/g, "-")}`;
       const keyStat2 = description || "Professional athlete";
+      const { data: existing, error: existingError } = await supabase
+        .from("athletes")
+        .select("id")
+        .eq("sport", sport)
+        .eq("full_name_normalized", normalized)
+        .limit(1);
+      if (existingError) {
+        throw new Error(`Failed to check existing Sportle athletes: ${existingError.message}`);
+      }
+      if ((existing ?? []).length > 0) {
+        return NextResponse.json(
+          { duplicateWarning: "This Sportle athlete already exists as another candidate." },
+          { status: 409 },
+        );
+      }
 
       const { data, error } = await supabase
         .from("athletes")
@@ -365,6 +434,7 @@ export async function PATCH(request: Request) {
       wikipediaUrl?: string;
       headshotUrl?: string;
       isActive?: boolean;
+      confirmDuplicate?: boolean;
     };
 
     const athleteId = String(payload.athleteId || "");
@@ -380,6 +450,14 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Invalid status" }, { status: 400 });
       }
       const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
+      const warnings =
+        status === "approved"
+          ? (await Promise.all([getDuplicateWarning(supabase, athleteId), getScheduleWarning(supabase, athleteId)])).filter(Boolean)
+          : [];
+      const warning = warnings.length > 0 ? warnings.join("\n") : null;
+      if (warning && payload.confirmDuplicate !== true) {
+        return NextResponse.json({ duplicateWarning: warning }, { status: 409 });
+      }
       const { error } = await supabase
         .from("athletes")
         .update({ status, reviewed_at: reviewedAt })
@@ -387,7 +465,7 @@ export async function PATCH(request: Request) {
       if (error) {
         throw new Error(`Failed to update athlete status: ${error.message}`);
       }
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, warning });
     }
 
     const fullName = String(payload.fullName || "").trim();

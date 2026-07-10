@@ -28,6 +28,42 @@ const getSupabaseEquadleAdmin = () =>
     },
   });
 
+const getScheduleWarning = async (supabase: ReturnType<typeof getSupabaseEquadleAdmin>, puzzleId: string) => {
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("puzzle_id", puzzleId)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Equadle schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Equadle puzzle has already been scheduled or played (${scheduledDate}).` : null;
+};
+
+const getDuplicateWarning = async (supabase: ReturnType<typeof getSupabaseEquadleAdmin>, puzzleId: string) => {
+  const { data: puzzle, error: puzzleError } = await supabase
+    .from("puzzles")
+    .select("equation")
+    .eq("id", puzzleId)
+    .maybeSingle<{ equation: string }>();
+  if (puzzleError) {
+    throw new Error(`Failed to check Equadle puzzle duplicates: ${puzzleError.message}`);
+  }
+  if (!puzzle?.equation) return null;
+  const { data, error } = await supabase
+    .from("puzzles")
+    .select("id")
+    .eq("equation", puzzle.equation)
+    .neq("id", puzzleId)
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Equadle puzzle duplicates: ${error.message}`);
+  }
+  return (data ?? []).length > 0 ? "Heads up: this Equadle equation already exists as another candidate." : null;
+};
+
 const tokenizeExpression = (expr: string): string[] => {
   const tokens = expr.match(/\d+|[+\-*/]/g) || [];
   if (tokens.join("") !== expr) {
@@ -291,6 +327,20 @@ export async function POST(request: Request) {
 
     if (action === "add-puzzle") {
       const equation = validateEquation(payload.equation ?? "", 8);
+      const { data: existing, error: existingError } = await supabase
+        .from("puzzles")
+        .select("id")
+        .eq("equation", equation)
+        .limit(1);
+      if (existingError) {
+        throw new Error(`Failed to check existing Equadle puzzles: ${existingError.message}`);
+      }
+      if ((existing ?? []).length > 0) {
+        return NextResponse.json(
+          { duplicateWarning: "This Equadle equation already exists as another candidate." },
+          { status: 409 },
+        );
+      }
       const { data, error } = await supabase
         .from("puzzles")
         .insert({
@@ -350,7 +400,11 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const payload = (await request.json().catch(() => ({}))) as { puzzleId?: string; status?: CandidateStatus };
+    const payload = (await request.json().catch(() => ({}))) as {
+      puzzleId?: string;
+      status?: CandidateStatus;
+      confirmDuplicate?: boolean;
+    };
     const puzzleId = String(payload.puzzleId || "");
     const status = String(payload.status || "") as CandidateStatus;
     if (!puzzleId || !validStatuses.includes(status)) {
@@ -359,6 +413,14 @@ export async function PATCH(request: Request) {
 
     const reviewedAt = status === "pending_review" ? null : new Date().toISOString();
     const supabase = getSupabaseEquadleAdmin();
+    const warnings =
+      status === "approved"
+        ? (await Promise.all([getDuplicateWarning(supabase, puzzleId), getScheduleWarning(supabase, puzzleId)])).filter(Boolean)
+        : [];
+    const warning = warnings.length > 0 ? warnings.join("\n") : null;
+    if (warning && payload.confirmDuplicate !== true) {
+      return NextResponse.json({ duplicateWarning: warning }, { status: 409 });
+    }
     const { error } = await supabase
       .from("puzzles")
       .update({ status, reviewed_at: reviewedAt })
@@ -368,7 +430,7 @@ export async function PATCH(request: Request) {
       throw new Error(`Failed to update puzzle status: ${error.message}`);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, warning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update Equadle candidate";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -584,7 +584,9 @@ const findOrCreateCandidate = async ({
     .maybeSingle();
 
   if (findError) throw findError;
-  if (existing?.id) return existing.id;
+  if (existing?.id) {
+    return { candidateId: existing.id, created: false };
+  }
 
   const { data, error } = await supabase
     .from("puzzle_candidates")
@@ -608,7 +610,7 @@ const findOrCreateCandidate = async ({
     .single();
 
   if (error) throw error;
-  return data.id;
+  return { candidateId: data.id, created: true };
 };
 
 const loadUsedCoupleKeys = async () => {
@@ -1155,13 +1157,22 @@ export const runAgegapleSeed = async ({
       personB: item.personB,
       relationshipType: item.relationshipType,
     });
-    const candidateId = await findOrCreateCandidate({
+    const { candidateId, created } = await findOrCreateCandidate({
       coupleId,
       ageGap,
       qualityScore: item.qualityScore,
       editorialMetadata,
       reviewNotes: "Needs Wikimedia Commons portraits and photo years before approval.",
     });
+
+    if (!created) {
+      usedQidKeys.add(coupleKey);
+      usedNameKeys.add(normalizeNameKey(item.personA.name, item.personB.name));
+      log(
+        `Skipped ${item.personA.name} + ${item.personB.name}: candidate ${candidateId} already exists.`,
+      );
+      continue;
+    }
 
     createdCount += 1;
     usedQidKeys.add(coupleKey);

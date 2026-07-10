@@ -220,6 +220,10 @@ export default function YeardleAdminTab() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (payload.duplicateWarning) {
+          window.alert(payload.duplicateWarning);
+          return;
+        }
         throw new Error(payload.error || "Failed to add manual candidate");
       }
 
@@ -340,7 +344,7 @@ export default function YeardleAdminTab() {
     }
   };
 
-  const patchStatus = async (id, status) => {
+  const patchStatus = async (id, status, confirmDuplicate = false) => {
     if (status === "finished") {
       return;
     }
@@ -348,12 +352,21 @@ export default function YeardleAdminTab() {
     const response = await fetch("/api/admin/yeardle", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: id, status }),
+      body: JSON.stringify({ eventId: id, status, confirmDuplicate }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (payload.duplicateWarning) {
+        if (window.confirm(`${payload.duplicateWarning}\n\nApprove anyway?`)) {
+          await patchStatus(id, status, true);
+        }
+        return;
+      }
       setError(payload.error || "Failed to update status");
       return;
+    }
+    if (payload.warning && !confirmDuplicate) {
+      window.alert(payload.warning);
     }
     await load({ page: currentPage, status: statusFilter });
   };

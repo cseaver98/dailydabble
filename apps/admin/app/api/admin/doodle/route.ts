@@ -287,6 +287,32 @@ const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<voi
   }
 };
 
+const getScheduleWarning = async (slug: string): Promise<string | null> => {
+  const supabase = getDoodleSupabaseAdmin();
+  const { data: puzzle, error: puzzleError } = await supabase
+    .from("puzzles")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle<{ id: string }>();
+  if (puzzleError) {
+    throw new Error(`Could not check Doodle puzzle history: ${puzzleError.message}`);
+  }
+  if (!puzzle?.id) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("puzzle_id", puzzle.id)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Could not check Doodle schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Doodle puzzle has already been scheduled or played (${scheduledDate}).` : null;
+};
+
 const ensureStorageBucket = async () => {
   const supabase = getDoodleSupabaseAdmin();
   const { error } = await supabase.storage.createBucket(DOODLE_STORAGE_BUCKET, {
@@ -606,6 +632,15 @@ export async function POST(request: Request) {
     if (!slug) {
       return NextResponse.json({ error: "Invalid SVG filename" }, { status: 400 });
     }
+    const currentState = loadReviewState();
+    const existingRawSvg = await downloadStorageSvg(slug);
+    const localPath = resolve(getRawDir(), `${slug}.svg`);
+    if (currentState[slug] || existingRawSvg || existsSync(localPath)) {
+      return NextResponse.json(
+        { duplicateWarning: "This Doodle filename already exists as another candidate." },
+        { status: 409 },
+      );
+    }
 
     const content = Buffer.from(await file.arrayBuffer()).toString("utf8");
     if (!content.includes("<svg")) {
@@ -615,7 +650,6 @@ export async function POST(request: Request) {
     await uploadStorageSvg(slug, content);
     writeLocalRaw(slug, content);
 
-    const currentState = loadReviewState();
     if (!currentState[slug]) {
       currentState[slug] = { status: "pending", updatedAt: new Date().toISOString() };
       saveReviewState(currentState);
@@ -637,6 +671,7 @@ export async function PATCH(request: Request) {
       action?: string;
       fromIndex?: number;
       toIndex?: number;
+      confirmDuplicate?: boolean;
     };
     const normalizedSlug = normalizeSlug(payload.slug ?? "");
     if (!normalizedSlug) {
@@ -725,6 +760,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Doodle file not found" }, { status: 404 });
     }
 
+    const warning = payload.status === "approved" ? await getScheduleWarning(normalizedSlug) : null;
+    if (warning && payload.confirmDuplicate !== true) {
+      return NextResponse.json({ duplicateWarning: warning }, { status: 409 });
+    }
     await syncPuzzleStatus(normalizedSlug, payload.status);
     const state = loadReviewState();
     state[normalizedSlug] = {
@@ -734,7 +773,7 @@ export async function PATCH(request: Request) {
     saveReviewState(state);
 
     const overview = await buildOverview();
-    return NextResponse.json({ ok: true, ...overview });
+    return NextResponse.json({ ok: true, warning, ...overview });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update doodle status";
     return NextResponse.json({ error: message }, { status: 500 });

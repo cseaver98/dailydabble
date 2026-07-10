@@ -178,13 +178,15 @@ export default function MoviedleAdminTab() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (payload.duplicateWarning) {
+          window.alert(payload.duplicateWarning);
+          return;
+        }
         throw new Error(payload.error || "Failed to create candidate from title");
       }
 
       setCreateStatus(
-        payload.action === "updated"
-          ? `Updated candidate for "${payload.title || trimmed}".`
-          : `Created candidate for "${payload.title || trimmed}".`,
+        `Created candidate for "${payload.title || trimmed}".`,
       );
       setTitleSuggestions([]);
       await load({ page: 1, status: statusFilter });
@@ -195,7 +197,7 @@ export default function MoviedleAdminTab() {
     }
   };
 
-  const patchStatus = async (id, status) => {
+  const patchStatus = async (id, status, confirmDuplicate = false) => {
     if (status === "finished") {
       return;
     }
@@ -203,12 +205,21 @@ export default function MoviedleAdminTab() {
     const response = await fetch("/api/admin/moviedle/candidates", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ id, status, confirmDuplicate }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (payload.duplicateWarning) {
+        if (window.confirm(`${payload.duplicateWarning}\n\nApprove anyway?`)) {
+          await patchStatus(id, status, true);
+        }
+        return;
+      }
       setError(payload.error || "Failed to update status");
       return;
+    }
+    if (payload.warning && !confirmDuplicate) {
+      window.alert(payload.warning);
     }
     await load({ page: currentPage, status: statusFilter });
   };
