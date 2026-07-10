@@ -40,6 +40,7 @@ export default function ResultDialogActions({ currentGameSlug, onShare }: Result
   const nextGame = isLoading
     ? undefined
     : games.find((game) => game.slug !== currentGameSlug && !completedGames[game.slug]);
+  const hasLongNextGameLabel = Boolean(nextGame && nextGame.name.length >= 8);
 
   return (
     <div className="result-modal-actions">
@@ -64,7 +65,12 @@ export default function ResultDialogActions({ currentGameSlug, onShare }: Result
           onMouseLeave={() => setIsPrimaryHovered(false)}
           onFocus={() => setIsPrimaryHovered(true)}
           onBlur={() => setIsPrimaryHovered(false)}
-          style={getPrimaryButtonStyle(nextGame?.slug, isPrimaryHovered)}
+          style={{
+            ...getPrimaryButtonStyle(nextGame?.slug ?? currentGameSlug, isPrimaryHovered),
+            whiteSpace: "nowrap",
+            fontSize: hasLongNextGameLabel ? "0.8rem" : undefined,
+            paddingInline: hasLongNextGameLabel ? "0.65rem" : undefined,
+          }}
         >
           {nextGame ? (
             <>
