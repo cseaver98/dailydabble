@@ -23,6 +23,8 @@ export default function SiteMenu() {
         completionTitle: allGamesComplete ? "All games complete" : undefined,
         completionMessage: allGamesComplete ? "Come back tomorrow to keep your streak going." : undefined,
         completionCountdown: allGamesComplete ? `New games in ${nextGameCountdown || "--:--:--"}` : undefined,
+        completionActionLabel: allGamesComplete ? "Remind me" : undefined,
+        completionActionHref: allGamesComplete ? "/account#email-preferences" : undefined,
       }}
       items={[
         ...games.map((game) => ({

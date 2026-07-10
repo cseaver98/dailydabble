@@ -41,6 +41,8 @@ export default function GameMenu({
         completionTitle: allGamesComplete ? "All games complete" : undefined,
         completionMessage: allGamesComplete ? "Come back tomorrow to keep your streak going." : undefined,
         completionCountdown: allGamesComplete ? `New games in ${nextGameCountdown || "--:--:--"}` : undefined,
+        completionActionLabel: allGamesComplete ? "Remind me" : undefined,
+        completionActionHref: allGamesComplete ? "/account#email-preferences" : undefined,
       }}
       items={[
         { label: "Today", href: todayHref, id: "todayGameBtn", hidden: hideTodayOption, iconBackground: currentGame?.iconBackground },
