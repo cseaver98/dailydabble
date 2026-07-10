@@ -13,6 +13,7 @@ type TodayCompletionRecordedEvent = CustomEvent<{
 
 export function useTodayCompletionStatus() {
   const [completedGames, setCompletedGames] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -26,10 +27,12 @@ export function useTodayCompletionStatus() {
         }
         if (isMounted) {
           setCompletedGames(payload.status ?? {});
+          setIsLoading(false);
         }
       } catch {
         if (isMounted) {
           setCompletedGames({});
+          setIsLoading(false);
         }
       }
     };
@@ -52,5 +55,5 @@ export function useTodayCompletionStatus() {
     };
   }, []);
 
-  return completedGames;
+  return { completedGames, isLoading };
 }

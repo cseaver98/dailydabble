@@ -36,8 +36,10 @@ const getPrimaryButtonStyle = (gameSlug: string | undefined, isHovered: boolean)
 
 export default function ResultDialogActions({ currentGameSlug, onShare }: ResultDialogActionsProps) {
   const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
-  const completedGames = useTodayCompletionStatus();
-  const nextGame = games.find((game) => game.slug !== currentGameSlug && !completedGames[game.slug]);
+  const { completedGames, isLoading } = useTodayCompletionStatus();
+  const nextGame = isLoading
+    ? undefined
+    : games.find((game) => game.slug !== currentGameSlug && !completedGames[game.slug]);
 
   return (
     <div className="result-modal-actions">
@@ -47,23 +49,32 @@ export default function ResultDialogActions({ currentGameSlug, onShare }: Result
       <Link className="admin-btn-like" href="/">
         All Games
       </Link>
-      <Link
-        className="admin-btn-like primary"
-        href={nextGame ? nextGame.href : "/account/stats"}
-        onMouseEnter={() => setIsPrimaryHovered(true)}
-        onMouseLeave={() => setIsPrimaryHovered(false)}
-        onFocus={() => setIsPrimaryHovered(true)}
-        onBlur={() => setIsPrimaryHovered(false)}
-        style={getPrimaryButtonStyle(nextGame?.slug, isPrimaryHovered)}
-      >
-        {nextGame ? (
-          <>
-            Next Game
-            <span className="mx-1.5 h-4 w-px bg-current opacity-55" aria-hidden="true" />
-            {nextGame.name}
-          </>
-        ) : "Stats"}
-      </Link>
+      {isLoading ? (
+        <span
+          aria-disabled="true"
+          className="admin-btn-like cursor-wait bg-white"
+        >
+          Loading...
+        </span>
+      ) : (
+        <Link
+          className="admin-btn-like primary"
+          href={nextGame ? nextGame.href : "/account/stats"}
+          onMouseEnter={() => setIsPrimaryHovered(true)}
+          onMouseLeave={() => setIsPrimaryHovered(false)}
+          onFocus={() => setIsPrimaryHovered(true)}
+          onBlur={() => setIsPrimaryHovered(false)}
+          style={getPrimaryButtonStyle(nextGame?.slug, isPrimaryHovered)}
+        >
+          {nextGame ? (
+            <>
+              Next Game
+              <span className="mx-1.5 h-4 w-px bg-current opacity-55" aria-hidden="true" />
+              {nextGame.name}
+            </>
+          ) : "Stats"}
+        </Link>
+      )}
     </div>
   );
 }

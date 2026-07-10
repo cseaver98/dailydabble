@@ -5,7 +5,7 @@ import { DailydabbleMenu } from "@dailydabble/ui";
 import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
 
 export default function SiteMenu() {
-  const completedGames = useTodayCompletionStatus();
+  const { completedGames } = useTodayCompletionStatus();
   const completedCount = games.filter((game) => completedGames[game.slug]).length;
 
   return (
