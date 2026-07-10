@@ -16,6 +16,7 @@ import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
 import EditorialDrawer from "./EditorialDrawer";
 import type { PuzzleAnswer, PuzzlePersonPublic, PuzzlePublic, RoundGuessFeedback } from "@/lib/agegaple/types";
+import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "@/lib/stored-game-result";
 
 const completionStoragePrefix = "agegaple:v6:completed:";
 const progressStoragePrefix = "agegaple:v6:progress:";
@@ -62,6 +63,14 @@ const getDefaultRestoredState = (puzzleId = ""): RestoredGameState => ({
   isCompleted: false,
   isResultOpen: false,
 });
+
+const isPuzzleAnswer = (value: unknown): value is PuzzleAnswer => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const answer = value as Partial<PuzzleAnswer>;
+  return typeof answer.puzzleId === "string"
+    && typeof answer.guessYears === "number"
+    && typeof answer.isCorrect === "boolean";
+};
 
 const restoreAgegapleState = ({
   puzzle,
@@ -358,6 +367,44 @@ export default function AgegapleGameClient({
         }
 
         if (!active) return;
+        const completionKey = `${completionPrefix}${payload.puzzleId}`;
+        if (lockDailyCompletion) {
+          const storedResult = await fetchStoredGameResult({
+            gameSlug: "agegaple",
+            puzzleId: payload.puzzleId,
+            puzzleDate: payload.puzzleDate,
+            isArchive: false,
+          });
+          if (!active) return;
+
+          if (storedResult) {
+            const localState = storedResult.resultPayload.localState;
+            const storedLocalCompletion = localState && typeof localState === "object" && !Array.isArray(localState)
+              ? localState as Partial<StoredCompletion>
+              : null;
+            const resultPayloadAnswer = getResultPayloadAnswer(storedResult);
+            const storedAnswer = isPuzzleAnswer(storedLocalCompletion?.result)
+              ? storedLocalCompletion.result
+              : isPuzzleAnswer(resultPayloadAnswer)
+                ? resultPayloadAnswer
+                : null;
+
+            if (storedAnswer) {
+              const storedAttempts = Array.isArray(storedLocalCompletion?.attempts)
+                ? storedLocalCompletion.attempts
+                : getResultPayloadAttempts(storedResult) as RoundGuessFeedback[];
+              const completion: StoredCompletion = {
+                puzzleId: payload.puzzleId,
+                guess: storedLocalCompletion?.guess || String(storedAnswer.guessYears),
+                result: storedAnswer,
+                fingerprint: getPuzzleFingerprint(payload),
+                attempts: storedAttempts,
+              };
+              window.localStorage.setItem(completionKey, JSON.stringify(completion));
+            }
+          }
+        }
+
         const restoredState = restoreAgegapleState({ puzzle: payload, completionPrefix, storagePrefix, lockDailyCompletion });
         setArchiveLock(null);
         setPuzzle(payload);
