@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
@@ -731,13 +731,7 @@ export default function SportleGameClient({
               />
             ) : null}
             <p className="result-modal-answer">{effectiveAnswer}</p>
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
-            </div>
+            <ResultDialogActions currentGameSlug="sportle" onShare={handleShareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>

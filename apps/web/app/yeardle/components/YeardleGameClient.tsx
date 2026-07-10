@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
 import { buildResultPayload } from "../../../lib/result-payload";
@@ -736,13 +736,7 @@ export default function YeardleGameClient({
                 Attribution: {imageAttributionLabel}
               </p>
             ) : null}
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <Link className="admin-btn-like primary" href={archiveHref}>Play Archive Games</Link>
-            </div>
+            <ResultDialogActions currentGameSlug="yeardle" onShare={handleShareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>

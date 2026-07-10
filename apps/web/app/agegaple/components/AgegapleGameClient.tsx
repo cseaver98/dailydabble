@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AccountNav from "../../components/AccountNav";
@@ -14,6 +13,7 @@ import AsyncImage from "../../components/AsyncImage";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import EditorialDrawer from "./EditorialDrawer";
 import type { PuzzleAnswer, PuzzlePersonPublic, PuzzlePublic, RoundGuessFeedback } from "@/lib/agegaple/types";
 
@@ -798,11 +798,7 @@ export default function AgegapleGameClient({
 
               <p className="agegaple-result-attribution">Attribution: {result.attribution}</p>
 
-              <div className="result-modal-actions">
-                <button type="button" onClick={handleShareResult} className="admin-btn-like">Share</button>
-                <Link href="/" className="admin-btn-like">DailyDabble</Link>
-                <Link href={archiveHref} className="admin-btn-like primary">Play Archive Games</Link>
-              </div>
+              <ResultDialogActions currentGameSlug="agegaple" onShare={handleShareResult} />
               {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
             </div>
           </div>

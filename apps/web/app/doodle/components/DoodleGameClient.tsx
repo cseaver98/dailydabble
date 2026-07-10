@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SVGProps } from "react";
-import Link from "next/link";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import { toPublicAppUrl } from "../../../lib/app-url";
 import { recordGameCompletionQuietly } from "../../../lib/record-game-completion";
@@ -13,6 +12,7 @@ import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
+import ResultDialogActions from "../../components/ResultDialogActions";
 import MainNav from "./MainNav";
 
 type DoodleGameClientProps = {
@@ -1056,13 +1056,7 @@ export default function DoodleGameClient({
               </div>
             ) : null}
             <p className="result-modal-answer">{capitalizeFirstLetter(answerText)}</p>
-            <div className="result-modal-actions">
-              <button className="admin-btn-like" type="button" onClick={handleShareResult}>
-                Share
-              </button>
-              <Link className="admin-btn-like" href="/">DailyDabble</Link>
-              <a className="admin-btn-like primary" href={archiveHref}>Play Archive Games</a>
-            </div>
+            <ResultDialogActions currentGameSlug="doodle" onShare={handleShareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>
         </div>
