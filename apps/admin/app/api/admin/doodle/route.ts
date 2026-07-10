@@ -90,6 +90,9 @@ const getReviewStatePath = (): string => resolve(findRepoRoot(), "apps/web/conte
 const storagePathForSlug = (slug: string): string =>
   DOODLE_STORAGE_PREFIX ? `${DOODLE_STORAGE_PREFIX}/${slug}.svg` : `${slug}.svg`;
 
+const shouldUseLocalDoodleFiles = (): boolean =>
+  process.env.NODE_ENV !== "production";
+
 const isValidStatus = (value: unknown): value is DoodleStatus =>
   typeof value === "string" && STATUS_VALUES.includes(value as DoodleStatus);
 
@@ -127,6 +130,10 @@ const readJsonFile = <T>(path: string): T | null => {
 };
 
 const loadReviewState = (): ReviewState => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return {};
+  }
+
   const statePath = getReviewStatePath();
   const parsed = readJsonFile<ReviewState>(statePath);
   if (!parsed || typeof parsed !== "object") {
@@ -151,6 +158,10 @@ const loadReviewState = (): ReviewState => {
 };
 
 const saveReviewState = (state: ReviewState): void => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return;
+  }
+
   const statePath = getReviewStatePath();
   mkdirSync(resolve(statePath, ".."), { recursive: true });
   writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
@@ -420,6 +431,10 @@ const listStorageSvgs = async (): Promise<StorageSvgItem[]> => {
 };
 
 const listLocalRawSvgs = (): StorageSvgItem[] => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return [];
+  }
+
   const rawDir = getRawDir();
   if (!existsSync(rawDir)) {
     return [];
@@ -479,6 +494,25 @@ const downloadStorageSvg = async (slug: string): Promise<string | null> => {
   }
 };
 
+const localRawPathForSlug = (slug: string): string => resolve(getRawDir(), `${slug}.svg`);
+
+const localRawExists = (slug: string): boolean => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return false;
+  }
+
+  return existsSync(localRawPathForSlug(slug));
+};
+
+const readLocalRawSvg = (slug: string): string | null => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return null;
+  }
+
+  const localPath = localRawPathForSlug(slug);
+  return existsSync(localPath) ? readFileSync(localPath, "utf8") : null;
+};
+
 const uploadStorageSvg = async (slug: string, content: string): Promise<void> => {
   await ensureStorageBucket();
 
@@ -502,9 +536,13 @@ const deleteStorageSvg = async (slug: string): Promise<void> => {
 };
 
 const writeLocalRaw = (slug: string, content: string): void => {
+  if (!shouldUseLocalDoodleFiles()) {
+    return;
+  }
+
   const rawDir = getRawDir();
   mkdirSync(rawDir, { recursive: true });
-  writeFileSync(resolve(rawDir, `${slug}.svg`), content, "utf8");
+  writeFileSync(localRawPathForSlug(slug), content, "utf8");
 };
 
 const buildOverview = async () => {
@@ -660,10 +698,7 @@ export async function GET(request: Request) {
 
       let rawSvg = await downloadStorageSvg(normalized);
       if (!rawSvg) {
-        const localPath = resolve(getRawDir(), `${normalized}.svg`);
-        if (existsSync(localPath)) {
-          rawSvg = readFileSync(localPath, "utf8");
-        }
+        rawSvg = readLocalRawSvg(normalized);
       }
 
       if (!rawSvg) {
@@ -715,8 +750,7 @@ export async function POST(request: Request) {
     }
     const currentState = loadReviewState();
     const existingRawSvg = await downloadStorageSvg(slug);
-    const localPath = resolve(getRawDir(), `${slug}.svg`);
-    if (currentState[slug] || existingRawSvg || existsSync(localPath)) {
+    if (currentState[slug] || existingRawSvg || localRawExists(slug)) {
       return NextResponse.json(
         { duplicateWarning: "This Doodle filename already exists as another candidate." },
         { status: 409 },
@@ -811,10 +845,7 @@ export async function PATCH(request: Request) {
 
       let rawSvg = await downloadStorageSvg(normalizedSlug);
       if (!rawSvg) {
-        const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
-        if (existsSync(localPath)) {
-          rawSvg = readFileSync(localPath, "utf8");
-        }
+        rawSvg = readLocalRawSvg(normalizedSlug);
       }
 
       return NextResponse.json({
@@ -867,10 +898,7 @@ export async function PATCH(request: Request) {
 
     let rawSvg = await downloadStorageSvg(normalizedSlug);
     if (!rawSvg) {
-      const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
-      if (existsSync(localPath)) {
-        rawSvg = readFileSync(localPath, "utf8");
-      }
+      rawSvg = readLocalRawSvg(normalizedSlug);
     }
 
     if (!rawSvg) {
@@ -907,10 +935,7 @@ export async function DELETE(request: Request) {
 
     let rawSvg = await downloadStorageSvg(normalizedSlug);
     if (!rawSvg) {
-      const localPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
-      if (existsSync(localPath)) {
-        rawSvg = readFileSync(localPath, "utf8");
-      }
+      rawSvg = readLocalRawSvg(normalizedSlug);
     }
 
     if (!rawSvg) {
@@ -919,18 +944,18 @@ export async function DELETE(request: Request) {
 
     await deleteStorageSvg(normalizedSlug);
 
-    const rawPath = resolve(getRawDir(), `${normalizedSlug}.svg`);
-    if (existsSync(rawPath) && statSync(rawPath).isFile()) {
+    const rawPath = localRawPathForSlug(normalizedSlug);
+    if (shouldUseLocalDoodleFiles() && existsSync(rawPath) && statSync(rawPath).isFile()) {
       unlinkSync(rawPath);
     }
 
     const processedPath = resolve(getProcessedDir(), `${normalizedSlug}.json`);
-    if (existsSync(processedPath) && statSync(processedPath).isFile()) {
+    if (shouldUseLocalDoodleFiles() && existsSync(processedPath) && statSync(processedPath).isFile()) {
       unlinkSync(processedPath);
     }
 
     const previewPath = resolve(getPreviewDir(), `${normalizedSlug}.html`);
-    if (existsSync(previewPath) && statSync(previewPath).isFile()) {
+    if (shouldUseLocalDoodleFiles() && existsSync(previewPath) && statSync(previewPath).isFile()) {
       unlinkSync(previewPath);
     }
 

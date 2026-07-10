@@ -1,0 +1,5 @@
+# Local Doodle pipeline artifacts should never ship with admin/web deploys.
+apps/web/content/doodle/admin/review-state.json
+apps/web/content/doodle/previews/**
+apps/web/content/doodle/processed/**
+apps/web/content/doodle/raw/*.svg
