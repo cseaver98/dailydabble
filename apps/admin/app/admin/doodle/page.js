@@ -475,9 +475,6 @@ export default function DoodleAdminTab() {
           <button className="admin-btn primary" type="button" onClick={() => void onUpload()} disabled={uploading}>
             {uploading ? "Uploading..." : "Upload SVG"}
           </button>
-          <button className="admin-btn" type="button" onClick={() => void runPipeline()} disabled={runningPipeline}>
-            {runningPipeline ? "Running..." : "Run Staging Pipeline"}
-          </button>
         </div>
 
         {uploadError ? <p className="admin-copy" style={{ color: "#8b2d2d", marginTop: ".55rem" }}>{uploadError}</p> : null}
@@ -642,16 +639,14 @@ export default function DoodleAdminTab() {
                     <button className="admin-btn" type="button" onClick={() => void openPreview(item.slug)}>
                       Preview
                     </button>
-                    {item.status === "pending" && item.hasProcessed ? (
-                      <button
-                        className="admin-btn"
-                        type="button"
-                        onClick={() => void runPipeline(item.slug)}
-                        disabled={runningPipeline || (Boolean(rerunningSlug) && rerunningSlug !== item.slug)}
-                      >
-                        {rerunningSlug === item.slug ? "Rerunning..." : "Rerun Stages"}
-                      </button>
-                    ) : null}
+                    <button
+                      className="admin-btn"
+                      type="button"
+                      onClick={() => void runPipeline(item.slug)}
+                      disabled={runningPipeline || (Boolean(rerunningSlug) && rerunningSlug !== item.slug)}
+                    >
+                      {rerunningSlug === item.slug ? "Running..." : item.hasProcessed ? "Rerun Stages" : "Run Stages"}
+                    </button>
                     <button
                       className="admin-btn"
                       type="button"
