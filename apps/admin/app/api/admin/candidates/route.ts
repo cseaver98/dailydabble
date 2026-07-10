@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createManualReviewCandidate,
   deleteReviewCandidate,
+  DuplicateCandidateWarning,
   getQueueHealth,
   listReviewCandidates,
   purgeExpiredRejectedCandidates,
@@ -13,6 +14,7 @@ import type { CandidateFilter, CandidateStatus } from "@/lib/types";
 type PatchPayload = {
   id?: string;
   status?: CandidateStatus;
+  confirmDuplicate?: boolean;
 };
 type PostPayload = {
   personAName?: string;
@@ -88,9 +90,14 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    await updateCandidateStatus(payload.id, payload.status);
-    return NextResponse.json({ ok: true });
+    const warning = await updateCandidateStatus(payload.id, payload.status, {
+      confirmDuplicate: payload.confirmDuplicate === true,
+    });
+    return NextResponse.json({ ok: true, warning });
   } catch (error) {
+    if (error instanceof DuplicateCandidateWarning) {
+      return NextResponse.json({ duplicateWarning: error.message }, { status: 409 });
+    }
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -125,6 +132,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, candidateId });
   } catch (error) {
+    if (error instanceof DuplicateCandidateWarning) {
+      return NextResponse.json({ duplicateWarning: error.message }, { status: 409 });
+    }
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 400 });
   }

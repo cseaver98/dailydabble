@@ -43,6 +43,46 @@ const parseReleaseYear = (value: string | undefined): number | null => {
   return year;
 };
 
+const getScheduleWarning = async (movieId: string) => {
+  const supabase = getMoviedleSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("movie_id", movieId)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Moviedle schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Moviedle movie has already been scheduled or played (${scheduledDate}).` : null;
+};
+
+const getDuplicateWarning = async (movieId: string) => {
+  const supabase = getMoviedleSupabaseAdmin();
+  const { data: movie, error: movieError } = await supabase
+    .from("movies")
+    .select("title,release_year,imdb_id")
+    .eq("id", movieId)
+    .maybeSingle<{ title: string; release_year: number | null; imdb_id: string | null }>();
+  if (movieError) {
+    throw new Error(`Failed to check Moviedle movie duplicates: ${movieError.message}`);
+  }
+  if (!movie?.title) return null;
+  let query = supabase.from("movies").select("id").neq("id", movieId).limit(1);
+  if (movie.imdb_id) {
+    query = query.eq("imdb_id", movie.imdb_id);
+  } else {
+    query = query.eq("title", movie.title);
+    query = movie.release_year == null ? query.is("release_year", null) : query.eq("release_year", movie.release_year);
+  }
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`Failed to check Moviedle movie duplicates: ${error.message}`);
+  }
+  return (data ?? []).length > 0 ? "Heads up: this Moviedle movie already exists as another candidate." : null;
+};
+
 const fetchOmdbByTitle = async (apiKey: string, title: string): Promise<OmdbDetail | null> => {
   const params = new URLSearchParams({
     apikey: apiKey,
@@ -299,11 +339,11 @@ export async function POST(request: Request) {
         .from("movies")
         .select("id")
         .eq("imdb_id", detail.imdbID)
-        .maybeSingle();
+        .limit(1);
       if (existingByImdbError) {
         throw new Error(`Failed checking existing candidate by imdb_id: ${existingByImdbError.message}`);
       }
-      existingMovieId = existingByImdb?.id || null;
+      existingMovieId = existingByImdb?.[0]?.id || null;
     }
 
     if (!existingMovieId) {
@@ -311,19 +351,18 @@ export async function POST(request: Request) {
         .from("movies")
         .select("id")
         .eq("title_normalized", titleNormalized)
-        .maybeSingle();
+        .limit(1);
       if (existingByTitleError) {
         throw new Error(`Failed checking existing candidate by title: ${existingByTitleError.message}`);
       }
-      existingMovieId = existingByTitle?.id || null;
+      existingMovieId = existingByTitle?.[0]?.id || null;
     }
 
     if (existingMovieId) {
-      const { error: updateError } = await supabase.from("movies").update(moviePayload).eq("id", existingMovieId);
-      if (updateError) {
-        throw new Error(`Failed updating movie candidate: ${updateError.message}`);
-      }
-      return NextResponse.json({ ok: true, action: "updated", candidateId: existingMovieId, title });
+      return NextResponse.json(
+        { duplicateWarning: "This Moviedle movie already exists as another candidate." },
+        { status: 409 },
+      );
     }
 
     const { data: insertData, error: insertError } = await supabase
@@ -363,6 +402,14 @@ export async function PATCH(request: Request) {
     }
 
     const supabase = getMoviedleSupabaseAdmin();
+    const warnings =
+      status === "approved"
+        ? (await Promise.all([getDuplicateWarning(id), getScheduleWarning(id)])).filter(Boolean)
+        : [];
+    const warning = warnings.length > 0 ? warnings.join("\n") : null;
+    if (warning && payload.confirmDuplicate !== true) {
+      return NextResponse.json({ duplicateWarning: warning }, { status: 409 });
+    }
     if (status === "approved") {
       const { data, error } = await supabase
         .from("movies")
@@ -387,7 +434,7 @@ export async function PATCH(request: Request) {
       throw new Error(`Failed to update candidate status: ${updateError.message}`);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, warning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update candidate";
     return NextResponse.json({ error: message }, { status: 500 });

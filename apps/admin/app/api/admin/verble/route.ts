@@ -23,6 +23,35 @@ type ScheduleRow = {
   puzzle_date: string;
 };
 
+const getScheduleWarning = async (phraseId: string) => {
+  const supabase = getVerbleSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("phrase_id", phraseId)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Verble schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Verble phrase has already been scheduled or played (${scheduledDate}).` : null;
+};
+
+const getDuplicateWarning = async (phraseId: string, normalizedPhrase: string) => {
+  const supabase = getVerbleSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("phrases")
+    .select("id")
+    .eq("normalized_phrase", normalizedPhrase)
+    .neq("id", phraseId)
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Verble phrase duplicates: ${error.message}`);
+  }
+  return (data ?? []).length > 0 ? "Heads up: this Verble phrase already exists as another candidate." : null;
+};
+
 const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const getToday = (): string => {
@@ -183,13 +212,16 @@ export async function POST(request: Request) {
       .from("phrases")
       .select("id")
       .eq("normalized_phrase", normalizedPhrase)
-      .maybeSingle<{ id: string }>();
+      .limit(1);
 
     if (existingError) {
       throw new Error(`Failed to validate phrase uniqueness: ${existingError.message}`);
     }
-    if (existing) {
-      return NextResponse.json({ error: "Phrase already exists" }, { status: 409 });
+    if ((existing ?? []).length > 0) {
+      return NextResponse.json(
+        { duplicateWarning: "This Verble phrase already exists as another candidate." },
+        { status: 409 },
+      );
     }
 
     const insertPayload = {
@@ -255,6 +287,30 @@ export async function PATCH(request: Request) {
     }
 
     const supabase = getVerbleSupabaseAdmin();
+    let duplicateWarning: string | null = null;
+    if (nextStatus === "approved") {
+      let normalizedForWarning =
+        typeof patch.normalized_phrase === "string" ? patch.normalized_phrase : "";
+      if (!normalizedForWarning) {
+        const { data: currentPhrase, error: currentPhraseError } = await supabase
+          .from("phrases")
+          .select("normalized_phrase")
+          .eq("id", id)
+          .maybeSingle<{ normalized_phrase: string }>();
+        if (currentPhraseError) {
+          throw new Error(`Failed to load phrase before approval: ${currentPhraseError.message}`);
+        }
+        normalizedForWarning = currentPhrase?.normalized_phrase ?? "";
+      }
+      const warnings = (
+        await Promise.all([getDuplicateWarning(id, normalizedForWarning), getScheduleWarning(id)])
+      ).filter(Boolean);
+      duplicateWarning = warnings.length > 0 ? warnings.join("\n") : null;
+      if (duplicateWarning && payload.confirmDuplicate !== true) {
+        return NextResponse.json({ duplicateWarning }, { status: 409 });
+      }
+    }
+
     const { data, error } = await supabase
       .from("phrases")
       .update(patch)
@@ -269,7 +325,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, item: data });
+    return NextResponse.json({ ok: true, item: data, warning: duplicateWarning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update Verble candidate";
     return NextResponse.json({ error: message }, { status: 500 });

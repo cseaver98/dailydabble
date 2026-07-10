@@ -35,6 +35,46 @@ const getSupabaseYeardleAdmin = () =>
     },
   });
 
+const getScheduleWarning = async (supabase: ReturnType<typeof getSupabaseYeardleAdmin>, eventId: string) => {
+  const { data, error } = await supabase
+    .from("daily_schedule")
+    .select("puzzle_date")
+    .eq("event_id", eventId)
+    .order("puzzle_date", { ascending: true })
+    .limit(1);
+  if (error) {
+    throw new Error(`Failed to check Yeardle schedule history: ${error.message}`);
+  }
+  const scheduledDate = data?.[0]?.puzzle_date;
+  return scheduledDate ? `Heads up: this Yeardle event has already been scheduled or played (${scheduledDate}).` : null;
+};
+
+const getDuplicateWarning = async (supabase: ReturnType<typeof getSupabaseYeardleAdmin>, eventId: string) => {
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("title,event_year,event_month,event_day")
+    .eq("id", eventId)
+    .maybeSingle<{ title: string; event_year: number; event_month: number | null; event_day: number | null }>();
+  if (eventError) {
+    throw new Error(`Failed to check Yeardle event duplicates: ${eventError.message}`);
+  }
+  if (!event?.title || !event.event_year) return null;
+  let query = supabase
+    .from("events")
+    .select("id")
+    .eq("title", event.title)
+    .eq("event_year", event.event_year)
+    .neq("id", eventId)
+    .limit(1);
+  query = event.event_month == null ? query.is("event_month", null) : query.eq("event_month", event.event_month);
+  query = event.event_day == null ? query.is("event_day", null) : query.eq("event_day", event.event_day);
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`Failed to check Yeardle event duplicates: ${error.message}`);
+  }
+  return (data ?? []).length > 0 ? "Heads up: this Yeardle event already exists as another candidate." : null;
+};
+
 export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
@@ -182,6 +222,7 @@ export async function PATCH(request: Request) {
       imageAttributionText?: string | null;
       imageLicenseVerified?: boolean;
       clearImage?: boolean;
+      confirmDuplicate?: boolean;
       candidate?: {
         title?: string;
         eventYear?: number;
@@ -389,6 +430,15 @@ export async function PATCH(request: Request) {
       updatePayload.wikipedia_url = String(candidate?.wikipediaUrl || "").trim() || null;
     }
 
+    const warnings =
+      hasStatus && status === "approved"
+        ? (await Promise.all([getDuplicateWarning(supabase, eventId), getScheduleWarning(supabase, eventId)])).filter(Boolean)
+        : [];
+    const warning = warnings.length > 0 ? warnings.join("\n") : null;
+    if (warning && payload.confirmDuplicate !== true) {
+      return NextResponse.json({ duplicateWarning: warning }, { status: 409 });
+    }
+
     const { error } = await supabase
       .from("events")
       .update(updatePayload)
@@ -397,7 +447,7 @@ export async function PATCH(request: Request) {
       throw new Error(`Failed updating event: ${error.message}`);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, warning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update event";
     return NextResponse.json({ error: message }, { status: 500 });

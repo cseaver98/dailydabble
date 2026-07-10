@@ -124,7 +124,7 @@ export default function AgegapleAdminTab() {
   const galleryImages = galleryCandidateId ? (galleryByCandidateId[galleryCandidateId]?.galleryImages ?? []) : [];
   const activeGalleryImage = galleryImages[0] ?? null;
 
-  const patchStatus = async (id, status) => {
+  const patchStatus = async (id, status, confirmDuplicate = false) => {
     if (status === "finished") {
       return;
     }
@@ -132,15 +132,24 @@ export default function AgegapleAdminTab() {
     const response = await fetch("/api/admin/candidates", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ id, status, confirmDuplicate }),
     });
+    const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
+      if (payload.duplicateWarning) {
+        if (window.confirm(`${payload.duplicateWarning}\n\nApprove anyway?`)) {
+          await patchStatus(id, status, true);
+        }
+        return;
+      }
       setError(payload.error || "Failed to update status");
       return;
     }
 
+    if (payload.warning && !confirmDuplicate) {
+      window.alert(payload.warning);
+    }
     await load({ page: currentPage, status: statusFilter });
   };
 
@@ -296,6 +305,10 @@ export default function AgegapleAdminTab() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (payload.duplicateWarning) {
+          window.alert(payload.duplicateWarning);
+          return;
+        }
         throw new Error(payload.error || "Failed to create manual candidate");
       }
       setManualForm((current) => ({

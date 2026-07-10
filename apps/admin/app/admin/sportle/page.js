@@ -92,6 +92,10 @@ export default function SportleAdminTab() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (payload.duplicateWarning) {
+          window.alert(payload.duplicateWarning);
+          return;
+        }
         throw new Error(payload.error || "Could not add athlete");
       }
       setNewFullName("");
@@ -120,6 +124,10 @@ export default function SportleAdminTab() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (payload.duplicateWarning) {
+          window.alert(payload.duplicateWarning);
+          return;
+        }
         throw new Error(payload.error || "Import failed");
       }
       setImportWikipediaUrl("");
@@ -132,7 +140,7 @@ export default function SportleAdminTab() {
     }
   };
 
-  const patchStatus = async (id, status) => {
+  const patchStatus = async (id, status, confirmDuplicate = false) => {
     if (status === "finished") {
       return;
     }
@@ -140,12 +148,21 @@ export default function SportleAdminTab() {
     const response = await fetch("/api/admin/sportle", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ athleteId: id, status }),
+      body: JSON.stringify({ athleteId: id, status, confirmDuplicate }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (payload.duplicateWarning) {
+        if (window.confirm(`${payload.duplicateWarning}\n\nApprove anyway?`)) {
+          await patchStatus(id, status, true);
+        }
+        return;
+      }
       setError(payload.error || "Failed to update status");
       return;
+    }
+    if (payload.warning && !confirmDuplicate) {
+      window.alert(payload.warning);
     }
     await load({ page: currentPage, status: statusFilter });
   };

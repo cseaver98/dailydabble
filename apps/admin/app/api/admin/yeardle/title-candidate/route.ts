@@ -376,6 +376,20 @@ export async function POST(request: Request) {
 
     const sourceKey = `${slugify(candidate.title)}-${eventYear}`;
     const supabase = getSupabaseYeardleAdmin();
+    const { data: existing, error: existingError } = await supabase
+      .from("events")
+      .select("id")
+      .eq("source_key", sourceKey)
+      .limit(1);
+    if (existingError) {
+      throw new Error(`Failed to check existing Yeardle events: ${existingError.message}`);
+    }
+    if ((existing ?? []).length > 0) {
+      return NextResponse.json(
+        { duplicateWarning: "This Yeardle event already exists as another candidate." },
+        { status: 409 },
+      );
+    }
 
     const { data: eventRow, error: eventError } = await supabase
       .from("events")

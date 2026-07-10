@@ -24,6 +24,13 @@ type CandidateStatusRow = {
   status: CandidateStatus;
 };
 
+export class DuplicateCandidateWarning extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateCandidateWarning";
+  }
+}
+
 type ImageInput = {
   url?: string | null;
   fileTitle?: string | null;
@@ -476,6 +483,18 @@ export const createManualReviewCandidate = async ({
     relationshipType,
   });
 
+  const { data: duplicateData, error: duplicateError } = await getSupabaseAdmin()
+    .from("puzzle_candidates")
+    .select("id")
+    .eq("couple_id", coupleId)
+    .limit(1);
+  if (duplicateError) {
+    throw new Error(`Failed to check existing Agegaple candidates: ${duplicateError.message}`);
+  }
+  if ((duplicateData ?? []).length > 0) {
+    throw new DuplicateCandidateWarning("This Agegaple couple already exists as another candidate.");
+  }
+
   const candidatePersonAIsOriginalA = orderedPersonAId === originalPersonAId;
   const candidatePersonAImage = candidatePersonAIsOriginalA ? personAImage : personBImage;
   const candidatePersonBImage = candidatePersonAIsOriginalA ? personBImage : personAImage;
@@ -869,11 +888,16 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
   }
 };
 
-export const updateCandidateStatus = async (id: string, status: CandidateStatus): Promise<void> => {
+export const updateCandidateStatus = async (
+  id: string,
+  status: CandidateStatus,
+  options: { confirmDuplicate?: boolean } = {},
+): Promise<string | null> => {
   const supabase = getSupabaseAdmin();
   const nowIso = new Date().toISOString();
   const reviewedAt = status === "pending_review" ? null : nowIso;
   const statusUpdate: Record<string, string | null> = { status, reviewed_at: reviewedAt };
+  const warnings: string[] = [];
 
   if (status === "approved") {
     const { data, error } = await supabase
@@ -906,6 +930,38 @@ export const updateCandidateStatus = async (id: string, status: CandidateStatus)
     if (!row.person_a_image.is_usable || !row.person_b_image.is_usable) {
       throw new Error("Both person images must be usable before approval");
     }
+
+    const { data: duplicateData, error: duplicateError } = await supabase
+      .from("puzzle_candidates")
+      .select("id")
+      .eq("couple_id", row.couple_id)
+      .neq("id", id)
+      .limit(1);
+    if (duplicateError) {
+      throw new Error(`Failed to check existing Agegaple candidates: ${duplicateError.message}`);
+    }
+    if ((duplicateData ?? []).length > 0) {
+      warnings.push("Heads up: this couple already has another Agegaple candidate.");
+    }
+
+    const { data: scheduleData, error: scheduleError } = await supabase
+      .from("daily_puzzles")
+      .select("puzzle_date")
+      .eq("candidate_id", id)
+      .order("puzzle_date", { ascending: true })
+      .limit(1);
+    if (scheduleError) {
+      throw new Error(`Failed to check Agegaple schedule history: ${scheduleError.message}`);
+    }
+    const scheduledDate = scheduleData?.[0]?.puzzle_date;
+    if (scheduledDate) {
+      warnings.push(`Heads up: this Agegaple candidate has already been scheduled or played (${scheduledDate}).`);
+    }
+  }
+
+  const warning = warnings.length > 0 ? warnings.join("\n") : null;
+  if (warning && !options.confirmDuplicate) {
+    throw new DuplicateCandidateWarning(warning);
   }
 
   const { error } = await supabase
@@ -916,6 +972,8 @@ export const updateCandidateStatus = async (id: string, status: CandidateStatus)
   if (error) {
     throw new Error(`Failed to update candidate: ${error.message}`);
   }
+
+  return warning;
 };
 
 export const deleteReviewCandidate = async (id: string): Promise<void> => {
