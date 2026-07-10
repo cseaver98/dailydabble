@@ -453,19 +453,23 @@ const buildOverview = async () => {
 
   const { data: puzzleRows, error: puzzleRowsError } = await supabase
     .from("puzzles")
-    .select("id,slug");
+    .select("id,slug,status");
 
   if (puzzleRowsError) {
     throw new Error(`Could not load doodle puzzle rows: ${puzzleRowsError.message}`);
   }
 
   const puzzlesBySlug = new Map<string, string>();
+  const puzzleStatusesBySlug = new Map<string, DoodleStatus>();
   const puzzleIds: string[] = [];
-  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string }> | null) ?? [])) {
+  for (const row of ((puzzleRows as Array<{ id?: string; slug?: string; status?: string }> | null) ?? [])) {
     if (typeof row.slug !== "string" || typeof row.id !== "string") {
       continue;
     }
     puzzlesBySlug.set(row.slug, row.id);
+    if (isValidStatus(row.status)) {
+      puzzleStatusesBySlug.set(row.slug, row.status);
+    }
     puzzleIds.push(row.id);
   }
 
@@ -503,7 +507,11 @@ const buildOverview = async () => {
     const isUsedToday = scheduleDates.includes(today);
     const isFinished = Boolean(latestUsedDate);
     const scheduledPuzzleDate = latestUsedDate ?? nextScheduledDate;
-    const normalizedStatus: DoodleStatus = state.status === "used" ? "approved" : state.status;
+    const storedStatus: DoodleStatus = state.status === "used" ? "approved" : state.status;
+    const dbStatus = puzzleStatusesBySlug.get(slug) ?? null;
+    const normalizedStatus: DoodleStatus = isFinished || scheduledPuzzleDate
+      ? "approved"
+      : dbStatus ?? storedStatus;
 
     return {
       slug,
