@@ -269,6 +269,53 @@
   background: var(--primary, #2f672d);
 }
 
+.nav-menu-progress-complete,
+.dd-nav .nav-menu-progress-complete {
+  display: grid;
+  gap: 0.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--primary, #2f672d) 16%, transparent);
+  margin-top: 0.1rem;
+  padding-top: 0.55rem;
+}
+
+.nav-menu-progress-complete-title,
+.dd-nav .nav-menu-progress-complete-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--primary-dim, var(--primary, #2f672d));
+  font-family: var(--font-headline, inherit), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.nav-menu-progress-check,
+.dd-nav .nav-menu-progress-check {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.4rem;
+  border-bottom: 0.13rem solid currentColor;
+  border-left: 0.13rem solid currentColor;
+  transform: translateY(-0.08rem) rotate(-45deg);
+}
+
+.nav-menu-progress-complete p,
+.dd-nav .nav-menu-progress-complete p {
+  margin: 0;
+  color: #75777a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.nav-menu-progress-countdown,
+.dd-nav .nav-menu-progress-countdown {
+  color: var(--primary-dim, var(--primary, #2f672d));
+  font-family: var(--font-headline, inherit), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .nav-menu-list,
 .dd-nav .nav-menu-list {
   display: grid;

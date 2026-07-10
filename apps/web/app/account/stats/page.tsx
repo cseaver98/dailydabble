@@ -9,6 +9,7 @@ import AccountLoginPanel from "../AccountLoginPanel";
 import { getAccountStats } from "@/lib/account-stats";
 import { games } from "@/lib/games";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
+import CompletionCountdown from "./CompletionCountdown";
 
 export const metadata: Metadata = {
   title: "Stats | DailyDabble",
@@ -36,27 +37,45 @@ export default async function AccountStatsPage() {
 
   const stats = await getAccountStats(user.id);
   const completedTodayLabel = `${stats.overall.completedTodayCount}/${stats.overall.totalGamesToday}`;
+  const allGamesComplete = stats.overall.completedTodayCount === stats.overall.totalGamesToday;
+  const streakDays = stats.overall.currentDailyDabbleStreak;
+  const streakLabel = `${streakDays}-day`;
 
   return (
     <>
       <DailydabbleNav headerClassName="hub-nav" leftContent={<SiteMenu />} rightContent={<AccountNav />} />
       <main className="min-h-screen bg-transparent px-5 pb-12 pt-8 text-[#2c2f31] sm:px-8">
         <section className="mx-auto max-w-6xl">
-          <div className="relative overflow-hidden rounded-[2.25rem] bg-white p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
+          <div className={`relative overflow-hidden rounded-[2.25rem] p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10 ${allGamesComplete ? "border border-[#b6f6ab] bg-[linear-gradient(135deg,#ffffff_0%,#f0ffed_100%)]" : "bg-white"}`}>
             <div className="relative">
               <p className="font-headline text-sm font-extrabold text-[#2f672d]">Today&apos;s progress</p>
               <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <p className="font-headline text-5xl font-extrabold text-[#2c2f31]">{completedTodayLabel}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-headline text-5xl font-extrabold text-[#2c2f31]">{completedTodayLabel}</p>
+                  {allGamesComplete ? (
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#d1ffc7] text-xl font-black text-[#225b22]" aria-hidden="true">✓</span>
+                  ) : null}
+                </div>
                 <Link
                   href="/"
                   className="font-headline inline-flex h-11 items-center justify-center rounded-full bg-[#2f672d] px-5 text-sm font-extrabold text-[#d1ffc7] transition hover:bg-[#225b22]"
                 >
-                  Play games
+                  {allGamesComplete ? "All games" : "Play games"}
                 </Link>
               </div>
-              <p className="mt-3 text-sm font-semibold text-[#595c5e]">
-                Complete every daily game to build your total <DailyDabbleWordmark className="text-[1em]" /> streak 🔥.
-              </p>
+              {allGamesComplete ? (
+                <div className="mt-4">
+                  <p className="font-headline text-xl font-extrabold text-[#225b22]">Nice work, you finished every game today!</p>
+                  <p className="mt-1 text-sm font-semibold text-[#595c5e]">
+                    Come back tomorrow to keep your {streakLabel} <DailyDabbleWordmark className="text-[1em]" /> streak going 🔥.
+                  </p>
+                  <CompletionCountdown />
+                </div>
+              ) : (
+                <p className="mt-3 text-sm font-semibold text-[#595c5e]">
+                  Complete every daily game to build your total <DailyDabbleWordmark className="text-[1em]" /> streak 🔥.
+                </p>
+              )}
             </div>
           </div>
 
