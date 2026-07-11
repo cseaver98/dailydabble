@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "DailyDabble",
     short_name: "DailyDabble",
-    description: "Daily trivia game hub",
+    description: "Play seven original daily games in one place, with a fresh challenge every day.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

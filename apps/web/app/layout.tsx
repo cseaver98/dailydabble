@@ -35,18 +35,31 @@ try {
 
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
 const twitterImageUrl = "/opengraph-image?v=20260710";
+const siteUrl = "https://dailydabble.app";
+const siteDescription =
+  "Play seven original daily games in one place. Solve phrases, doodles, movies, history, sports, equations, and age gaps with a fresh challenge every day.";
 
 export const generateMetadata = (): Metadata => {
   const title = isStagingEnvironment() ? "DailyDabble Staging" : "DailyDabble";
-  const description = "The daily trivia game hub";
+  const description = siteDescription;
 
   return {
-    title,
-    description: "Daily trivia game hub",
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: title,
+      template: `%s | ${title}`,
+    },
+    description,
+    applicationName: "DailyDabble",
+    category: "games",
+    keywords: ["daily games", "daily trivia games", "word games", "puzzle games", "browser games", "DailyDabble"],
     manifest: "/manifest.webmanifest",
     openGraph: {
       title,
       description,
+      siteName: "DailyDabble",
+      type: "website",
+      locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
@@ -79,8 +92,54 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "DailyDabble",
+        description: siteDescription,
+        inLanguage: "en-US",
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${siteUrl}/#daily-games`,
+        name: "DailyDabble daily games",
+        itemListElement: [
+          ["Verble", "verble", "Guess the daily phrase one word at a time."],
+          ["Agegaple", "agegaple", "Guess the celebrity couple age gap."],
+          ["Doodle", "doodle", "Guess the doodle as it is drawn."],
+          ["Equadle", "equadle", "Guess the hidden arithmetic equation."],
+          ["Yeardle", "yeardle", "Guess the year of an event from this day in history."],
+          ["Moviedle", "moviedle", "Guess the movie from stills."],
+          ["Sportle", "sportle", "Guess the pro athlete from the daily clues."],
+        ].map(([name, slug, description], index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "WebApplication",
+            name,
+            url: `${siteUrl}/${slug}`,
+            description,
+            applicationCategory: "GameApplication",
+            operatingSystem: "Any",
+            isAccessibleForFree: true,
+          },
+        })),
+      },
+    ],
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+        />
+      </head>
       <body className={`${plusJakartaSans.variable} ${manrope.variable} antialiased`}>
         <script dangerouslySetInnerHTML={{ __html: subscriberBootScript }} />
         <AuthStateStorageBoundary />

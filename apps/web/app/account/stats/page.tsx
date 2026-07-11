@@ -12,8 +12,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 import CompletionCountdown from "./CompletionCountdown";
 
 export const metadata: Metadata = {
-  title: "Stats | DailyDabble",
+  title: "Stats",
   description: "View your DailyDabble game stats.",
+  robots: { index: false, follow: false },
 };
 
 const formatPercent = (value: number | null) => (value === null ? "—" : `${Math.round(value * 100)}%`);

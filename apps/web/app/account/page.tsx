@@ -13,8 +13,9 @@ import { getSubscriptionAccess } from "@/lib/subscriptions";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 
 export const metadata: Metadata = {
-  title: "Account | DailyDabble",
+  title: "Account",
   description: "Manage your DailyDabble account.",
+  robots: { index: false, follow: false },
 };
 
 const isApplePrivateRelayEmail = (email: string) => email.toLowerCase().endsWith("@privaterelay.appleid.com");

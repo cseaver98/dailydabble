@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Moviedle | DailyDabble",
-  description: "Guess the movie from stills.",
+  title: "Moviedle",
+  description: "Play Moviedle, the daily movie game. Identify the film from a sequence of movie stills.",
 };
 
 export default function MoviedleLayout({ children }: { children: React.ReactNode }) {

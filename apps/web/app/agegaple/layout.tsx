@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Agegaple | DailyDabble",
-  description: "Guess the celebrity couple age gap.",
+  title: "Agegaple",
+  description: "Play Agegaple, the daily celebrity game. Study two photos and guess the couple's age gap.",
 };
 
 export default function AgegapleLayout({ children }: { children: React.ReactNode }) {
