@@ -259,6 +259,7 @@ function HomeContent() {
 
       <main className="min-h-screen bg-transparent px-5 pb-12 text-[#2c2f31] sm:px-8">
         <section className="mx-auto max-w-6xl">
+        <h1 className="sr-only">DailyDabble: seven original daily games in one place</h1>
         <div className="mb-4 py-2 text-center sm:py-3">
           {error && <p className="mt-3 text-sm text-[#b02500]">{error}</p>}
         </div>

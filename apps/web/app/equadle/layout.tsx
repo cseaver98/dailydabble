@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Equadle | DailyDabble",
-  description: "Guess the hidden arithmetic equation.",
+  title: "Equadle",
+  description: "Play Equadle, the daily math puzzle. Use each guess to uncover the hidden arithmetic equation.",
 };
 
 export default function EquadleLayout({
