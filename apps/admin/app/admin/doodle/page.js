@@ -390,19 +390,13 @@ export default function DoodleAdminTab() {
     const stages = previewItem?.processed?.stages;
     return Array.isArray(stages) ? stages : [];
   }, [previewItem]);
-  const processedStageParts = useMemo(() => {
-    const stages = previewItem?.processed?.stageParts;
-    return Array.isArray(stages) ? stages : [];
-  }, [previewItem]);
-
-  const stageCount = (processedStageParts.length > 0 ? processedStageParts : processedStages).length;
+  const stageCount = processedStages.length;
   const boundedStageIndex = Math.min(Math.max(activeStageIndex, 0), Math.max(stageCount - 1, 0));
   const activeStagePaths = useMemo(
     () => {
-      const source = processedStageParts.length > 0 ? processedStageParts : processedStages;
-      return Array.isArray(source[boundedStageIndex]) ? source[boundedStageIndex] : [];
+      return Array.isArray(processedStages[boundedStageIndex]) ? processedStages[boundedStageIndex] : [];
     },
-    [processedStageParts, processedStages, boundedStageIndex],
+    [processedStages, boundedStageIndex],
   );
   const normalizedStagePaths = useMemo(
     () =>
@@ -857,7 +851,7 @@ export default function DoodleAdminTab() {
                       </div>
 
                       <div style={{ marginTop: ".6rem", display: "flex", flexWrap: "wrap", gap: ".42rem" }}>
-                        {(processedStageParts.length > 0 ? processedStageParts : processedStages).map((stagePaths, index) => (
+                        {processedStages.map((stagePaths, index) => (
                           <button
                             key={`stage-${index + 1}`}
                             className="admin-btn"

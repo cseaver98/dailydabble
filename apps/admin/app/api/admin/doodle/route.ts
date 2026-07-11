@@ -44,7 +44,6 @@ type ProcessedDoodleRecord = {
   stageCount?: number;
   pathCount?: number;
   stages?: ProcessedStageSegment[][];
-  stageParts?: ProcessedStageSegment[][];
 };
 
 type DbDoodlePuzzleRow = {
@@ -191,27 +190,6 @@ const reorderArray = <T>(items: T[], fromIndex: number, toIndex: number): T[] =>
   const [moved] = copy.splice(fromIndex, 1);
   copy.splice(toIndex, 0, moved);
   return copy;
-};
-
-const buildCumulativeStagesFromParts = (
-  stageParts: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>,
-) => {
-  const state = new Map<string, { id?: string; d: string; [key: string]: unknown }>();
-  return stageParts.map((stage) => {
-    for (const segment of stage) {
-      if (typeof segment === "string") {
-        state.set(segment, { d: segment });
-        continue;
-      }
-      const key = segment.id || segment.d;
-      const previous = state.get(key) ?? null;
-      state.set(key, {
-        ...segment,
-        d: previous ? `${String(previous.d || "")} ${String(segment.d || "")}`.trim() : String(segment.d || ""),
-      });
-    }
-    return Array.from(state.values());
-  });
 };
 
 const updateManifestStagesForSlug = (slug: string, nextStages: unknown): void => {
@@ -801,7 +779,6 @@ export async function GET(request: Request) {
           pathCount?: number;
           viewBox?: string;
           stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
-          stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
         }>(processedPath) ?? await getDbProcessedRecord(normalized),
       };
 
@@ -899,17 +876,13 @@ export async function PATCH(request: Request) {
         pathCount?: number;
         strategy?: string;
         stages?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
-        stageParts?: Array<Array<string | { id?: string; d: string; to?: number; style?: Record<string, string>; fillOnly?: boolean; complete?: boolean; fullD?: string }>>;
       }>(processedPath) ?? await getDbProcessedRecord(normalizedSlug);
 
       if (!processed || !Array.isArray(processed.stages)) {
         return NextResponse.json({ error: "Processed doodle stages not found. Run pipeline first." }, { status: 404 });
       }
 
-      const reorderTarget = Array.isArray(processed.stageParts) && processed.stageParts.length > 0
-        ? processed.stageParts
-        : processed.stages;
-      const stageCount = reorderTarget.length;
+      const stageCount = processed.stages.length;
       if (
         fromIndex < 0 ||
         toIndex < 0 ||
@@ -920,13 +893,10 @@ export async function PATCH(request: Request) {
       }
 
       if (fromIndex !== toIndex) {
-        processed.stageParts = reorderArray(reorderTarget, fromIndex, toIndex);
-        processed.stages = buildCumulativeStagesFromParts(processed.stageParts);
-      } else if (!Array.isArray(processed.stageParts) || processed.stageParts.length === 0) {
-        processed.stageParts = processed.stages;
+        processed.stages = reorderArray(processed.stages, fromIndex, toIndex);
       }
 
-      processed.stageCount = processed.stageParts?.length ?? processed.stages.length;
+      processed.stageCount = processed.stages.length;
       if (shouldUseLocalDoodleFiles()) {
         writeFileSync(processedPath, `${JSON.stringify(processed, null, 2)}\n`, "utf8");
         updateManifestStagesForSlug(normalizedSlug, processed.stages);

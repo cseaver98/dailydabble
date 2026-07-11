@@ -22,7 +22,8 @@ const previewDir = resolve(rootDir, argMap.get("preview") ?? "content/doodle/pre
 const strategy = (argMap.get("strategy") ?? "balanced").toLowerCase();
 const stageCount = Number(argMap.get("stages") ?? DEFAULT_STAGE_COUNT);
 const slugFilter = (argMap.get("slug") ?? "").trim().toLowerCase();
-const seedArg = Number(argMap.get("seed") ?? "");
+const rawSeedArg = argMap.get("seed");
+const seedArg = rawSeedArg === undefined ? Number.NaN : Number(rawSeedArg);
 
 if (!Number.isFinite(stageCount) || stageCount < 2 || stageCount > 9) {
   throw new Error("--stages must be a number between 2 and 9");
@@ -219,12 +220,22 @@ const orderPaths = (paths) => {
 
 const buildIncrementRatios = (count) => {
   if (count === 5) {
-    return [0.1, 0.13, 0.17, 0.25, 0.35];
+    return [0.1, 0.1, 0.1, 0.1, 0.6];
   }
 
-  const raw = Array.from({ length: count }, (_, index) => Math.pow(index + 1, 1.35));
+  const raw = Array.from({ length: count }, (_, index) => 1 + index * 0.04);
   const total = raw.reduce((sum, value) => sum + value, 0);
   return raw.map((value) => value / total);
+};
+
+const varyRatios = (ratios, random) => {
+  if (!random) {
+    return ratios;
+  }
+
+  const varied = ratios.map((ratio) => ratio * (0.9 + random() * 0.2));
+  const total = varied.reduce((sum, value) => sum + value, 0);
+  return varied.map((value) => value / total);
 };
 
 const parsePathGeometry = (d) => {
@@ -280,7 +291,8 @@ const computeCellKey = (geometry, bounds) => {
 };
 
 const assignPathsToBuckets = (paths, count) => {
-  const incrementRatios = buildIncrementRatios(count);
+  const random = Number.isFinite(seedArg) ? createSeededRng(seedArg) : null;
+  const incrementRatios = varyRatios(buildIncrementRatios(count), random);
   const totalScore = paths.reduce((sum, path) => sum + path.score, 0);
   const withGeometry = paths.map((path) => ({
     ...path,
@@ -307,20 +319,13 @@ const assignPathsToBuckets = (paths, count) => {
     cells: new Set(),
   }));
 
-  const random = Number.isFinite(seedArg) ? createSeededRng(seedArg) : null;
-  const sorted = [...withGeometry].sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
-    }
-    if (!random) {
-      return 0;
-    }
-    return random() - 0.5;
-  });
+  const sorted = withGeometry
+    .map((path) => ({ path, tieBreaker: random ? random() : 0 }))
+    .sort((a, b) => b.path.score - a.path.score || a.tieBreaker - b.tieBreaker)
+    .map(({ path }) => path);
 
   for (const path of sorted) {
-    let chosenIndex = 0;
-    let bestMetric = Number.POSITIVE_INFINITY;
+    const candidates = [];
     const cellKey = computeCellKey(path.geometry, globalBounds);
 
     for (let index = 0; index < buckets.length; index += 1) {
@@ -332,12 +337,18 @@ const assignPathsToBuckets = (paths, count) => {
       const spreadBonus = hasCell ? 0 : Math.min(path.score * 0.2, bucket.target * 0.25);
       const earlyOverflowGuard =
         index === 0 && nextScore > bucket.target * 1.9 && sorted.length > 6 ? overflow * 6 : 0;
-      const metric = targetGap + overflow * 2.2 + earlyOverflowGuard - spreadBonus + bucket.paths.length * 0.01;
-      if (metric < bestMetric) {
-        bestMetric = metric;
-        chosenIndex = index;
-      }
+      const variance = random ? (random() - 0.5) * bucket.target * 0.2 : 0;
+      const metric = targetGap + overflow * 2.2 + earlyOverflowGuard - spreadBonus + bucket.paths.length * 0.01 + variance;
+      candidates.push({ index, metric });
     }
+
+    candidates.sort((a, b) => a.metric - b.metric);
+    const bestMetric = candidates[0]?.metric ?? 0;
+    const nearBest = candidates.filter(({ metric }) => metric <= bestMetric + Math.max(path.score * 0.16, totalScore * 0.012));
+    const chosen = random && nearBest.length > 1
+      ? nearBest[Math.floor(random() * nearBest.length)]
+      : candidates[0];
+    const chosenIndex = chosen?.index ?? 0;
 
     buckets[chosenIndex].paths.push(path);
     buckets[chosenIndex].score += path.score;
@@ -462,11 +473,7 @@ const assignPathsToBuckets = (paths, count) => {
     }
   }
 
-  const minBucketShare = incrementRatios.map((ratio, index) => {
-    if (index === 0) return ratio * 0.65;
-    if (index === count - 1) return ratio * 0.75;
-    return ratio * 0.6;
-  });
+  const minBucketShare = incrementRatios.map((ratio) => ratio * 0.72);
 
   const moveFromDonorToBucket = (toIndex) => {
     let donorIndex = -1;
@@ -496,23 +503,14 @@ const assignPathsToBuckets = (paths, count) => {
     }
   }
 
-  // Specific guardrail: prevent "stage 4 does everything, stage 5 is a dot".
-  if (count >= 5) {
-    const finalIndex = count - 1;
-    const penultimateIndex = count - 2;
-    const minFinal = Math.max(incrementRatios[finalIndex] * 0.8, 0.22) * totalScore;
-    let guard = 0;
-    while (buckets[finalIndex].score < minFinal && guard < 80) {
-      let moved = false;
-      if (buckets[penultimateIndex].paths.length > 1) {
-        moved = movePath(penultimateIndex, finalIndex);
-      }
-      if (!moved) {
-        moved = moveFromDonorToBucket(finalIndex);
-      }
-      if (!moved) break;
-      guard += 1;
+  const finalIndex = buckets.length - 1;
+  const finalMinimum = incrementRatios[finalIndex] * totalScore * 0.9;
+  let finalGuard = 0;
+  while (buckets[finalIndex].score < finalMinimum && finalGuard < 80) {
+    if (!moveFromDonorToBucket(finalIndex)) {
+      break;
     }
+    finalGuard += 1;
   }
 
   return buckets;
@@ -574,24 +572,7 @@ const splitIntoStages = (orderedPaths, count) => {
     });
   };
 
-  const stageParts = buckets.map((bucket) => collapseByGroup(bucket.paths));
-  const buildCumulativeFromParts = (partsByStage) => {
-    const cumulativeStates = new Map();
-    return partsByStage.map((stage) => {
-      for (const segment of stage) {
-        const key = segment.id ?? segment.d;
-        const previous = cumulativeStates.get(key);
-        cumulativeStates.set(key, {
-          ...segment,
-          d: previous ? `${previous.d} ${segment.d}`.trim() : segment.d,
-        });
-      }
-      return Array.from(cumulativeStates.values());
-    });
-  };
-
-  const stages = buildCumulativeFromParts(stageParts);
-  return { stages, stageParts };
+  return buckets.map((bucket) => collapseByGroup(bucket.paths));
 };
 
 const buildPreviewHtml = ({ title, viewBox, stages }) => {
@@ -722,7 +703,7 @@ for (const filePath of filteredFiles) {
   }
 
   const orderedPaths = maybeShufflePaths(orderPaths(rawPaths));
-  const { stages, stageParts } = splitIntoStages(orderedPaths, stageCount);
+  const stages = splitIntoStages(orderedPaths, stageCount);
 
   const record = {
     slug,
@@ -733,7 +714,6 @@ for (const filePath of filteredFiles) {
     pathCount: rawPaths.length,
     strategy,
     stages,
-    stageParts,
   };
 
   manifest.push(record);
