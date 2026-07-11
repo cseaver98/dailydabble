@@ -83,6 +83,31 @@ const capitalizeFirstLetter = (value: string) => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 const getSegmentKey = (segment: NormalizedDoodleSegment, index: number) => segment.id || segment.fullD || segment.d || `segment-${index}`;
+const combineStageParts = (stages: DoodleStageSegmentInput[][], revealedCount: number): DoodleStageSegmentInput[] => {
+  const combined = new Map<string, DoodleStageSegmentInput>();
+
+  for (const stage of stages.slice(0, revealedCount)) {
+    for (const segment of stage) {
+      if (typeof segment === "string") {
+        combined.set(segment, segment);
+        continue;
+      }
+      if (!segment || typeof segment !== "object" || typeof segment.d !== "string") {
+        continue;
+      }
+
+      const key = typeof segment.id === "string" && segment.id ? segment.id : segment.d;
+      const previous = combined.get(key);
+      const previousD = previous && typeof previous === "object" && typeof previous.d === "string" ? previous.d : "";
+      combined.set(key, {
+        ...segment,
+        d: previousD ? `${previousD} ${segment.d}`.trim() : segment.d,
+      });
+    }
+  }
+
+  return Array.from(combined.values());
+};
 const getDefaultRestoredDoodleState = (): RestoredDoodleState => ({
   guess: "",
   attempts: [],
@@ -447,15 +472,15 @@ export default function DoodleGameClient({
     ? (shouldAnimateWinReveal ? (winRevealStage ?? baseRevealedStages) : finalRevealStage)
     : baseRevealedStages;
   const activeStageSegments = useMemo(
-    () => (Array.isArray(stageList[revealedStages - 1]) ? stageList[revealedStages - 1] : []),
+    () => combineStageParts(stageList, revealedStages),
     [revealedStages, stageList],
   );
   const previousStageSegments = useMemo(
-    () => (Array.isArray(stageList[revealedStages - 2]) ? stageList[revealedStages - 2] : []),
+    () => combineStageParts(stageList, Math.max(0, revealedStages - 1)),
     [revealedStages, stageList],
   );
   const finalStageSegments = useMemo(
-    () => (Array.isArray(stageList[finalRevealStage - 1]) ? stageList[finalRevealStage - 1] : []),
+    () => combineStageParts(stageList, finalRevealStage),
     [finalRevealStage, stageList],
   );
   const isWinRevealInProgress = isWinRevealAnimating;
