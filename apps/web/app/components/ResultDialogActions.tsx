@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { useState } from "react";
 
 import { games } from "@/lib/games";
+import { trackEvent } from "@/lib/analytics-client";
 import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
 
 type ResultDialogActionsProps = {
@@ -61,6 +62,14 @@ export default function ResultDialogActions({ currentGameSlug, onShare }: Result
         <Link
           className="admin-btn-like primary"
           href={nextGame ? nextGame.href : "/account/stats"}
+          onClick={() => {
+            if (!nextGame) return;
+            trackEvent({
+              eventName: "next_game_clicked",
+              gameSlug: currentGameSlug,
+              metadata: { nextGameSlug: nextGame.slug },
+            });
+          }}
           onMouseEnter={() => setIsPrimaryHovered(true)}
           onMouseLeave={() => setIsPrimaryHovered(false)}
           onFocus={() => setIsPrimaryHovered(true)}

@@ -4,6 +4,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AuthError } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase-auth/client";
+import { trackEvent, trackEventOnce } from "@/lib/analytics-client";
 
 type AuthDialogProps = {
   isOpen: boolean;
@@ -76,12 +77,18 @@ export default function AuthDialog({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || mode !== "gate") return;
+    trackEventOnce("account-wall-shown", { eventName: "account_wall_shown" });
+  }, [isOpen, mode]);
+
   if (!portalRoot || !isOpen) return null;
 
   const signInWithProvider = async (provider: "google" | "apple") => {
     setError("");
     setMessage("");
     setLoadingProvider(provider);
+    trackEvent({ eventName: "signup_started", metadata: { provider } });
 
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider,
@@ -108,6 +115,7 @@ export default function AuthDialog({
     setError("");
     setMessage("");
     setLoadingProvider("email");
+    trackEvent({ eventName: "signup_started", metadata: { provider: "email" } });
 
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email: trimmedEmail,

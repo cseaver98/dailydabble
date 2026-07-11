@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { useEffect, useMemo, useState } from "react";
 import type { SVGProps } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
@@ -636,6 +638,8 @@ export default function DoodleGameClient({
       setMessage("Enter a guess first.");
       return;
     }
+
+    trackGameStarted("doodle", puzzle.puzzleDate, isArchiveView);
 
     const isCorrect = isCorrectAttempt(normalized);
     const nextAttempts = [...attempts, normalized];

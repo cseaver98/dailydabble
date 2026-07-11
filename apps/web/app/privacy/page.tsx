@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <main className="min-h-screen bg-transparent px-5 pb-12 text-[#2c2f31] sm:px-8">
         <section className="mx-auto mt-6 max-w-4xl rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10">
           <h1 className="font-headline text-3xl font-extrabold text-[#2c2f31]">Privacy Policy</h1>
-          <p className="mt-2 text-sm text-[#595c5e]">Last updated June 22, 2026.</p>
+          <p className="mt-2 text-sm text-[#595c5e]">Last updated July 11, 2026.</p>
 
           <div className="mt-6 space-y-4 text-[15px] leading-7 text-[#3e4245]">
             <p>
@@ -42,6 +42,16 @@ export default function PrivacyPage() {
               Some account, sign-in, or cross-device features may be available now or expanded over time. When you use
               those features, we may process account identifiers, authentication state, and related records needed to
               provide access and keep your account secure.
+            </p>
+
+            <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Usage Analytics</h2>
+            <p>
+              DailyDabble records limited first-party usage events, such as opening or completing a game, using account
+              features, enabling reminders, or sharing a result. These records may include a player or account
+              identifier, session identifier, game and puzzle date, page path, broad device category, referral domain,
+              and campaign tags. We use this information to understand engagement, improve the games, diagnose problems,
+              and prevent abuse. We do not include puzzle guesses, email addresses, or shared-result text in these
+              analytics events.
             </p>
 
             <h2 className="font-headline pt-2 text-xl font-bold text-[#2c2f31]">Third-Party Sign-In Data</h2>

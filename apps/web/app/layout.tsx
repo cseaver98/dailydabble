@@ -13,6 +13,7 @@ import "./doodle/doodle.css";
 import "./agegaple/agegaple.css";
 import AuthStateStorageBoundary from "./components/AuthStateStorageBoundary";
 import DailyReminderPrompt from "./components/DailyReminderPrompt";
+import AnalyticsPageTracker from "./components/AnalyticsPageTracker";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -143,6 +144,7 @@ export default function RootLayout({
       <body className={`${plusJakartaSans.variable} ${manrope.variable} antialiased`}>
         <script dangerouslySetInnerHTML={{ __html: subscriberBootScript }} />
         <AuthStateStorageBoundary />
+        <AnalyticsPageTracker />
         <DailyReminderPrompt />
         {children}
         <Analytics />

@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
@@ -370,6 +372,8 @@ export default function SportleGameClient({
       setMessage("Select an athlete guess.");
       return;
     }
+
+    trackGameStarted("sportle", puzzle.puzzleDate, isArchiveView);
 
     try {
       const response = await fetch("/api/sportle/puzzle/submit", {

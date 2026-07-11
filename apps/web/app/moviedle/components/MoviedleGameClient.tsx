@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
@@ -403,6 +405,8 @@ export default function MoviedleGameClient({
       setMessage("Enter a movie title.");
       return;
     }
+
+    trackGameStarted("moviedle", puzzle.puzzleDate, isArchiveView);
 
     try {
       const response = await fetch("/api/moviedle/puzzle/submit", {

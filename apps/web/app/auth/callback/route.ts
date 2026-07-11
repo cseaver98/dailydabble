@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
     if (needsDisplayName) {
       const welcomeUrl = new URL("/", requestUrl.origin);
       welcomeUrl.searchParams.set("onboarding", "display-name");
+      welcomeUrl.searchParams.set("auth_success", "1");
       welcomeUrl.searchParams.set("next", next);
       for (const [key, value] of redirectUrl.searchParams) {
         if (key.startsWith("auth_warning")) {
@@ -94,6 +95,8 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect(welcomeUrl);
     }
+
+    redirectUrl.searchParams.set("auth_success", "1");
   }
 
   return NextResponse.redirect(redirectUrl);

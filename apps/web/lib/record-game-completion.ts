@@ -1,3 +1,5 @@
+import { trackEventOnce } from "@/lib/analytics-client";
+
 export type RecordGameCompletionInput = {
   gameSlug: string;
   puzzleId: string;
@@ -42,6 +44,17 @@ export const recordGameCompletion = async (input: RecordGameCompletionInput) => 
   }
 
   dispatchTodayCompletionRecorded(input);
+  trackEventOnce(`completed:${input.gameSlug}:${input.puzzleDate}:${Boolean(input.isArchive)}`, {
+    eventName: "game_completed",
+    gameSlug: input.gameSlug,
+    puzzleDate: input.puzzleDate,
+    isArchive: Boolean(input.isArchive),
+    metadata: {
+      didWin: input.isWin,
+      guessesUsed: input.guessesUsed,
+      maxGuesses: input.maxGuesses,
+    },
+  });
 
   const payload = (await response.json().catch(() => ({}))) as CompletionResponse;
   if (payload.reminderPrompt?.puzzleDate && typeof window !== "undefined") {
