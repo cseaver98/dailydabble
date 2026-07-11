@@ -2,6 +2,13 @@ import { games } from "@/lib/games";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSubscriptionAccess } from "@/lib/subscriptions";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  calculateBestCompletionStreak,
+  calculateCurrentCompletionStreak,
+  calculateDailyTrophyDates,
+  calculateFavoriteGame,
+  dedupeDailyCompletions,
+} from "@/lib/daily-completion-stats";
 
 type GameResultRow = {
   id: string;
@@ -46,6 +53,21 @@ export type AccountStats = {
     totalGamesToday: number;
   };
   games: GameStats[];
+  favoriteGame: {
+    gameSlug: string;
+    gameName: string;
+    totalCompletions: number;
+    lastCompletedAt: string;
+  } | null;
+  trophies: {
+    total: number;
+    currentMonth: number;
+    bestMonth: {
+      month: string;
+      count: number;
+    } | null;
+    dates: string[];
+  };
   entitlements: {
     advancedStats: boolean;
   };
@@ -54,97 +76,8 @@ export type AccountStats = {
 const roundRate = (value: number) => Math.round(value * 1000) / 1000;
 const roundAverage = (value: number) => Math.round(value * 100) / 100;
 
-const previousDate = (date: string) => {
-  const [year, month, day] = date.split("-").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, day));
-  next.setUTCDate(next.getUTCDate() - 1);
-  return next.toISOString().slice(0, 10);
-};
-
-const calculateWinStreak = (dailyRows: GameResultRow[]) => {
-  const resultByDate = new Map(dailyRows.map((row) => [row.puzzle_date, row]));
-  if (!resultByDate.size) {
-    return 0;
-  }
-
-  let date = getTodayPuzzleDate();
-  if (!resultByDate.has(date)) {
-    date = previousDate(date);
-  }
-
-  let streak = 0;
-  while (true) {
-    const result = resultByDate.get(date);
-    if (!result?.is_win) {
-      return streak;
-    }
-    streak += 1;
-    date = previousDate(date);
-  }
-};
-
-const calculateDailyDabbleStreak = (rows: GameResultRow[]) => {
-  const requiredGameSlugs = new Set(games.map((game) => game.slug));
-  const completedGamesByDate = new Map<string, Set<string>>();
-
-  for (const row of rows) {
-    if (row.is_archive) continue;
-    const completedGames = completedGamesByDate.get(row.puzzle_date) ?? new Set<string>();
-    completedGames.add(row.game_slug);
-    completedGamesByDate.set(row.puzzle_date, completedGames);
-  }
-
-  const isCompleteDate = (date: string) => {
-    const completedGames = completedGamesByDate.get(date);
-    if (!completedGames) return false;
-    return [...requiredGameSlugs].every((slug) => completedGames.has(slug));
-  };
-
-  let date = getTodayPuzzleDate();
-  if (!isCompleteDate(date)) {
-    date = previousDate(date);
-  }
-
-  let streak = 0;
-  while (isCompleteDate(date)) {
-    streak += 1;
-    date = previousDate(date);
-  }
-
-  return streak;
-};
-
-const calculateBestDailyDabbleStreak = (rows: GameResultRow[]) => {
-  const requiredGameSlugs = new Set(games.map((game) => game.slug));
-  const completedGamesByDate = new Map<string, Set<string>>();
-
-  for (const row of rows) {
-    if (row.is_archive) continue;
-    const completedGames = completedGamesByDate.get(row.puzzle_date) ?? new Set<string>();
-    completedGames.add(row.game_slug);
-    completedGamesByDate.set(row.puzzle_date, completedGames);
-  }
-
-  const completeDates = [...completedGamesByDate.entries()]
-    .filter(([, completedGames]) => [...requiredGameSlugs].every((slug) => completedGames.has(slug)))
-    .map(([date]) => date)
-    .sort();
-
-  let bestStreak = 0;
-  let currentStreak = 0;
-  let previousCompleteDate: string | null = null;
-
-  for (const date of completeDates) {
-    currentStreak = previousCompleteDate && previousDate(date) === previousCompleteDate ? currentStreak + 1 : 1;
-    bestStreak = Math.max(bestStreak, currentStreak);
-    previousCompleteDate = date;
-  }
-
-  return bestStreak;
-};
-
-const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]): GameStats => {
-  const dailyRows = rows.filter((row) => !row.is_archive);
+const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[], today: string): GameStats => {
+  const dailyRows = dedupeDailyCompletions(rows, new Set([gameSlug]));
   const archiveRows = rows.filter((row) => row.is_archive);
   const played = dailyRows.length;
   const wins = dailyRows.filter((row) => row.is_win).length;
@@ -168,7 +101,7 @@ const summarizeGame = (gameSlug: string, gameName: string, rows: GameResultRow[]
     winRate: played ? roundRate(wins / played) : null,
     averageGuesses: guesses.length ? roundAverage(guesses.reduce((sum, value) => sum + value, 0) / guesses.length) : null,
     bestGuesses: guesses.length ? Math.min(...guesses) : null,
-    currentStreak: calculateWinStreak(dailyRows),
+    currentStreak: calculateCurrentCompletionStreak(dailyRows.map((row) => row.puzzle_date), today),
     lastPlayedAt,
   };
 };
@@ -196,19 +129,28 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
     statsByGame.set(row.game_slug, gameRows);
   }
 
-  const gameStats = games.map((game) => summarizeGame(game.slug, game.name, statsByGame.get(game.slug) ?? []));
-  const dailyRows = rows.filter((row) => !row.is_archive);
+  const today = getTodayPuzzleDate();
+  const gameStats = games.map((game) => summarizeGame(game.slug, game.name, statsByGame.get(game.slug) ?? [], today));
+  const dailyRows = dedupeDailyCompletions(rows, new Set(games.map((game) => game.slug)));
   const archiveRows = rows.filter((row) => row.is_archive);
   const played = dailyRows.length;
   const wins = dailyRows.filter((row) => row.is_win).length;
   const dailyPlayed = dailyRows.length;
   const guesses = dailyRows.map((row) => row.guesses_used);
-  const today = getTodayPuzzleDate();
   const completedTodayCount = new Set(
     rows
       .filter((row) => !row.is_archive && row.puzzle_date === today)
       .map((row) => row.game_slug),
   ).size;
+  const trophyDates = calculateDailyTrophyDates(dailyRows, new Set(games.map((game) => game.slug)));
+  const currentMonth = today.slice(0, 7);
+  const trophiesByMonth = trophyDates.reduce((months, date) => {
+    const month = date.slice(0, 7);
+    months.set(month, (months.get(month) ?? 0) + 1);
+    return months;
+  }, new Map<string, number>());
+  const bestMonth = [...trophiesByMonth.entries()]
+    .sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0] ?? null;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -221,12 +163,19 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
       losses: played - wins,
       winRate: played ? roundRate(wins / played) : null,
       averageGuesses: guesses.length ? roundAverage(guesses.reduce((sum, value) => sum + value, 0) / guesses.length) : null,
-      currentDailyDabbleStreak: calculateDailyDabbleStreak(rows),
-      bestDailyDabbleStreak: calculateBestDailyDabbleStreak(rows),
+      currentDailyDabbleStreak: calculateCurrentCompletionStreak(dailyRows.map((row) => row.puzzle_date), today),
+      bestDailyDabbleStreak: calculateBestCompletionStreak(dailyRows.map((row) => row.puzzle_date), today),
       completedTodayCount,
       totalGamesToday: games.length,
     },
     games: gameStats,
+    favoriteGame: calculateFavoriteGame(dailyRows, games),
+    trophies: {
+      total: trophyDates.length,
+      currentMonth: trophiesByMonth.get(currentMonth) ?? 0,
+      bestMonth: bestMonth ? { month: bestMonth[0], count: bestMonth[1] } : null,
+      dates: trophyDates,
+    },
     entitlements: {
       advancedStats: subscriptionAccess.canAccessPremiumStats,
     },
