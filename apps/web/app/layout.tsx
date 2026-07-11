@@ -34,34 +34,45 @@ try {
 `;
 
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
+const twitterImageUrl = "/opengraph-image?v=20260710";
 
-export const generateMetadata = (): Metadata => ({
-  title: isStagingEnvironment() ? "DailyDabble Staging" : "DailyDabble",
-  description: "Daily trivia game hub",
-  manifest: "/manifest.webmanifest",
-  openGraph: {
-    title: isStagingEnvironment() ? "DailyDabble Staging" : "DailyDabble",
-    description: "The daily trivia game hub",
-    images: ["/opengraph-image"],
-  },
-  robots: isStagingEnvironment()
-    ? {
-        index: false,
-        follow: false,
-        googleBot: {
+export const generateMetadata = (): Metadata => {
+  const title = isStagingEnvironment() ? "DailyDabble Staging" : "DailyDabble";
+  const description = "The daily trivia game hub";
+
+  return {
+    title,
+    description: "Daily trivia game hub",
+    manifest: "/manifest.webmanifest",
+    openGraph: {
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [twitterImageUrl],
+    },
+    robots: isStagingEnvironment()
+      ? {
           index: false,
           follow: false,
-        },
-      }
-    : undefined,
-  icons: {
-    icon: [
-      { url: "/apple-icon.png", type: "image/png", sizes: "512x512" },
-    ],
-    shortcut: "/apple-icon.png",
-    apple: "/apple-icon.png",
-  },
-});
+          googleBot: {
+            index: false,
+            follow: false,
+          },
+        }
+      : undefined,
+    icons: {
+      icon: [
+        { url: "/apple-icon.png", type: "image/png", sizes: "512x512" },
+      ],
+      shortcut: "/apple-icon.png",
+      apple: "/apple-icon.png",
+    },
+  };
+};
 
 export default function RootLayout({
   children,
