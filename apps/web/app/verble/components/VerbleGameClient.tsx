@@ -57,17 +57,25 @@ type WordAttempt = {
   feedback: LetterFeedback[];
 };
 
-const toShareFeedbackBlock = (feedback: LetterFeedback) => {
+const toShareFeedbackBlock = (feedback: LetterFeedback | "empty") => {
   if (feedback === "correct") return "🟩";
   if (feedback === "present") return "🟨";
   return "🟥";
 };
 
-const buildVerbleShareRow = (attempts: WordAttempt[]) =>
-  attempts
-    .map((attempt) => attempt.feedback.map(toShareFeedbackBlock).join(""))
-    .filter(Boolean)
-    .join(" ");
+const buildVerbleShareRow = ({
+  slots,
+  slotMarks,
+  didWin,
+}: {
+  slots: Slot[];
+  slotMarks: SlotMarks;
+  didWin: boolean;
+}) => slots
+  .map((slot) => Array.from({ length: slot.length }, (_, index) => (
+    toShareFeedbackBlock(didWin ? "correct" : slotMarks[slot.index]?.[index] || "empty")
+  )).join("\u2060"))
+  .join(" ");
 
 type SlotDrafts = Record<number, string[]>;
 type SlotLocks = Record<number, boolean[]>;
@@ -1224,7 +1232,11 @@ export default function VerbleGameClient({
 
   const shareResult = async () => {
     if (!puzzle || gameState === "playing") return;
-    const shareBlocks = buildVerbleShareRow(wordAttempts);
+    const shareBlocks = buildVerbleShareRow({
+      slots: puzzle.slots,
+      slotMarks,
+      didWin: gameState === "won",
+    });
     const text = buildGameShareText({
       gameName: "Verble",
       isArchiveView,
