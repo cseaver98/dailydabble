@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
@@ -390,6 +392,8 @@ export default function YeardleGameClient({
       setMessage("Enter a 4-digit year.");
       return;
     }
+
+    trackGameStarted("yeardle", puzzle.puzzleDate, isArchiveView);
 
     const numericGuess = Number(nextGuess);
     try {

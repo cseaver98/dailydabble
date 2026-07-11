@@ -15,6 +15,7 @@ import { buildGameShareText, shareResultText } from "../../../lib/share-results"
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
+import { trackGameStarted } from "../../../lib/analytics-client";
 
 type VerbleGameClientProps = {
   apiUrl: string;
@@ -729,6 +730,8 @@ export default function VerbleGameClient({
       setMessage(`Word must be ${selectedSlotMeta.length} letters for this slot.`);
       return;
     }
+
+    trackGameStarted("verble", puzzle.puzzleDate, isArchiveView);
 
     let responsePayload: GuessWordResponse = {};
     try {

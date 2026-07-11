@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { trackEvent, trackEventOnce } from "@/lib/analytics-client";
 
 const DISMISSED_KEY_PREFIX = "dailydabble:v1:daily-reminder-prompt-dismissed";
 
@@ -59,6 +60,11 @@ export default function DailyReminderPrompt() {
 
   useEffect(() => {
     if (!puzzleDate) return;
+
+    trackEventOnce(`reminder-prompt:${puzzleDate}`, {
+      eventName: "reminder_prompt_shown",
+      puzzleDate,
+    });
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -127,6 +133,7 @@ export default function DailyReminderPrompt() {
       }
 
       window.dispatchEvent(new Event("dailydabble:profile-updated"));
+      trackEvent({ eventName: "reminder_enabled", puzzleDate: puzzleDate ?? undefined });
       dismiss();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not enable reminders.");

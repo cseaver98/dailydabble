@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
@@ -459,6 +461,7 @@ export default function EquadleGameClient({
     }
 
     const guessEquation = buildFullGuess(guess.trim(), equationLength, equalsIndex);
+    trackGameStarted("equadle", puzzle.puzzleDate, isArchiveView);
     try {
       const response = await fetch("/api/equadle/puzzle/submit", {
         method: "POST",

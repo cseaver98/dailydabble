@@ -1,5 +1,7 @@
 "use client";
 
+import { trackGameStarted } from "../../../lib/analytics-client";
+
 import { DailydabbleNav, DailydabbleUnavailable } from "@dailydabble/ui";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AccountNav from "../../components/AccountNav";
@@ -559,6 +561,8 @@ export default function AgegapleGameClient({
       setError("Enter an age gap guess.");
       return;
     }
+
+    trackGameStarted("agegaple", puzzle.puzzleDate, isArchiveView);
 
     setError(null);
     try {
