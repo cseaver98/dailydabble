@@ -147,7 +147,7 @@ export default async function OpenGraphImage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Play original daily trivia games in one place.
+            Play original daily games in one place.
           </div>
 
           <div
