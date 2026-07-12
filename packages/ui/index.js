@@ -199,6 +199,13 @@ export function DailydabbleMenu({
                   },
                 }),
               ),
+              progressSummary.progressMessage
+                ? React.createElement(
+                    "p",
+                    { className: "nav-menu-progress-message" },
+                    progressSummary.progressMessage,
+                  )
+                : null,
               progressSummary.completionTitle
                 ? React.createElement(
                     "div",

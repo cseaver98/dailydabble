@@ -1,14 +1,13 @@
 "use client";
 
 const gameStatePrefixes = [
-  "agegaple:v1:",
-  "agegaple:v2:",
-  "doodle:v1:",
-  "equadle:v1:",
-  "moviedle:v1:",
-  "sportle:v1:",
-  "verble:v1:",
-  "yeardle:v1:",
+  "agegaple:",
+  "doodle:",
+  "equadle:",
+  "moviedle:",
+  "sportle:",
+  "verble:",
+  "yeardle:",
 ];
 
 export const clearLocalGameState = () => {
