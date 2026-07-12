@@ -574,6 +574,14 @@ export default function VerbleGameClient({
     && Boolean(selectedSlotMeta)
     && selectedSlotDraft.length === (selectedSlotMeta?.length || 0)
     && selectedSlotDraft.every((letter) => Boolean(letter));
+  const shouldSubmitLastUnsolvedWord =
+    canSubmitWordGuess
+    && !!puzzle
+    && !!selectedSlotMeta
+    && puzzle.slots.every((slot) => (
+      slot.index === selectedSlotMeta.index || Boolean(solvedWords[slot.index])
+    ));
+  const canOpenFullPhraseConfirm = canSubmitFullPhraseGuess && !shouldSubmitLastUnsolvedWord;
   const shouldShowPickWordPulse =
     gameState === "playing"
     && !selectedSlotMeta
@@ -1264,7 +1272,7 @@ export default function VerbleGameClient({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        if (canSubmitFullPhraseGuess) {
+        if (canOpenFullPhraseConfirm) {
           setIsPhraseConfirmOpen(true);
           return;
         }
@@ -1303,7 +1311,7 @@ export default function VerbleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canSubmitFullPhraseGuess, canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, selectedSlotMeta, solvedWords]);
+  }, [canOpenFullPhraseConfirm, canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, selectedSlotMeta, solvedWords]);
  
   const latestAttempt = wordAttempts.length > 0 ? wordAttempts[wordAttempts.length - 1] : null;
   const earlierAttempts = wordAttempts.slice(0, -1).reverse();
@@ -1356,7 +1364,7 @@ export default function VerbleGameClient({
   const playPrompt = message || (
     gameState !== "playing"
       ? ""
-      : canSubmitFullPhraseGuess
+      : canOpenFullPhraseConfirm
         ? "Full phrase filled. Press Enter to submit it."
         : selectedSlotMeta
           ? `Guess word #${selectedSlotMeta.index + 1}: ${selectedSlotMeta.length} letters.`
@@ -1489,7 +1497,7 @@ export default function VerbleGameClient({
                           return (
                             <span key={`${slot.index}-${index}`} className="slot-char-group">
                               <span
-                                className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && shouldShowPickWordPulse ? "pick-word-pulse" : ""} ${item.kind === "letter" && canSubmitFullPhraseGuess ? "phrase-ready" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
+                                className={`slot-tile ${item.kind === "fixed" ? "fixed" : ""} ${item.kind === "letter" && solved && !phraseRevealForSlot ? "solved" : ""} ${item.kind === "letter" && isSelected ? "selected" : ""} ${item.kind === "letter" && item.value ? "filled" : ""} ${item.kind === "letter" && shouldShowPickWordPulse ? "pick-word-pulse" : ""} ${item.kind === "letter" && canOpenFullPhraseConfirm ? "phrase-ready" : ""} ${item.kind === "letter" && !activeRevealIndex ? feedbackClass : ""} ${item.kind === "letter" && activeRevealIndex ? "reveal" : ""} ${item.kind === "letter" && postRevealIndex ? "reveal-swap" : ""} ${item.kind === "letter" && persistedLocks[letterIndex] ? "locked" : ""}`}
                                 style={
                                   item.kind === "letter" && activeRevealIndex
                                     ? ({
@@ -1596,13 +1604,13 @@ export default function VerbleGameClient({
                 type="button"
                 className="key wide control-key"
                 onClick={() => {
-                  if (canSubmitFullPhraseGuess) {
+                  if (canOpenFullPhraseConfirm) {
                     setIsPhraseConfirmOpen(true);
                     return;
                   }
                   void submitWordGuess();
                 }}
-                disabled={!canSubmitFullPhraseGuess && !canSubmitWordGuess}
+                disabled={!canOpenFullPhraseConfirm && !canSubmitWordGuess}
               >
                 Enter
               </button>
