@@ -34,6 +34,7 @@ export type DailydabbleMenuProgressSummary = {
   completed?: number;
   total?: number;
   ariaLabel?: string;
+  progressMessage?: string;
   completionTitle?: string;
   completionMessage?: string;
   completionCountdown?: string;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DailydabbleNav } from "@dailydabble/ui";
 import AccountNav from "../../components/AccountNav";
 import DailyDabbleWordmark from "../../components/DailyDabbleWordmark";
+import DailyTrophyIcon from "../../components/DailyTrophyIcon";
 import SiteMenu from "../../components/SiteMenu";
 import AccountLoginPanel from "../AccountLoginPanel";
 import { getAccountStats } from "@/lib/account-stats";
@@ -36,18 +37,6 @@ const gameAccentColors: Record<string, string> = {
   sportle: "#c45f08",
 };
 
-function TrophyIcon() {
-  return (
-    <svg viewBox="0 0 96 96" className="h-20 w-20" aria-hidden="true">
-      <path d="M29 17h38v18c0 14-8 25-19 25S29 49 29 35V17Z" fill="#e9b937" stroke="#7d5108" strokeWidth="3" />
-      <path d="M36 21h9v28c-6-2-9-8-9-16V21Z" fill="#fff2a8" opacity=".72" />
-      <path d="M29 24H17v8c0 11 7 18 18 19M67 24h12v8c0 11-7 18-18 19" fill="none" stroke="#b87c0a" strokeWidth="6" strokeLinecap="round" />
-      <path d="M48 60v12M34 82h28M39 72h18v10H39z" fill="#d99e22" stroke="#7d5108" strokeWidth="3" strokeLinejoin="round" />
-      <path d="m48 27 3 6 7 .9-5 4.8 1.3 6.8L48 42l-6.3 3.5 1.3-6.8-5-4.8 7-.9 3-6Z" fill="#fff6c8" />
-    </svg>
-  );
-}
-
 export default async function AccountStatsPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,15 +68,18 @@ export default async function AccountStatsPage() {
           <div className={`relative overflow-hidden rounded-[2.25rem] p-7 shadow-[0_20px_40px_rgba(44,47,49,0.06)] sm:p-10 ${allGamesComplete ? "border border-[#b6f6ab] bg-[linear-gradient(135deg,#ffffff_0%,#f0ffed_100%)]" : "bg-white"}`}>
             <div className="relative">
               <p className="font-headline text-sm font-extrabold text-[#2f672d]">Today&apos;s progress</p>
+              {allGamesComplete ? (
+                <span className="absolute right-0 top-0 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#d1ffc7] text-xl font-black text-[#225b22]" aria-hidden="true">✓</span>
+              ) : null}
               <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div>
                     <p className="font-headline text-5xl font-extrabold text-[#2c2f31]">{completedTodayLabel}</p>
                     <p className="mt-1 text-sm font-bold text-[#75777a]">games completed today</p>
+                    {!allGamesComplete ? (
+                      <p className="mt-1 text-sm font-extrabold text-[#2f672d]">Complete all 7 games to earn today&apos;s trophy.</p>
+                    ) : null}
                   </div>
-                  {allGamesComplete ? (
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#d1ffc7] text-xl font-black text-[#225b22]" aria-hidden="true">✓</span>
-                  ) : null}
                 </div>
                 <Link
                   href="/"
@@ -106,9 +98,9 @@ export default async function AccountStatsPage() {
               </div>
               {allGamesComplete ? (
                 <div className="mt-4">
-                  <p className="font-headline text-xl font-extrabold text-[#225b22]">Full DailyDabble completed!</p>
+                  <p className="font-headline text-xl font-extrabold text-[#225b22]">Today&apos;s Daily Trophy is in your case!</p>
                   <p className="mt-1 text-sm font-semibold text-[#595c5e]">
-                    You completed all seven games today. Come back tomorrow to keep your streak going.
+                    You completed all seven games today. Come back tomorrow to earn another trophy.
                   </p>
                   <CompletionCountdown />
                 </div>
@@ -164,7 +156,7 @@ export default async function AccountStatsPage() {
             </section>
           </div>
 
-          <section className="mt-6 overflow-hidden rounded-[2rem] bg-[linear-gradient(145deg,#fffdf6_0%,#fff7d9_100%)] p-6 shadow-[0_18px_36px_rgba(112,78,8,0.08)] sm:p-7">
+          <section id="trophy-case" className="mt-6 scroll-mt-24 overflow-hidden rounded-[2rem] bg-[linear-gradient(145deg,#fffdf6_0%,#fff7d9_100%)] p-6 shadow-[0_18px_36px_rgba(112,78,8,0.08)] sm:p-7">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="font-headline text-2xl font-extrabold text-[#51370a]">Daily Trophy Case</p>
@@ -187,7 +179,7 @@ export default async function AccountStatsPage() {
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {stats.trophies.dates.map((date) => (
                     <article key={date} className="flex flex-col items-center rounded-[1.5rem] border border-[#ecd99d] bg-white/75 px-3 pb-4 pt-3 text-center">
-                      <TrophyIcon />
+                      <DailyTrophyIcon />
                       <div className="-mt-1 w-full rounded-lg border border-[#8a5b09] bg-[linear-gradient(180deg,#d99e22,#b97708)] px-2 py-1.5 shadow-[inset_0_1px_rgba(255,255,255,0.45)]">
                         <p className="font-headline whitespace-nowrap text-[0.68rem] font-extrabold text-white sm:text-xs">
                           {formatTrophyDate(date)}
@@ -204,7 +196,7 @@ export default async function AccountStatsPage() {
               </>
             ) : (
               <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#dfc875] bg-white/55 p-6 text-center">
-                <div className="mx-auto w-fit opacity-45"><TrophyIcon /></div>
+                <div className="mx-auto w-fit opacity-45"><DailyTrophyIcon /></div>
                 <p className="font-headline mt-1 text-lg font-extrabold text-[#51370a]">Your first trophy is waiting</p>
                 <p className="mx-auto mt-1 max-w-md text-sm font-semibold text-[#75633d]">Finish all seven games on the same day to place it in your case.</p>
               </div>

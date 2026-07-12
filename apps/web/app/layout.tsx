@@ -12,8 +12,8 @@ import "./moviedle/moviedle.css";
 import "./doodle/doodle.css";
 import "./agegaple/agegaple.css";
 import AuthStateStorageBoundary from "./components/AuthStateStorageBoundary";
-import DailyReminderPrompt from "./components/DailyReminderPrompt";
 import AnalyticsPageTracker from "./components/AnalyticsPageTracker";
+import TrophyEarnedDialog from "./components/TrophyEarnedDialog";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -145,7 +145,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: subscriberBootScript }} />
         <AuthStateStorageBoundary />
         <AnalyticsPageTracker />
-        <DailyReminderPrompt />
+        <TrophyEarnedDialog />
         {children}
         <Analytics />
         <SpeedInsights />

@@ -31,7 +31,7 @@ export async function GET() {
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       const fallbackStatus = Object.fromEntries(games.map((game) => [game.slug, false]));
       const fallbackGameStatuses = Object.fromEntries(games.map((game) => [game.slug, { status: "not_started" as GameResultStatus }]));
-      return NextResponse.json({ date: today, status: fallbackStatus, gameStatuses: fallbackGameStatuses, persisted: false });
+      return NextResponse.json({ date: today, status: fallbackStatus, gameStatuses: fallbackGameStatuses, persisted: false, ownerKey: null });
     }
 
     const authClient = await createSupabaseServerClient();
@@ -112,7 +112,14 @@ export async function GET() {
       }),
     );
 
-    return NextResponse.json({ date: today, status, gameStatuses, persisted: true, source: "game_results" });
+    return NextResponse.json({
+      date: today,
+      status,
+      gameStatuses,
+      persisted: true,
+      source: "game_results",
+      ownerKey: user?.id ?? playerId,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -269,6 +269,15 @@
   background: var(--primary, #2f672d);
 }
 
+.nav-menu-progress-message,
+.dd-nav .nav-menu-progress-message {
+  margin: 0;
+  color: #75777a;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
 .nav-menu-progress-complete,
 .dd-nav .nav-menu-progress-complete {
   display: grid;
