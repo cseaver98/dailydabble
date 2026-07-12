@@ -35,7 +35,7 @@ try {
 `;
 
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
-const twitterImageUrl = "/opengraph-image?v=20260710";
+const twitterImageUrl = "/opengraph-image?v=20260712";
 const siteUrl = "https://dailydabble.app";
 const siteDescription =
   "Play seven original daily games in one place. Solve phrases, doodles, movies, history, sports, equations, and age gaps with a fresh challenge every day.";
