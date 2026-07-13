@@ -316,18 +316,25 @@ export async function POST(request: Request) {
     };
 
     if (detail.imdbID) {
-      const { error: titleLibraryUpdateError } = await supabase
-        .from("movie_titles")
-        .upsert(
-          {
-            id: titleId || undefined,
-            title,
-            title_normalized: titleNormalized,
-            imdb_id: detail.imdbID,
-            source: "omdb",
-          },
-          { onConflict: "title_normalized", ignoreDuplicates: false },
-        );
+      const titleLibraryPayload = {
+        title,
+        imdb_id: detail.imdbID,
+        source: "omdb",
+      };
+      const { error: titleLibraryUpdateError } = titleId
+        ? await supabase
+          .from("movie_titles")
+          .update(titleLibraryPayload)
+          .eq("id", titleId)
+        : await supabase
+          .from("movie_titles")
+          .upsert(
+            {
+              ...titleLibraryPayload,
+              title_normalized: titleNormalized,
+            },
+            { onConflict: "title_normalized", ignoreDuplicates: false },
+          );
       if (titleLibraryUpdateError) {
         throw new Error(`Failed syncing title library entry: ${titleLibraryUpdateError.message}`);
       }
