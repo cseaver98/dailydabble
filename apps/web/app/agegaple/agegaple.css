@@ -4,6 +4,9 @@
   --primary: #d87093;
   --primary-dim: #9e4e6d;
   --primary-container: #f6abc4;
+  --brand: var(--primary);
+  --brand-strong: var(--primary-dim);
+  --brand-soft: var(--primary-container);
   --surface-container-low: #eff1f4;
   --surface-container-lowest: #ffffff;
   --surface-container: #e6e8ec;
@@ -93,10 +96,10 @@
   gap: 0.28rem;
   min-height: 2rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary-dim) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-strong) 28%, transparent);
   background: transparent;
-  color: var(--primary-dim);
-  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  color: var(--brand-strong);
+  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.02em;
@@ -108,8 +111,8 @@
 }
 
 .agegaple-shell .how-to-play-btn:hover {
-  border-color: color-mix(in srgb, var(--primary-dim) 42%, transparent);
-  background: color-mix(in srgb, var(--primary-container) 28%, white);
+  border-color: color-mix(in srgb, var(--brand-strong) 42%, transparent);
+  background: color-mix(in srgb, var(--brand-soft) 34%, white);
   transform: translateY(-1px);
 }
 
