@@ -284,11 +284,11 @@ function HomeContent() {
             const iconBackground = isDoodle
                 ? "bg-sky-100"
                 : isVerble
-                  ? "bg-[#f3e85c]/20"
-                : isYeardle
                   ? "bg-violet-100"
+                : isYeardle
+                  ? "bg-rose-100"
                 : isEquadle
-                    ? "bg-rose-100"
+                    ? "bg-[#f3e85c]/20"
                   : isMoviedle
                     ? "bg-teal-100"
                     : isSportle
@@ -297,11 +297,11 @@ function HomeContent() {
             const iconAccent = isDoodle
                 ? "bg-sky-700/12"
                 : isVerble
-                  ? "bg-[#e6d900]/22"
-                : isYeardle
                   ? "bg-violet-700/12"
+                : isYeardle
+                  ? "bg-rose-700/12"
                 : isEquadle
-                    ? "bg-rose-700/12"
+                    ? "bg-[#e6d900]/22"
                   : isMoviedle
                     ? "bg-teal-700/12"
                     : isSportle
@@ -310,11 +310,11 @@ function HomeContent() {
             const buttonBackground = isDoodle
                 ? "bg-gradient-to-r from-sky-600 to-blue-800 text-white transition-colors hover:from-sky-700 hover:to-blue-900"
                 : isVerble
-                  ? "bg-gradient-to-r from-[#e6d900] to-[#cfbf00] text-white transition-colors hover:from-[#d9cb00] hover:to-[#b8a900]"
-                : isYeardle
                   ? "bg-gradient-to-r from-violet-600 to-indigo-800 text-white transition-colors hover:from-violet-700 hover:to-indigo-900"
+                : isYeardle
+                  ? "bg-gradient-to-r from-[#e03a3e] to-[#ba1a1a] text-white transition-colors hover:from-[#c92f34] hover:to-[#9f1414]"
                   : isEquadle
-                    ? "bg-gradient-to-r from-[#e03a3e] to-[#ba1a1a] text-white transition-colors hover:from-[#c92f34] hover:to-[#9f1414]"
+                    ? "bg-gradient-to-r from-[#e6d900] to-[#cfbf00] text-white transition-colors hover:from-[#d9cb00] hover:to-[#b8a900]"
                   : isMoviedle
                     ? "bg-gradient-to-r from-teal-600 to-emerald-800 text-white transition-colors hover:from-teal-700 hover:to-emerald-900"
                     : isSportle
@@ -372,7 +372,7 @@ function HomeContent() {
                       />
                     ) : isVerble ? (
                       <Image
-                        src="/verble-mark-v3.png"
+                        src="/verble-mark-v5.png"
                         alt="Verble logo"
                         width={42}
                         height={42}
@@ -380,7 +380,7 @@ function HomeContent() {
                       />
                     ) : isYeardle ? (
                       <Image
-                        src="/yeardle-mark-v2.png"
+                        src="/yeardle-mark-v3.png"
                         alt="Yeardle logo"
                         width={42}
                         height={42}
@@ -388,7 +388,7 @@ function HomeContent() {
                       />
                     ) : isEquadle ? (
                       <Image
-                        src="/equadle-mark-v2.png"
+                        src="/equadle-mark-v4.png"
                         alt="Equadle logo"
                         width={46}
                         height={46}

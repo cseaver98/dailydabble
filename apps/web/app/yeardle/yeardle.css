@@ -7,10 +7,10 @@
   --muted: #595c5e;
   --outline-soft: rgba(171, 173, 176, 0.28);
 
-  --brand: #7a5af8;
-  --brand-strong: #5a40cb;
-  --brand-soft: #e9e3ff;
-  --accent: #a88bff;
+  --brand: #e03a3e;
+  --brand-strong: #ba1a1a;
+  --brand-soft: #ffdad6;
+  --accent: #ff7b7e;
 
   --surface-container-low: var(--surface-low);
   --surface-container-high: var(--surface-high);
@@ -20,8 +20,8 @@
   --primary: var(--brand);
   --primary-dim: var(--brand-strong);
   --dd-menu-accent: var(--brand-strong);
-  --dd-menu-hover-bg: #eee8ff;
-  --dd-menu-focus-ring: rgba(122, 90, 248, 0.35);
+  --dd-menu-hover-bg: #ffe9e9;
+  --dd-menu-focus-ring: rgba(224, 58, 62, 0.35);
 }
 
 .yeardle-shell * { box-sizing: border-box; }
@@ -290,7 +290,7 @@
 }
 
 .yeardle-shell .guess-input:focus-visible {
-  outline: 3px solid rgba(122, 90, 248, 0.3);
+  outline: 3px solid rgba(224, 58, 62, 0.3);
   outline-offset: 1px;
 }
 
@@ -304,7 +304,7 @@
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 10px 20px rgba(90, 64, 203, 0.28);
+  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -734,7 +734,7 @@
   border: 0;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
   color: #fff;
-  box-shadow: 0 10px 20px rgba(90, 64, 203, 0.28);
+  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
 }
 
 .yeardle-shell .page-title {
