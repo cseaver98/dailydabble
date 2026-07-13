@@ -24,6 +24,7 @@ export type VerblePuzzle = {
   puzzleDate: string;
   archiveGameNumber: number;
   phraseTemplate: string;
+  sourceNote: string | null;
   slots: Slot[];
   maxGuesses: number;
   answerWords: string[];
@@ -124,6 +125,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, phraseRow: PhraseRow): Promis
     puzzleDate: scheduleRow.puzzle_date,
     archiveGameNumber,
     phraseTemplate: parsed.template,
+    sourceNote: phraseRow.source_note?.trim() || null,
     slots: parsed.slots,
     maxGuesses: 6,
     answerWords: parsed.answerWords,
