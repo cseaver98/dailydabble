@@ -15,6 +15,8 @@ import { buildGameShareText, shareResultText } from "../../../lib/share-results"
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import { trackGameStarted } from "../../../lib/analytics-client";
 
 type VerbleGameClientProps = {
@@ -224,7 +226,7 @@ export default function VerbleGameClient({
   const [guessesUsed, setGuessesUsed] = useState(0);
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("verble", Boolean(puzzle) && !loading);
   const [isPhraseConfirmOpen, setIsPhraseConfirmOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
@@ -464,7 +466,6 @@ export default function VerbleGameClient({
         setSelectedSlot(restoredState.selectedSlot);
         setCopyStatus("");
         setIsResultOpen(restoredState.gameState !== "playing");
-        setIsHowToPlayOpen(false);
         setIsPhraseConfirmOpen(false);
         setIsHistoryOpen(false);
         setRevealState(null);
@@ -1378,8 +1379,8 @@ export default function VerbleGameClient({
         <section className="card verble-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">{`Guesses ${guessesUsed}/${maxGuesses}`}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={guessesUsed} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -1751,19 +1752,9 @@ export default function VerbleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Verble"
-          subtitle="Guess the daily phrase one word at a time."
-          steps={[
-            "Pick one word in the phrase.",
-            "Guess that word with the keyboard.",
-            "Green letters are correct. Yellow letters are in the word, but in another spot. Gray letters are not in that word.",
-            "Green and yellow letters will fill every matching spot across the phrase.",
-            "The keyboard tracks the whole phrase, so a letter may show yellow if it appears in another word.",
-            "If every tile is filled, Enter submits the full phrase after confirmation.",
-            "A full phrase miss ends the game.",
-            `Solve the phrase in ${maxGuesses} guesses.`,
-          ]}
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="verble"
+          maxGuesses={maxGuesses}
+          onClose={closeHowToPlay}
         />
       ) : null}
 

@@ -16,6 +16,8 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import EditorialDrawer from "./EditorialDrawer";
 import type { PuzzleAnswer, PuzzlePersonPublic, PuzzlePublic, RoundGuessFeedback } from "@/lib/agegaple/types";
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "@/lib/stored-game-result";
@@ -324,12 +326,12 @@ export default function AgegapleGameClient({
   const [result, setResult] = useState<PuzzleAnswer | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("agegaple", Boolean(puzzle) && !loading);
   const hasHydratedProgressRef = useRef(false);
 
   useEffect(() => {
@@ -647,8 +649,8 @@ export default function AgegapleGameClient({
             <section className={panelClass}>
               <div className="agegaple-meta-row">
                 <span className="chip">{statusChipLabel}</span>
-                <span className="chip">GUESSES {attempts.length}/{maxGuesses}</span>
-                <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+                <GuessProgressChip used={attempts.length} total={maxGuesses} active={!hasFinishedAttempts} />
+                <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
                   ? How to play
                 </button>
               </div>
@@ -779,16 +781,10 @@ export default function AgegapleGameClient({
 
         {isHowToPlayOpen ? (
           <HowToPlayDialog
-            title="How to play Agegaple"
-            subtitle="Guess the age gap between the two photos."
-            steps={[
-              "Look at both people and the year each photo was taken.",
-              "Guess the rounded age gap in years.",
-              "After each wrong guess, hot and cold feedback tells you how close you are.",
-              `Find the exact rounded age gap in ${maxGuesses} guesses.`,
-            ]}
-            buttonClassName="guess-submit-btn"
-            onClose={() => setIsHowToPlayOpen(false)}
+            game="agegaple"
+            maxGuesses={maxGuesses}
+            preview={{ people: puzzle ? [puzzle.personA, puzzle.personB] : undefined }}
+            onClose={closeHowToPlay}
           />
         ) : null}
 

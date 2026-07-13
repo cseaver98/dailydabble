@@ -18,6 +18,8 @@ import { buildGameShareText, shareResultText } from "../../../lib/share-results"
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 
 type YeardleGameClientProps = {
   apiUrl: string;
@@ -230,7 +232,7 @@ export default function YeardleGameClient({
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [imageFailed, setImageFailed] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("yeardle", Boolean(puzzle) && !loading);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
@@ -323,7 +325,6 @@ export default function YeardleGameClient({
         setMessage(restoredState.message);
         setResolvedAnswer(restoredState.resolvedAnswer);
         setIsResultOpen(restoredState.isResultOpen);
-        setIsHowToPlayOpen(false);
         setCopyStatus("");
       } catch (loadError) {
         if (!active) {
@@ -589,8 +590,8 @@ export default function YeardleGameClient({
         <section className="card yeardle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -748,16 +749,16 @@ export default function YeardleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Yeardle"
-          subtitle="This event happened on this date. Guess the year."
-          steps={[
-            "After each guess, warm and cold hints show how close your guess was.",
-            "Use the image, hints, and your prior guesses to narrow it down.",
-            "Read the editorial content to learn more about the event.",
-            `Find the exact year in ${maxGuesses} guesses.`,
-          ]}
-          buttonClassName="admin-btn-like primary"
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="yeardle"
+          maxGuesses={maxGuesses}
+          preview={{
+            image: {
+              url: imageSrc,
+              alt: activeImage?.imageAlt || puzzle.imageAlt || "Historical event",
+              title: eventTitleLabel,
+            },
+          }}
+          onClose={closeHowToPlay}
         />
       ) : null}
     </div>
