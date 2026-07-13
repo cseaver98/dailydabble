@@ -13,6 +13,8 @@ import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
 import MainNav from "./MainNav";
@@ -319,7 +321,7 @@ export default function DoodleGameClient({
   const [message, setMessage] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("doodle", Boolean(puzzle) && !loading);
   const [winRevealStage, setWinRevealStage] = useState<number | null>(null);
   const [shouldAnimateWinReveal, setShouldAnimateWinReveal] = useState(false);
   const [isWinRevealAnimating, setIsWinRevealAnimating] = useState(false);
@@ -409,7 +411,6 @@ export default function DoodleGameClient({
         setGameState(restoredState.gameState);
         setMessage(restoredState.message);
         setIsResultOpen(restoredState.gameState !== "playing");
-        setIsHowToPlayOpen(false);
         setWinRevealStage(null);
         setShouldAnimateWinReveal(false);
         setIsWinRevealAnimating(false);
@@ -748,8 +749,8 @@ export default function DoodleGameClient({
         <section className="card doodle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -1093,16 +1094,9 @@ export default function DoodleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Doodle"
-          subtitle="Guess the doodle as it is drawn."
-          steps={[
-            "Watch the drawing reveal one stage at a time.",
-            "Type what you think the doodle is.",
-            "Each wrong guess reveals more of the drawing.",
-            `Guess the doodle in ${maxGuesses} guesses.`,
-          ]}
-          buttonClassName="admin-btn-like primary"
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="doodle"
+          maxGuesses={maxGuesses}
+          onClose={closeHowToPlay}
         />
       ) : null}
     </div>

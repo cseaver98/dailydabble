@@ -13,6 +13,8 @@ import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import AsyncImage from "../../components/AsyncImage";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
@@ -170,7 +172,7 @@ export default function MoviedleGameClient({
   const [revealedAnswer, setRevealedAnswer] = useState("");
   const [revealedDetails, setRevealedDetails] = useState<RevealedDetails>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("moviedle", Boolean(puzzle) && !loading);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -265,7 +267,6 @@ export default function MoviedleGameClient({
         setRevealedAnswer(restoredState.revealedAnswer);
         setRevealedDetails(restoredState.revealedDetails);
         setIsResultOpen(restoredState.isResultOpen);
-        setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
         setLockedSuggestionQuery("");
@@ -594,8 +595,8 @@ export default function MoviedleGameClient({
         <section className="card moviedle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -821,16 +822,14 @@ export default function MoviedleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Moviedle"
-          subtitle="Guess the movie from stills."
-          steps={[
-            "Each wrong guess reveals another movie still.",
-            "Use the suggestions to pick the exact movie title.",
-            "Reveal the editorial content for a hint and to learn more about the movie.",
-            `Find the movie in ${maxGuesses} guesses.`,
-          ]}
-          buttonClassName="admin-btn-like primary"
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="moviedle"
+          maxGuesses={maxGuesses}
+          preview={{
+            image: puzzle.stillImages[0]
+              ? { url: puzzle.stillImages[0].url, alt: puzzle.stillImages[0].alt || "Movie still" }
+              : undefined,
+          }}
+          onClose={closeHowToPlay}
         />
       ) : null}
     </div>

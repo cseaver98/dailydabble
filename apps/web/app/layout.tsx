@@ -11,6 +11,8 @@ import "./equadle/equadle.css";
 import "./moviedle/moviedle.css";
 import "./doodle/doodle.css";
 import "./agegaple/agegaple.css";
+import "./guess-progress.css";
+import "./how-to-play.css";
 import "./desktop-game-layout.css";
 import AuthStateStorageBoundary from "./components/AuthStateStorageBoundary";
 import AnalyticsPageTracker from "./components/AnalyticsPageTracker";

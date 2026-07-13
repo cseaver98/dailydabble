@@ -17,6 +17,8 @@ import { buildResultPayload } from "../../../lib/result-payload";
 import { buildGameShareText, shareResultText } from "../../../lib/share-results";
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 
 const FLIP_DURATION_MS = 260;
 const FLIP_STAGGER_MS = 208;
@@ -229,7 +231,7 @@ export default function EquadleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("equadle", Boolean(puzzle) && !loading);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [revealingRowIndex, setRevealingRowIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -317,7 +319,6 @@ export default function EquadleGameClient({
         setMessage(restoredState.message);
         setResolvedAnswer(restoredState.resolvedAnswer);
         setIsResultOpen(restoredState.isResultOpen);
-        setIsHowToPlayOpen(false);
         setRevealingRowIndex(null);
         setCopyStatus("");
       } catch (loadError) {
@@ -666,8 +667,8 @@ export default function EquadleGameClient({
         <section className="card equadle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -848,22 +849,10 @@ export default function EquadleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Equadle"
-          subtitle="Guess the hidden arithmetic equation."
-          steps={[
-            <>
-              Build a true equation using digits, <span className="how-to-play-math-symbol">+</span>,{" "}
-              <span className="how-to-play-math-symbol">-</span>,{" "}
-              <span className="how-to-play-math-symbol">×</span>, and{" "}
-              <span className="how-to-play-math-symbol">÷</span>.
-            </>,
-            `Your guess must fit the ${equationLength}-character board.`,
-            "Green tiles are correct. Yellow tiles are in the equation, but in another spot. Grey tiles are not in the equation.",
-            "Standard PEMDAS order applies.",
-            `Solve the equation in ${maxGuesses} guesses.`,
-          ]}
-          buttonClassName="admin-btn-like primary"
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="equadle"
+          maxGuesses={maxGuesses}
+          equationLength={equationLength}
+          onClose={closeHowToPlay}
         />
       ) : null}
     </div>

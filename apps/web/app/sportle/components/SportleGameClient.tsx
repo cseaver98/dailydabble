@@ -17,6 +17,8 @@ import { buildGameShareText, shareResultText } from "../../../lib/share-results"
 import { fetchStoredGameResult, getResultPayloadAnswer, getResultPayloadAttempts } from "../../../lib/stored-game-result";
 import { useNextGameCountdown } from "../../../lib/use-next-game-countdown";
 import LoadingLabel from "../../components/LoadingLabel";
+import GuessProgressChip from "../../components/GuessProgressChip";
+import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 
 const CLUE_TILE_COUNT = 6;
 const CLUE_FLIP_DURATION_MS = 640;
@@ -154,7 +156,7 @@ export default function SportleGameClient({
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+  const { isHowToPlayOpen, openHowToPlay, closeHowToPlay } = useHowToPlayDialog("sportle", Boolean(puzzle) && !loading);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
@@ -246,7 +248,6 @@ export default function SportleGameClient({
         setMessage(restoredState.message);
         setResolvedAnswer(restoredState.resolvedAnswer);
         setIsResultOpen(restoredState.isResultOpen);
-        setIsHowToPlayOpen(false);
         setIsHistoryOpen(false);
         setCopyStatus("");
         setAnimatingClueIndexes([]);
@@ -549,8 +550,8 @@ export default function SportleGameClient({
         <section className="card sportle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <span className="chip">Guesses {attempts.length}/{maxGuesses}</span>
-            <button className="how-to-play-btn" type="button" onClick={() => setIsHowToPlayOpen(true)}>
+            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
           </div>
@@ -743,15 +744,9 @@ export default function SportleGameClient({
 
       {isHowToPlayOpen ? (
         <HowToPlayDialog
-          title="How to play Sportle"
-          subtitle="Guess the pro athlete."
-          steps={[
-            "Each wrong guess reveals another clue.",
-            "Use the clue tiles to narrow down the player.",
-            `Find the athlete in ${maxGuesses} guesses.`,
-          ]}
-          buttonClassName="admin-btn-like primary"
-          onClose={() => setIsHowToPlayOpen(false)}
+          game="sportle"
+          maxGuesses={maxGuesses}
+          onClose={closeHowToPlay}
         />
       ) : null}
     </div>
