@@ -8,15 +8,10 @@ type EditorialContext = {
   leadActors?: string[];
 };
 
-export default function EditorialDrawer({
-  editorialContext,
-  revealHint = false,
-}: {
+export default function EditorialDrawer({ editorialContext }: {
   editorialContext?: EditorialContext | null;
-  revealHint?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isHintRevealed, setIsHintRevealed] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -53,8 +48,10 @@ export default function EditorialDrawer({
   const leadActors = Array.isArray(editorialContext?.leadActors)
     ? editorialContext.leadActors.map((value) => String(value || "").trim()).filter(Boolean)
     : [];
-  const hasHintContent = Boolean(summary || director || leadActors.length);
-  const shouldRevealHint = revealHint || isHintRevealed;
+
+  if (!summary && !director && !leadActors.length) {
+    return null;
+  }
 
   return (
     <div ref={containerRef} className="editorial-drawer">
@@ -90,29 +87,20 @@ export default function EditorialDrawer({
             {summary ? (
               <p>
                 <span className="editorial-field-label">Summary:</span>{" "}
-                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{summary}</span>
+                <span>{summary}</span>
               </p>
             ) : null}
             {director ? (
               <p>
                 <span className="editorial-field-label">Director:</span>{" "}
-                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{director}</span>
+                <span>{director}</span>
               </p>
             ) : null}
             {leadActors.length ? (
               <p>
                 <span className="editorial-field-label">Lead actors:</span>{" "}
-                <span className={shouldRevealHint ? "" : "editorial-blurred"}>{leadActors.join(", ")}</span>
+                <span>{leadActors.join(", ")}</span>
               </p>
-            ) : null}
-            {hasHintContent && !revealHint ? (
-              <button
-                type="button"
-                className="editorial-hint-toggle"
-                onClick={() => setIsHintRevealed((current) => !current)}
-              >
-                {isHintRevealed ? "Hide hint" : "Show hint"}
-              </button>
             ) : null}
           </div>
         </div>
