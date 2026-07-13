@@ -45,6 +45,7 @@ type VerblePuzzle = {
   puzzleDate: string;
   archiveGameNumber?: number;
   phraseTemplate: string;
+  sourceNote: string | null;
   slots: Slot[];
   maxGuesses: number;
   answerWords: string[];
@@ -1812,6 +1813,9 @@ export default function VerbleGameClient({
                 );
               })}
             </div>
+            {puzzle.sourceNote ? (
+              <p className="verble-source-note result-modal-source-note">- {puzzle.sourceNote}</p>
+            ) : null}
             <ResultDialogActions currentGameSlug="verble" onShare={shareResult} />
             {copyStatus ? <p className="result-modal-copy">{copyStatus}</p> : null}
           </section>

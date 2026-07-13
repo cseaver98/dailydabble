@@ -672,6 +672,22 @@
   top: -0.16rem;
 }
 
+.verble-shell .verble-source-note {
+  margin: -0.15rem 0 0;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.verble-shell .result-modal-source-note {
+  margin: -0.1rem 0 0.1rem;
+  padding-left: 1rem;
+  text-align: left;
+}
+
 .verble-shell .result-modal-actions {
   border-top: 1px solid var(--outline-soft);
   padding-top: 0.75rem;
