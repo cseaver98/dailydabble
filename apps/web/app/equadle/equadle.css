@@ -7,9 +7,9 @@
   --muted: #595c5e;
   --outline-soft: rgba(171, 173, 176, 0.28);
 
-  --brand: #e03a3e;
-  --brand-strong: #ba1a1a;
-  --brand-soft: #ffdad6;
+  --brand: #e6d900;
+  --brand-strong: #9d9200;
+  --brand-soft: #f7ec56;
 
   --surface-container-low: var(--surface-low);
   --surface-container-high: var(--surface-high);
@@ -18,9 +18,9 @@
   --outline: var(--muted);
   --primary: var(--brand);
   --primary-dim: var(--brand-strong);
-  --dd-menu-accent: var(--brand-strong);
-  --dd-menu-hover-bg: #ffe9e9;
-  --dd-menu-focus-ring: rgba(224, 58, 62, 0.35);
+  --dd-menu-accent: #c7ba00;
+  --dd-menu-hover-bg: #fff7c2;
+  --dd-menu-focus-ring: rgba(230, 217, 0, 0.34);
 }
 
 .equadle-shell * { box-sizing: border-box; }
@@ -533,7 +533,7 @@
 }
 
 .equadle-shell .guess-input:focus-visible {
-  outline: 3px solid rgba(224, 58, 62, 0.3);
+  outline: 3px solid rgba(230, 217, 0, 0.3);
   outline-offset: 1px;
 }
 
@@ -547,7 +547,7 @@
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
+  box-shadow: 0 10px 20px rgba(125, 109, 0, 0.24);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -752,7 +752,7 @@
 .equadle-shell .admin-btn-like {
   background: #fff;
   color: var(--brand-strong);
-  border: 1px solid #f2c0bd;
+  border: 1px solid color-mix(in srgb, var(--brand-strong) 28%, white);
   box-shadow: none;
 }
 
@@ -760,7 +760,7 @@
   border: 0;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
   color: #fff;
-  box-shadow: 0 10px 20px rgba(186, 26, 26, 0.28);
+  box-shadow: 0 10px 20px rgba(125, 109, 0, 0.24);
 }
 
 .equadle-shell .page-title {

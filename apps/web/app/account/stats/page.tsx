@@ -28,11 +28,11 @@ const formatTrophyMonth = (month: string) =>
   new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
     .format(new Date(`${month}-01T00:00:00Z`));
 const gameAccentColors: Record<string, string> = {
-  verble: "#c9b900",
+  verble: "#6d44c5",
   agegaple: "#b24f75",
   doodle: "#1768a6",
-  equadle: "#ba1a1a",
-  yeardle: "#6d44c5",
+  equadle: "#c9b900",
+  yeardle: "#ba1a1a",
   moviedle: "#087f74",
   sportle: "#c45f08",
 };
