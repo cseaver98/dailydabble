@@ -115,9 +115,9 @@ export default function RootLayout({
           ["Verble", "verble", "Guess the daily phrase one word at a time."],
           ["Agegaple", "agegaple", "Guess the celebrity couple age gap."],
           ["Doodle", "doodle", "Guess the doodle as it is drawn."],
-          ["Equadle", "equadle", "Guess the hidden arithmetic equation."],
-          ["Yeardle", "yeardle", "Guess the year of an event from this day in history."],
           ["Moviedle", "moviedle", "Guess the movie from stills."],
+          ["Yeardle", "yeardle", "Guess the year of an event from this day in history."],
+          ["Equadle", "equadle", "Guess the hidden arithmetic equation."],
           ["Sportle", "sportle", "Guess the pro athlete from the daily clues."],
         ].map(([name, slug, description], index) => ({
           "@type": "ListItem",

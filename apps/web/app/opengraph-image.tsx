@@ -10,12 +10,12 @@ export const contentType = "image/png";
 
 const gameDetails = [
   { name: "Verble", file: "verble-mark-v3.png", color: "#7a7200", background: "#fdfadf" },
+  { name: "Agegaple", file: "agegaple-mark-v3.png", color: "#9e4e6d", background: "#faebf0" },
   { name: "Doodle", file: "doodle-mark-v2.png", color: "#1768a6", background: "#e0f2fe" },
   { name: "Moviedle", file: "moviedle-mark-v2.png", color: "#0f766e", background: "#ccfbf1" },
   { name: "Yeardle", file: "yeardle-mark-v2.png", color: "#5a40cb", background: "#ede9fe" },
-  { name: "Sportle", file: "sportle-mark-v2.png", color: "#a45508", background: "#fef3c7" },
   { name: "Equadle", file: "equadle-mark-v2.png", color: "#ba1a1a", background: "#ffe4e6" },
-  { name: "Agegaple", file: "agegaple-mark-v3.png", color: "#9e4e6d", background: "#faebf0" },
+  { name: "Sportle", file: "sportle-mark-v2.png", color: "#a45508", background: "#fef3c7" },
 ];
 
 export default async function OpenGraphImage() {
