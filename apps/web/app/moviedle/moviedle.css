@@ -595,26 +595,6 @@
   margin-right: 0.3rem;
 }
 
-.moviedle-shell .editorial-blurred  {
-  filter: blur(5px);
-  user-select: none;
-  transition: filter 180ms ease;
-}
-
-.moviedle-shell .editorial-hint-toggle  {
-  margin-top: 0.2rem;
-  justify-self: start;
-  border: 0;
-  border-radius: 999px;
-  padding: 0.46rem 0.8rem;
-  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  cursor: pointer;
-}
-
 .moviedle-shell .answer-banner  {
   margin: 0;
   border-radius: 0.75rem;

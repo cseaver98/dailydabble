@@ -637,7 +637,7 @@ export default function MoviedleGameClient({
             ) : null}
           </figure>
 
-          <EditorialDrawer editorialContext={puzzle?.editorialContext} revealHint={gameState !== "playing"} />
+          {gameState !== "playing" ? <EditorialDrawer editorialContext={puzzle?.editorialContext} /> : null}
 
           <form className="guess-form" onSubmit={handleSubmit}>
             <input
