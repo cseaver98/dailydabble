@@ -74,7 +74,7 @@
 .tutorial-image-preview,
 .tutorial-game-feedback { width: 100%; }
 
-.tutorial-verble-phrase { justify-content: center; gap: 0.5rem 0.42rem !important; }
+.tutorial-verble-phrase { width: 100%; justify-content: flex-start; gap: 0.5rem 0.42rem !important; }
 .tutorial-game-preview .slot-tile {
   width: 2rem;
   height: 2.45rem;
