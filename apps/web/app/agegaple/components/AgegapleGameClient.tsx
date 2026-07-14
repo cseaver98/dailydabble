@@ -848,6 +848,15 @@ export default function AgegapleGameClient({
                 ))}
               </div>
 
+              {puzzle.relationshipTimeline ? (
+                <FitOneLineText
+                  text={puzzle.relationshipTimeline}
+                  className="agegaple-relationship-timeline"
+                  maxFontSize={14}
+                  minFontSize={8}
+                />
+              ) : null}
+
               <div className="agegaple-result-metrics">
                 <p className="result-modal-copy">
                   {puzzle.personAName}: <strong>{result.personABirthDate}</strong>
