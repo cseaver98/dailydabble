@@ -627,7 +627,7 @@ export default function AgegapleGameClient({
           />
           <div className="container flex flex-1 min-h-0 flex-col gap-3 sm:gap-4">
             <section className={panelClass}>
-              <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
+              <p className="page-title" role="status"><LoadingLabel text="Loading puzzle" /></p>
             </section>
           </div>
         </main>
