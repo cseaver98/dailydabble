@@ -155,7 +155,9 @@
 }
 
 .agegaple-shell .agegaple-relationship-timeline {
+  box-sizing: border-box;
   width: fit-content;
+  min-width: 0;
   max-width: 100%;
   margin: -0.2rem auto 0;
   border-radius: 999px;
