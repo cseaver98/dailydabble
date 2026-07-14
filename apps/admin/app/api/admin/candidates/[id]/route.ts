@@ -54,6 +54,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       personBBirthDate: payload.personBBirthDate ? String(payload.personBBirthDate) : null,
       personBWikipediaTitle: payload.personBWikipediaTitle ? String(payload.personBWikipediaTitle) : null,
       relationshipType: payload.relationshipType,
+      relationshipStartYear: payload.relationshipStartYear ?? null,
+      relationshipEndYear: payload.relationshipEndYear ?? null,
       personAPhotoYear: payload.personAPhotoYear ?? null,
       personBPhotoYear: payload.personBPhotoYear ?? null,
       personAImage: payload.personAImage ?? null,

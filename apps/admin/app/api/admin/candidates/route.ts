@@ -24,6 +24,8 @@ type PostPayload = {
   personBBirthDate?: string;
   personBWikipediaTitle?: string;
   relationshipType?: "spouse" | "couple" | "former_spouse" | "former_couple";
+  relationshipStartYear?: number | string;
+  relationshipEndYear?: number | string;
   personAPhotoYear?: number | string;
   personBPhotoYear?: number | string;
   personAImage?: {
@@ -120,6 +122,8 @@ export async function POST(request: Request) {
       personBBirthDate: String(payload.personBBirthDate ?? ""),
       personBWikipediaTitle: payload.personBWikipediaTitle,
       relationshipType: relationshipType as "spouse" | "couple" | "former_spouse" | "former_couple",
+      relationshipStartYear: payload.relationshipStartYear,
+      relationshipEndYear: payload.relationshipEndYear,
       personAPhotoYear: payload.personAPhotoYear ?? "",
       personBPhotoYear: payload.personBPhotoYear ?? "",
       personAImage: payload.personAImage ?? {},

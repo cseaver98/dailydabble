@@ -394,20 +394,43 @@ const upsertPerson = async ({ wikidata_qid, name, birth_date, wikipedia_title })
   return data.id;
 };
 
-const findOrCreateCouple = async ({ personAId, personBId, relationshipType }) => {
+const findOrCreateCouple = async ({
+  personAId,
+  personBId,
+  relationshipType,
+  relationshipStartDate,
+  relationshipEndDate,
+}) => {
   const { data: existing, error: findError } = await supabase
     .from("couples")
-    .select("id")
+    .select("id,start_date,end_date")
     .or(`and(person_a_id.eq.${personAId},person_b_id.eq.${personBId}),and(person_a_id.eq.${personBId},person_b_id.eq.${personAId})`)
     .limit(1)
     .maybeSingle();
 
   if (findError) throw findError;
-  if (existing?.id) return existing.id;
+  if (existing?.id) {
+    const { error: updateError } = await supabase
+      .from("couples")
+      .update({
+        relationship_type: relationshipType,
+        start_date: relationshipStartDate ?? existing.start_date,
+        end_date: relationshipEndDate ?? existing.end_date,
+      })
+      .eq("id", existing.id);
+    if (updateError) throw updateError;
+    return existing.id;
+  }
 
   const { data, error } = await supabase
     .from("couples")
-    .insert({ person_a_id: personAId, person_b_id: personBId, relationship_type: relationshipType })
+    .insert({
+      person_a_id: personAId,
+      person_b_id: personBId,
+      relationship_type: relationshipType,
+      start_date: relationshipStartDate ?? null,
+      end_date: relationshipEndDate ?? null,
+    })
     .select("id")
     .single();
 
@@ -776,6 +799,7 @@ SELECT
   ?partnerArticle
   ?partnerSitelinks
   ?relationshipPredicate
+  ?relationshipStartDate
   ?relationshipEndDate
 WHERE {
   VALUES (?relationshipProp ?relationshipPredicate) {
@@ -785,6 +809,7 @@ WHERE {
   ?person ?relationshipProp ?relationshipStatement .
   ?relationshipStatement ?relationshipPredicate ?partner .
   FILTER(?person != ?partner)
+  OPTIONAL { ?relationshipStatement pq:P580 ?relationshipStartDate . }
   OPTIONAL { ?relationshipStatement pq:P582 ?relationshipEndDate . }
 
   ?person wdt:P31 wd:Q5 ;
@@ -885,6 +910,7 @@ SELECT
   ?partnerArticle
   ?partnerSitelinks
   ?relationshipPredicate
+  ?relationshipStartDate
   ?relationshipEndDate
 WHERE {
   VALUES ?person { wd:${qid} }
@@ -902,6 +928,7 @@ WHERE {
     ?relationshipStatement ?relationshipPredicate ?person .
   }
   FILTER(?person != ?partner)
+  OPTIONAL { ?relationshipStatement pq:P580 ?relationshipStartDate . }
   OPTIONAL { ?relationshipStatement pq:P582 ?relationshipEndDate . }
 
   ?person wdt:P31 wd:Q5 ;
@@ -963,6 +990,8 @@ const normalizeCouplePoolBindings = (bindings) => {
       predicateUri: row.relationshipPredicate?.value ?? "",
       hasEndDate: Boolean(row.relationshipEndDate?.value),
     });
+    const relationshipStartDate = toIsoDate(row.relationshipStartDate?.value);
+    const relationshipEndDate = toIsoDate(row.relationshipEndDate?.value);
     const personSitelinks = Number(row.personSitelinks?.value ?? 0);
     const partnerSitelinks = Number(row.partnerSitelinks?.value ?? 0);
 
@@ -1008,6 +1037,8 @@ const normalizeCouplePoolBindings = (bindings) => {
         sitelinks: partnerSitelinks,
       },
       relationshipType,
+      relationshipStartDate,
+      relationshipEndDate,
       qualityScore: getQualityScore({ relationshipType, ageGap }),
     });
   }
@@ -1148,6 +1179,8 @@ export const runAgegapleSeed = async ({
       personAId,
       personBId,
       relationshipType: item.relationshipType,
+      relationshipStartDate: item.relationshipStartDate,
+      relationshipEndDate: item.relationshipEndDate,
     });
 
     const coupleKey = buildCoupleKey(item.personA.wikidata_qid, item.personB.wikidata_qid);

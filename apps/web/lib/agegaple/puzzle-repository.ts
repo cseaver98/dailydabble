@@ -48,6 +48,8 @@ type PuzzleRow = {
     editorial_person_b_bio_url: string | null;
     couples: {
       relationship_type: RelationshipType;
+      start_date: string | null;
+      end_date: string | null;
       person_a: { name: string; birth_date: string; wikipedia_title: string | null };
       person_b: { name: string; birth_date: string; wikipedia_title: string | null };
     };
@@ -87,6 +89,8 @@ const basePuzzleSelect = `
     editorial_person_b_bio_url,
     couples!inner(
       relationship_type,
+      start_date,
+      end_date,
       person_a:people!couples_person_a_id_fkey(name,birth_date,wikipedia_title),
       person_b:people!couples_person_b_id_fkey(name,birth_date,wikipedia_title)
     ),
@@ -193,6 +197,40 @@ const getAttribution = (row: PuzzleRow): string =>
     .filter(Boolean)
     .join(" / ") || "Wikimedia Commons";
 
+const buildRelationshipTimeline = (
+  relationshipType: RelationshipType,
+  personAName: string,
+  personBName: string,
+  startDate: string | null,
+  endDate: string | null,
+): string | null => {
+  const startYear = startDate?.slice(0, 4) || null;
+  const endYear = endDate?.slice(0, 4) || null;
+  const names = `${personAName} and ${personBName}`;
+  const isMarriage = relationshipType === "spouse" || relationshipType === "former_spouse";
+
+  if (startYear && endYear) {
+    return isMarriage
+      ? `${names} were married from ${startYear} to ${endYear}.`
+      : `${names} dated from ${startYear} to ${endYear}.`;
+  }
+
+  if (startYear) {
+    if (relationshipType === "spouse") return `${names} have been married since ${startYear}.`;
+    if (relationshipType === "couple") return `${names} have been together since ${startYear}.`;
+    if (relationshipType === "former_spouse") return `${names} married in ${startYear}.`;
+    return `${names} started dating in ${startYear}.`;
+  }
+
+  if (endYear) {
+    return isMarriage
+      ? `${names} were married until ${endYear}.`
+      : `${names} dated until ${endYear}.`;
+  }
+
+  return null;
+};
+
 const buildPublicPuzzle = async (row: PuzzleRow): Promise<PuzzlePublic> => {
   const candidate = row.puzzle_candidates;
   const personAName = candidate.couples.person_a.name;
@@ -221,6 +259,13 @@ const buildPublicPuzzle = async (row: PuzzleRow): Promise<PuzzlePublic> => {
       imageAlt: buildImageAlt(candidate.person_b_image, personBName, candidate.person_b_photo_year),
       photoYear: candidate.person_b_photo_year,
     },
+    relationshipTimeline: buildRelationshipTimeline(
+      candidate.couples.relationship_type,
+      personAName,
+      personBName,
+      candidate.couples.start_date,
+      candidate.couples.end_date,
+    ),
     editorialContext: {
       relationshipNote,
       personABio: candidate.editorial_person_a_bio?.trim() || null,
