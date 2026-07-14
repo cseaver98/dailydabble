@@ -150,10 +150,20 @@ const getPerformanceLabel = (didWin: boolean, attemptsUsed: number) => {
   return "Phew, close!";
 };
 
-function FitOneLineText({ text }: { text: string }) {
+function FitOneLineText({
+  text,
+  className = "agegaple-person-header",
+  maxFontSize = 16,
+  minFontSize = 5,
+}: {
+  text: string;
+  className?: string;
+  maxFontSize?: number;
+  minFontSize?: number;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(maxFontSize);
   const [scaleX, setScaleX] = useState(1);
   const fit = useCallback(() => {
     const container = containerRef.current;
@@ -165,8 +175,8 @@ function FitOneLineText({ text }: { text: string }) {
     const availableWidth = Math.max(0, container.clientWidth - horizontalPadding);
     if (availableWidth <= 0) return;
 
-    const maxSize = 16;
-    const minSize = 5;
+    const maxSize = maxFontSize;
+    const minSize = minFontSize;
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) return;
@@ -189,7 +199,7 @@ function FitOneLineText({ text }: { text: string }) {
     const fittedWidth = measureAtSize(nextSize);
     setFontSize(Math.floor(nextSize * 10) / 10);
     setScaleX(fittedWidth > availableWidth ? Math.max(0.48, availableWidth / fittedWidth) : 1);
-  }, [text]);
+  }, [maxFontSize, minFontSize, text]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -221,7 +231,7 @@ function FitOneLineText({ text }: { text: string }) {
   }, [fit, text]);
 
   return (
-    <div ref={containerRef} className="agegaple-person-header">
+    <div ref={containerRef} className={className}>
       <span ref={textRef} style={{ fontSize, transform: `scaleX(${scaleX})` }}>{text}</span>
     </div>
   );
@@ -659,6 +669,15 @@ export default function AgegapleGameClient({
                 <PersonCard person={puzzle.personA} />
                 <PersonCard person={puzzle.personB} />
               </div>
+
+              {puzzle.relationshipTimeline ? (
+                <FitOneLineText
+                  text={puzzle.relationshipTimeline}
+                  className="agegaple-relationship-timeline"
+                  maxFontSize={14}
+                  minFontSize={8}
+                />
+              ) : null}
 
               <EditorialDrawer
                 context={puzzle.editorialContext}

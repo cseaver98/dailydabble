@@ -80,6 +80,8 @@ export type ReviewCandidateDetails = {
   personBBirthDate: string | null;
   personBWikipediaTitle: string | null;
   relationshipType: RelationshipType;
+  relationshipStartYear: number | null;
+  relationshipEndYear: number | null;
   personAImageId: string | null;
   personAImageUrl: string | null;
   personAImageThumbUrl: string | null;
@@ -117,6 +119,8 @@ export type ReviewCandidateDetailsUpdate = {
   personBBirthDate: string | null;
   personBWikipediaTitle: string | null;
   relationshipType: RelationshipType;
+  relationshipStartYear: number | null;
+  relationshipEndYear: number | null;
   personAPhotoYear: number | null;
   personBPhotoYear: number | null;
   personAImage?: {

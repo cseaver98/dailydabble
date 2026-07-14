@@ -53,6 +53,8 @@ export default function AgegapleAdminTab() {
     personBBirthDate: "",
     personBWikipediaTitle: "",
     relationshipType: "couple",
+    relationshipStartYear: "",
+    relationshipEndYear: "",
     personAPhotoYear: "",
     personBPhotoYear: "",
     personACommonsUrl: "",
@@ -319,6 +321,8 @@ export default function AgegapleAdminTab() {
         personBName: "",
         personBBirthDate: "",
         personBWikipediaTitle: "",
+        relationshipStartYear: "",
+        relationshipEndYear: "",
         personAPhotoYear: "",
         personBPhotoYear: "",
         personACommonsUrl: "",
@@ -856,6 +860,35 @@ export default function AgegapleAdminTab() {
 
                 <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
                   <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                    Relationship start year
+                    <input
+                      type="number"
+                      min="1800"
+                      max="2200"
+                      step="1"
+                      placeholder="2016"
+                      value={detailsForm.relationshipStartYear || ""}
+                      onChange={(event) => patchDetailsField("relationshipStartYear", event.target.value)}
+                      style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
+                    Relationship end year
+                    <input
+                      type="number"
+                      min="1800"
+                      max="2200"
+                      step="1"
+                      placeholder="2018"
+                      value={detailsForm.relationshipEndYear || ""}
+                      onChange={(event) => patchDetailsField("relationshipEndYear", event.target.value)}
+                      style={{ border: "1px solid #d8dce2", borderRadius: 10, padding: ".52rem .6rem" }}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gap: ".55rem", gridTemplateColumns: "1fr 1fr" }}>
+                  <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
                     Person A photo year
                     <input
                       type="number"
@@ -1167,7 +1200,7 @@ export default function AgegapleAdminTab() {
                 Person B birth date
                 <input type="date" value={manualForm.personBBirthDate} onChange={(event) => patchManualField("personBBirthDate", event.target.value)} />
               </label>
-              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+              <label style={{ display: "grid", gridColumn: "1 / -1", gap: ".25rem", fontWeight: 700 }}>
                 Relationship type
                 <select value={manualForm.relationshipType} onChange={(event) => patchManualField("relationshipType", event.target.value)}>
                   <option value="spouse">spouse</option>
@@ -1175,6 +1208,14 @@ export default function AgegapleAdminTab() {
                   <option value="former_spouse">former spouse</option>
                   <option value="former_couple">former couple</option>
                 </select>
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Relationship start year
+                <input type="number" min="1800" max="2200" step="1" value={manualForm.relationshipStartYear} onChange={(event) => patchManualField("relationshipStartYear", event.target.value)} placeholder="2016" />
+              </label>
+              <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
+                Relationship end year
+                <input type="number" min="1800" max="2200" step="1" value={manualForm.relationshipEndYear} onChange={(event) => patchManualField("relationshipEndYear", event.target.value)} placeholder="2018" />
               </label>
               <label style={{ display: "grid", gap: ".25rem", fontWeight: 700 }}>
                 Person A photo year

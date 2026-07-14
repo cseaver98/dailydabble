@@ -29,6 +29,7 @@ export type PuzzlePublic = {
   relationshipType: RelationshipType;
   personA: PuzzlePersonPublic;
   personB: PuzzlePersonPublic;
+  relationshipTimeline: string | null;
   editorialContext: EditorialContext;
 };
 

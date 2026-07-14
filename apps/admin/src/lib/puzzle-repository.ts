@@ -102,6 +102,8 @@ type CandidateDetailsRow = {
   couples: {
     id: string;
     relationship_type: RelationshipType;
+    start_date: string | null;
+    end_date: string | null;
     person_a_id: string;
     person_b_id: string;
     person_a: { name: string; birth_date: string | null; wikipedia_title: string | null };
@@ -162,22 +164,37 @@ const normalizeNullableText = (value: string | null | undefined): string | null 
   return normalized || null;
 };
 
-const normalizeNullableDate = (value: string | null | undefined): string | null => {
+const normalizeNullableDate = (value: string | null | undefined, label = "Date"): string | null => {
   const normalized = normalizeNullableText(value);
   if (!normalized) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    throw new Error("Birth dates must be YYYY-MM-DD");
+    throw new Error(`${label} must be YYYY-MM-DD`);
   }
   return normalized;
 };
 
 const normalizeRequiredDate = (value: string | null | undefined, label: string): string => {
-  const normalized = normalizeNullableDate(value);
+  const normalized = normalizeNullableDate(value, label);
   if (!normalized) {
     throw new Error(`${label} is required`);
   }
   return normalized;
 };
+
+const normalizeNullableRelationshipYear = (
+  value: number | string | null | undefined,
+  label: string,
+): number | null => {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const year = Number(value);
+  if (!Number.isInteger(year) || year < 1800 || year > 2200) {
+    throw new Error(`${label} must be a whole year between 1800 and 2200`);
+  }
+  return year;
+};
+
+const relationshipYearToDate = (year: number | null): string | null =>
+  year === null ? null : `${year}-01-01`;
 
 const normalizeRequiredText = (value: string | null | undefined, label: string): string => {
   const normalized = normalizeNullableText(value);
@@ -268,6 +285,8 @@ const candidateDetailsSelect = `
   couples!inner(
     id,
     relationship_type,
+    start_date,
+    end_date,
     person_a_id,
     person_b_id,
     person_a:people!couples_person_a_id_fkey(name,birth_date,wikipedia_title),
@@ -332,10 +351,14 @@ const findOrCreateCouple = async ({
   personAId,
   personBId,
   relationshipType,
+  relationshipStartDate,
+  relationshipEndDate,
 }: {
   personAId: string;
   personBId: string;
   relationshipType: RelationshipType;
+  relationshipStartDate: string | null;
+  relationshipEndDate: string | null;
 }): Promise<{ coupleId: string; personAId: string; personBId: string }> => {
   const supabase = getSupabaseAdmin();
   const orderedPeople = [personAId, personBId].sort((a, b) => a.localeCompare(b));
@@ -344,7 +367,7 @@ const findOrCreateCouple = async ({
 
   const { data: existingCouple, error: existingCoupleError } = await supabase
     .from("couples")
-    .select("id")
+    .select("id,start_date,end_date")
     .eq("person_a_id", orderedPersonAId)
     .eq("person_b_id", orderedPersonBId)
     .maybeSingle();
@@ -356,7 +379,12 @@ const findOrCreateCouple = async ({
   if (existingCouple?.id) {
     const { error } = await supabase
       .from("couples")
-      .update({ relationship_type: relationshipType, updated_at: new Date().toISOString() })
+      .update({
+        relationship_type: relationshipType,
+        start_date: relationshipStartDate ?? existingCouple.start_date,
+        end_date: relationshipEndDate ?? existingCouple.end_date,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", existingCouple.id);
     if (error) {
       throw new Error(`Failed to update couple relationship type: ${error.message}`);
@@ -370,6 +398,8 @@ const findOrCreateCouple = async ({
       person_a_id: orderedPersonAId,
       person_b_id: orderedPersonBId,
       relationship_type: relationshipType,
+      start_date: relationshipStartDate ?? null,
+      end_date: relationshipEndDate ?? null,
       source: "manual",
     })
     .select("id")
@@ -431,6 +461,8 @@ export const createManualReviewCandidate = async ({
   personBBirthDate,
   personBWikipediaTitle,
   relationshipType,
+  relationshipStartYear,
+  relationshipEndYear,
   personAPhotoYear,
   personBPhotoYear,
   personAImage,
@@ -447,6 +479,8 @@ export const createManualReviewCandidate = async ({
   personBBirthDate: string;
   personBWikipediaTitle?: string | null;
   relationshipType: RelationshipType;
+  relationshipStartYear?: number | string | null;
+  relationshipEndYear?: number | string | null;
   personAPhotoYear?: number | string | null;
   personBPhotoYear?: number | string | null;
   personAImage?: ImageInput | null;
@@ -466,6 +500,11 @@ export const createManualReviewCandidate = async ({
   const normalizedPersonBBirthDate = normalizeRequiredDate(personBBirthDate, "Person B birth date");
   const normalizedPersonAPhotoYear = normalizeNullablePhotoYear(personAPhotoYear, "Person A photo year");
   const normalizedPersonBPhotoYear = normalizeNullablePhotoYear(personBPhotoYear, "Person B photo year");
+  const normalizedRelationshipStartYear = normalizeNullableRelationshipYear(relationshipStartYear, "Relationship start year");
+  const normalizedRelationshipEndYear = normalizeNullableRelationshipYear(relationshipEndYear, "Relationship end year");
+  if (normalizedRelationshipStartYear && normalizedRelationshipEndYear && normalizedRelationshipEndYear < normalizedRelationshipStartYear) {
+    throw new Error("Relationship end year cannot be before the start year");
+  }
 
   const originalPersonAId = await findOrCreatePerson({
     name: normalizedPersonAName,
@@ -481,6 +520,8 @@ export const createManualReviewCandidate = async ({
     personAId: originalPersonAId,
     personBId: originalPersonBId,
     relationshipType,
+    relationshipStartDate: relationshipYearToDate(normalizedRelationshipStartYear),
+    relationshipEndDate: relationshipYearToDate(normalizedRelationshipEndYear),
   });
 
   const { data: duplicateData, error: duplicateError } = await getSupabaseAdmin()
@@ -769,6 +810,8 @@ export const getReviewCandidateDetails = async (candidateId: string): Promise<Re
     personBBirthDate: row.couples.person_b.birth_date,
     personBWikipediaTitle: row.couples.person_b.wikipedia_title,
     relationshipType: row.couples.relationship_type,
+    relationshipStartYear: row.couples.start_date ? Number(row.couples.start_date.slice(0, 4)) : null,
+    relationshipEndYear: row.couples.end_date ? Number(row.couples.end_date.slice(0, 4)) : null,
     personAImageId: row.person_a_image_id,
     personAImageUrl: row.person_a_image?.image_url ?? null,
     personAImageThumbUrl: row.person_a_image?.thumb_url ?? null,
@@ -807,6 +850,11 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
   const personBBirthDate = normalizeRequiredDate(payload.personBBirthDate, "Person B birth date");
   const personAPhotoYear = normalizeNullablePhotoYear(payload.personAPhotoYear, "Person A photo year");
   const personBPhotoYear = normalizeNullablePhotoYear(payload.personBPhotoYear, "Person B photo year");
+  const relationshipStartYear = normalizeNullableRelationshipYear(payload.relationshipStartYear, "Relationship start year");
+  const relationshipEndYear = normalizeNullableRelationshipYear(payload.relationshipEndYear, "Relationship end year");
+  if (relationshipStartYear && relationshipEndYear && relationshipEndYear < relationshipStartYear) {
+    throw new Error("Relationship end year cannot be before the start year");
+  }
   const nowIso = new Date().toISOString();
 
   const { error: personAError } = await supabase
@@ -837,7 +885,12 @@ export const updateReviewCandidateDetails = async (payload: ReviewCandidateDetai
 
   const { error: coupleError } = await supabase
     .from("couples")
-    .update({ relationship_type: payload.relationshipType, updated_at: nowIso })
+    .update({
+      relationship_type: payload.relationshipType,
+      start_date: relationshipYearToDate(relationshipStartYear),
+      end_date: relationshipYearToDate(relationshipEndYear),
+      updated_at: nowIso,
+    })
     .eq("id", current.coupleId);
   if (coupleError) {
     throw new Error(`Failed to update relationship type: ${coupleError.message}`);
