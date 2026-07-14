@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 export type DailydabbleNavProps = {
   subtitle?: string;
   subtitleHref?: string;
+  subtitleAsHeading?: boolean;
   label?: string;
   labelId?: string;
   labelClassName?: string;
