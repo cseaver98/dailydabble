@@ -43,6 +43,7 @@ export type EquadlePuzzle = {
   archiveGameNumber: number;
   equationLength: number;
   equalsIndex: number;
+  target: string;
   maxGuesses: number;
 };
 
@@ -60,14 +61,20 @@ const getArchiveGameNumber = async (date: string): Promise<number> => {
   return count ?? 0;
 };
 
-const mapPuzzle = async (scheduleRow: ScheduleRow, puzzleRow: PuzzleRow): Promise<EquadlePuzzle> => ({
-  puzzleId: puzzleRow.id,
-  puzzleDate: scheduleRow.puzzle_date,
-  archiveGameNumber: await getArchiveGameNumber(scheduleRow.puzzle_date),
-  equationLength: Number(puzzleRow.equation_length) || 8,
-  equalsIndex: Math.max(0, String(puzzleRow.equation || "").indexOf("=")),
-  maxGuesses: 6,
-});
+const mapPuzzle = async (scheduleRow: ScheduleRow, puzzleRow: PuzzleRow): Promise<EquadlePuzzle> => {
+  const equation = String(puzzleRow.equation || "");
+  const equalsIndex = Math.max(0, equation.indexOf("="));
+
+  return {
+    puzzleId: puzzleRow.id,
+    puzzleDate: scheduleRow.puzzle_date,
+    archiveGameNumber: await getArchiveGameNumber(scheduleRow.puzzle_date),
+    equationLength: Number(puzzleRow.equation_length) || 9,
+    equalsIndex,
+    target: equation.slice(equalsIndex + 1),
+    maxGuesses: 6,
+  };
+};
 
 const getPuzzleByScheduleDate = async (date: string): Promise<EquadlePuzzle | null> => {
   const supabase = getEquadleSupabaseAdmin();

@@ -381,6 +381,12 @@
   --cell-color: #2c2f31;
 }
 
+.equadle-shell .board-cell.target {
+  --cell-bg: color-mix(in srgb, var(--brand-soft) 58%, white);
+  --cell-border: color-mix(in srgb, var(--brand-strong) 30%, transparent);
+  --cell-color: #000;
+}
+
 .equadle-shell .equadle-operator-symbol {
   display: inline-block;
   font-size: 1.3em;

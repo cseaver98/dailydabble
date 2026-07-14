@@ -63,7 +63,7 @@ type Tutorial = {
   pages: TutorialPage[];
 };
 
-type TileState = "correct" | "present" | "absent" | "draft";
+type TileState = "correct" | "present" | "absent" | "draft" | "locked" | "target";
 
 function VerbleTileRow({
   values,
@@ -474,12 +474,12 @@ function getTutorial(
     },
     equadle: {
       title: "How to play Equadle",
-      subtitle: "Build the hidden arithmetic equation.",
+      subtitle: "Build the hidden expression for the target.",
       pages: [
         {
-          eyebrow: "Build a true equation",
-          heading: "Fill every tile",
-          copy: `Use digits and +, -, ×, or ÷. Every guess must be a complete ${equationLength ?? "full-board"}-tile equation with equal values on both sides.`,
+          eyebrow: "Hit the target",
+          heading: "Complete the left side",
+          copy: `The answer is shown after the equals sign. Use digits and +, -, ×, or ÷ to build a ${equationLength ?? "nine"}-tile equation that equals that target.`,
           visual: <div className="tutorial-game-preview"><EquationRow values={EQUADLE_TUTORIAL.answer} /></div>,
         },
         {

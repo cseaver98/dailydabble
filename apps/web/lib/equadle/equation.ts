@@ -113,7 +113,7 @@ const normalizeEquationInput = (value: string): string =>
     .replace(/[xX×]/g, "*")
     .replace(/÷/g, "/");
 
-export const validateEquation = (equation: string, expectedLength = 8): string => {
+export const validateEquation = (equation: string, expectedLength = 9): string => {
   const value = normalizeEquationInput(equation).trim();
 
   if (value.length !== expectedLength) {
