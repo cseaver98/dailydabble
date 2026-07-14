@@ -1324,7 +1324,7 @@ export default function VerbleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card legal-card">
-            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
+            <p className="page-title" role="status"><LoadingLabel text="Loading puzzle" /></p>
           </section>
         </main>
       </div>

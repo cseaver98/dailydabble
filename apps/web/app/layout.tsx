@@ -40,28 +40,32 @@ try {
 const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === "staging";
 const twitterImageUrl = "/opengraph-image?v=20260712";
 const siteUrl = "https://dailydabble.app";
+const siteName = "DailyDabble";
+const siteTitle = "DailyDabble: Free Daily Games, Trivia & Puzzles";
 const siteDescription =
-  "Play seven original daily games in one place. Solve phrases, doodles, movies, history, sports, equations, and age gaps with a fresh challenge every day.";
+  "Play seven free daily games in one place. Challenge yourself with word, movie, sports, history, math, drawing, and celebrity trivia puzzles.";
 
 export const generateMetadata = (): Metadata => {
-  const title = isStagingEnvironment() ? "DailyDabble Staging" : "DailyDabble";
+  const title = isStagingEnvironment() ? "DailyDabble Staging" : siteTitle;
   const description = siteDescription;
 
   return {
     metadataBase: new URL(siteUrl),
     title: {
       default: title,
-      template: `%s | ${title}`,
+      template: `%s | ${siteName}`,
     },
     description,
-    applicationName: "DailyDabble",
+    alternates: { canonical: "/" },
+    applicationName: siteName,
     category: "games",
     keywords: ["daily games", "daily trivia games", "word games", "puzzle games", "browser games", "DailyDabble"],
     manifest: "/manifest.webmanifest",
     openGraph: {
       title,
       description,
-      siteName: "DailyDabble",
+      siteName,
+      url: "/",
       type: "website",
       locale: "en_US",
     },
@@ -103,7 +107,8 @@ export default function RootLayout({
         "@type": "WebSite",
         "@id": `${siteUrl}/#website`,
         url: siteUrl,
-        name: "DailyDabble",
+        name: siteName,
+        alternateName: "Daily Dabble",
         description: siteDescription,
         inLanguage: "en-US",
       },

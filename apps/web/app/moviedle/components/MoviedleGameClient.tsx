@@ -558,7 +558,7 @@ export default function MoviedleGameClient({
         <MainNav label={navLabel} hideToday={hideToday} />
         <main className="container">
           <section className="card moviedle-card">
-            <h1 className="page-title"><LoadingLabel text="Loading puzzle" /></h1>
+            <p className="page-title" role="status"><LoadingLabel text="Loading puzzle" /></p>
           </section>
         </main>
       </div>
