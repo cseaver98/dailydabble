@@ -205,7 +205,6 @@ export default function YeardleAdminTab() {
         imageUrl: normalizedImageUrl,
         imageAlt: `${normalizedTitle} historical image`,
         description: normalizedDescription,
-        keyFigures: String(manualCandidate.keyFigures || "").trim(),
       };
 
       const response = await fetch("/api/admin/yeardle/title-candidate", {
@@ -399,7 +398,6 @@ export default function YeardleAdminTab() {
       eventYear: String(item.event_year || ""),
       eventMonth: item.event_month ? String(item.event_month) : "",
       eventDay: item.event_day ? String(item.event_day) : "",
-      keyFigures: String(item.hint_person || ""),
       description: String(item.hint_description || ""),
       wikipediaUrl: String(item.wikipedia_url || ""),
     });
@@ -434,7 +432,6 @@ export default function YeardleAdminTab() {
             eventYear: Number(editingCandidateDraft.eventYear),
             eventMonth: editingCandidateDraft.eventMonth ? Number(editingCandidateDraft.eventMonth) : null,
             eventDay: editingCandidateDraft.eventDay ? Number(editingCandidateDraft.eventDay) : null,
-            keyFigures: editingCandidateDraft.keyFigures,
             description: editingCandidateDraft.description,
             wikipediaUrl: editingCandidateDraft.wikipediaUrl,
           },
@@ -742,15 +739,6 @@ export default function YeardleAdminTab() {
                     />
                   </label>
                   <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
-                    Key figures (comma-separated)
-                    <input
-                      type="text"
-                      value={manualCandidate.keyFigures || ""}
-                      onChange={(event) => updateManualCandidateField("keyFigures", event.target.value)}
-                      style={{ marginLeft: ".35rem", minWidth: 320 }}
-                    />
-                  </label>
-                  <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
                     Image URL
                     <input
                       type="text"
@@ -821,11 +809,6 @@ export default function YeardleAdminTab() {
                   <p style={{ margin: ".2rem 0", color: "#5b6168", fontSize: ".86rem" }}>
                     {manualCandidate.description}
                   </p>
-                  {manualCandidate.keyFigures ? (
-                    <p style={{ margin: 0, color: "#5b6168", fontSize: ".82rem" }}>
-                      Key figures: {manualCandidate.keyFigures}
-                    </p>
-                  ) : null}
                   {manualCandidate.imageAttributionText ? (
                     <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".78rem" }}>
                       Image: {manualCandidate.imageAttributionText}
@@ -949,11 +932,6 @@ export default function YeardleAdminTab() {
                 {getScheduleWarningCopy(item)}
               </p>
             ) : null}
-            {item.hint_person ? (
-              <p style={{ margin: "0 0 .18rem", color: "#5b6168", fontSize: ".86rem" }}>
-                Key figures: {item.hint_person}
-              </p>
-            ) : null}
             <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
               Usage: {item.scheduleCount === 0 ? "Not used yet" : `${item.scheduleCount}x (last ${item.lastScheduledDate})`}
             </p>
@@ -1010,15 +988,6 @@ export default function YeardleAdminTab() {
                     value={editingCandidateDraft.eventDay}
                     onChange={(event) => updateEditingCandidateField("eventDay", event.target.value)}
                     style={{ marginLeft: ".35rem", width: 76 }}
-                  />
-                </label>
-                <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
-                  Key figures (comma-separated)
-                  <input
-                    type="text"
-                    value={editingCandidateDraft.keyFigures}
-                    onChange={(event) => updateEditingCandidateField("keyFigures", event.target.value)}
-                    style={{ marginLeft: ".35rem", minWidth: 280 }}
                   />
                 </label>
                 <label style={{ fontWeight: 700, fontSize: ".85rem" }}>

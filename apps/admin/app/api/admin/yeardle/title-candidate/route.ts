@@ -44,7 +44,6 @@ type ManualCandidate = {
   imageAuthor?: string | null;
   imageAttributionText?: string | null;
   wikipediaUrl: string | null;
-  keyFigures: string;
   description: string;
   eventYearGuess: number | null;
   eventMonthGuess: number | null;
@@ -113,25 +112,6 @@ const slugify = (value: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-
-const inferKeyFigures = (title: string, text: string): string => {
-  const pageName = title.replace(/\s*\(.+\)\s*/g, "").trim();
-  const matches = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) ?? [];
-  const deduped = Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)));
-  const chosen = [];
-
-  for (const name of deduped) {
-    if (name.length < 4) continue;
-    chosen.push(name);
-    if (chosen.length >= 4) break;
-  }
-
-  if (pageName.split(" ").length >= 2 && !chosen.includes(pageName)) {
-    chosen.unshift(pageName);
-  }
-
-  return chosen.length ? chosen.slice(0, 4).join(", ") : (pageName || "Notable figures");
-};
 
 const extractYearGuess = (title: string, extract: string): number | null => {
   const currentYear = new Date().getFullYear();
@@ -309,7 +289,6 @@ const buildManualCandidate = async (page: { title: string; canonicalUrl: string 
     imageAuthor: commonsMetadata?.author ?? null,
     imageAttributionText: commonsMetadata?.attributionText ?? null,
     wikipediaUrl: summary?.content_urls?.desktop?.page ?? page.canonicalUrl,
-    keyFigures: inferKeyFigures(title, normalizedDescription),
     description: normalizedDescription,
     eventYearGuess: yearGuess,
     eventMonthGuess: month,
@@ -413,7 +392,6 @@ export async function POST(request: Request) {
           hint_category: null,
           hint_region: null,
           hint_era: null,
-          hint_person: candidate.keyFigures,
           hint_description: candidate.description,
           status: "pending_review",
           reviewed_at: null,

@@ -73,25 +73,6 @@ const addDays = (date: string, delta: number): string => {
 
 const isDateString = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-const inferKeyFigures = (title: string, text: string): string => {
-  const pageName = title.replace(/\s*\(.+\)\s*/g, "").trim();
-  const matches = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g) ?? [];
-  const deduped = Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)));
-  const chosen = [];
-
-  for (const name of deduped) {
-    if (name.length < 4) continue;
-    chosen.push(name);
-    if (chosen.length >= 4) break;
-  }
-
-  if (pageName.split(" ").length >= 2 && !chosen.includes(pageName)) {
-    chosen.unshift(pageName);
-  }
-
-  return chosen.length ? chosen.slice(0, 4).join(", ") : (pageName || "Notable figures");
-};
-
 const slugify = (value: string): string =>
   value
     .toLowerCase()
@@ -233,7 +214,6 @@ export async function POST(request: Request) {
             hint_category: null,
             hint_region: null,
             hint_era: null,
-            hint_person: inferKeyFigures(chosen.pageTitle, chosen.text),
             hint_description: hintDescription,
             status: hasVerifiedImageAttribution ? "approved" : "pending_review",
             reviewed_at: hasVerifiedImageAttribution ? new Date().toISOString() : null,
