@@ -89,7 +89,7 @@ export async function GET(request: Request) {
     const supabase = getSupabaseYeardleAdmin();
     const { data: eventRows, error: eventsError } = await supabase
       .from("events")
-      .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_file_title,image_license,image_license_url,image_author,image_attribution_text,image_license_verified_at,hint_person,hint_description,wikipedia_url,status,created_at")
+      .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_file_title,image_license,image_license_url,image_author,image_attribution_text,image_license_verified_at,hint_description,wikipedia_url,status,created_at")
       .order("created_at", { ascending: false })
       .limit(5000);
     if (eventsError) {
@@ -112,7 +112,6 @@ export async function GET(request: Request) {
         image_author: string | null;
         image_attribution_text: string | null;
         image_license_verified_at: string | null;
-        hint_person: string | null;
         hint_description: string | null;
         wikipedia_url: string | null;
         status: CandidateStatus;
@@ -228,7 +227,6 @@ export async function PATCH(request: Request) {
         eventYear?: number;
         eventMonth?: number | null;
         eventDay?: number | null;
-        keyFigures?: string;
         description?: string;
         wikipediaUrl?: string;
       };
@@ -425,7 +423,6 @@ export async function PATCH(request: Request) {
       updatePayload.hint_category = null;
       updatePayload.hint_region = null;
       updatePayload.hint_era = null;
-      updatePayload.hint_person = String(candidate?.keyFigures || "").trim() || null;
       updatePayload.hint_description = String(candidate?.description || "").trim();
       updatePayload.wikipedia_url = String(candidate?.wikipediaUrl || "").trim() || null;
     }
