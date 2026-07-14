@@ -26,13 +26,17 @@ export async function POST(request: NextRequest) {
 
     let guess: string;
     try {
-      guess = validateEquation(rawGuess, Number(puzzle.equation_length) || 8);
+      guess = validateEquation(rawGuess, Number(puzzle.equation_length) || 9);
     } catch (validationError) {
       const message = validationError instanceof Error ? validationError.message : "Guess must be a valid equation";
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
     const answer = String(puzzle.equation);
+    const target = answer.split("=")[1] || "";
+    if ((guess.split("=")[1] || "") !== target) {
+      return NextResponse.json({ error: `Equation must equal ${target}` }, { status: 400 });
+    }
     const feedback = buildCharFeedback(guess, answer);
 
     return NextResponse.json({

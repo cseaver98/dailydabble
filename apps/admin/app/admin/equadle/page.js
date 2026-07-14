@@ -167,11 +167,12 @@ export default function EquadleAdminTab() {
 
       <div style={{ marginTop: ".9rem", border: "1px solid #d8dce2", borderRadius: 12, background: "#f8fafc", padding: ".75rem" }}>
         <p style={{ margin: 0, fontWeight: 900 }}>Add puzzle candidate</p>
+        <p className="admin-copy" style={{ margin: ".25rem 0 0" }}>Use 9 tiles with a visible two-digit target from 10 to 99.</p>
         <div style={{ display: "flex", gap: ".5rem", marginTop: ".45rem", flexWrap: "wrap" }}>
           <input
             value={newEquation}
             onChange={(event) => setNewEquation(event.target.value)}
-            placeholder="9+8*7=65"
+            placeholder="12+8*7=68"
             style={{ minWidth: 220, padding: ".55rem .7rem", borderRadius: 12, border: "1px solid #d8dce2" }}
           />
           <button className="admin-btn primary" type="button" onClick={() => void addPuzzle()} disabled={busy}>

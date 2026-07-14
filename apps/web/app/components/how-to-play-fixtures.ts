@@ -7,9 +7,9 @@ export const VERBLE_TUTORIAL = {
 } as const;
 
 export const EQUADLE_TUTORIAL = {
-  answer: ["9", "+", "8", "×", "7", "=", "6", "5"],
-  incorrectGuess: ["8", "+", "9", "×", "7", "=", "7", "1"],
-  incorrectGuessFeedback: ["present", "correct", "present", "correct", "correct", "correct", "absent", "absent"],
+  answer: ["1", "2", "+", "8", "×", "7", "=", "6", "8"],
+  incorrectGuess: ["1", "2", "×", "5", "+", "8", "=", "6", "8"],
+  incorrectGuessFeedback: ["correct", "correct", "present", "absent", "present", "present", "locked", "target", "target"],
 } as const;
 
 export const DOODLE_TUTORIAL = doodleTutorialPalmTree;

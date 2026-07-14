@@ -53,6 +53,7 @@ type EquadlePuzzle = {
   archiveGameNumber?: number;
   equationLength: number;
   equalsIndex: number;
+  target: string;
   maxGuesses: number;
   answer?: string;
 };
@@ -92,11 +93,13 @@ const toShareEquationBlock = (char: string, feedback: string) => {
   return "⬛";
 };
 
-const buildEquationShareRows = (attempts: Attempt[]) =>
+const buildEquationShareRows = (attempts: Attempt[], equalsIndex: number) =>
   attempts.map((attempt) =>
     attempt.guess
       .split("")
-      .map((char, index) => toShareEquationBlock(char, attempt.feedback[index] || "absent"))
+      .map((char, index) => index >= equalsIndex
+        ? toDisplayEquationChar(char)
+        : toShareEquationBlock(char, attempt.feedback[index] || "absent"))
       .join(""),
   );
 
@@ -106,13 +109,17 @@ const sanitizeEquationInput = (value: string, maxLength: number) =>
     .replace(/[^0-9+\-*/]/g, "")
     .slice(0, maxLength);
 
-const buildFullGuess = (inputValue: string, equationLength: number, equalsIndex: number) => {
+const buildFullGuess = (inputValue: string, equationLength: number, equalsIndex: number, target: string) => {
   const chars = [];
   let inputIndex = 0;
   const safeValue = String(inputValue || "");
   for (let index = 0; index < equationLength; index += 1) {
     if (index === equalsIndex) {
       chars.push("=");
+      continue;
+    }
+    if (index > equalsIndex) {
+      chars.push(target[index - equalsIndex - 1] || "");
       continue;
     }
     chars.push(safeValue[inputIndex] || "");
@@ -217,8 +224,8 @@ export default function EquadleGameClient({
   navLabel = "Equadle",
   hideToday = false,
   archiveHref = "/equadle/archive",
-  storagePrefix = "equadle:v1:today",
-  completionPrefix = "equadle:v1:completed",
+  storagePrefix = "equadle:v2:today",
+  completionPrefix = "equadle:v2:completed",
   lockDailyCompletion = true,
 }: EquadleGameClientProps) {
   const isArchiveView = apiUrl.includes("/by-date");
@@ -227,6 +234,7 @@ export default function EquadleGameClient({
   const [puzzle, setPuzzle] = useState<EquadlePuzzle | null>(null);
   const [guess, setGuess] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [recordedGuessesUsed, setRecordedGuessesUsed] = useState(0);
   const [gameState, setGameState] = useState<EquadleGameState>("playing");
   const [message, setMessage] = useState("");
   const [resolvedAnswer, setResolvedAnswer] = useState("");
@@ -315,6 +323,7 @@ export default function EquadleGameClient({
         setArchiveLock(null);
         setGuess(restoredState.guess);
         setAttempts(restoredState.attempts);
+        setRecordedGuessesUsed(storedResult?.guessesUsed ?? restoredState.attempts.length);
         setGameState(restoredState.gameState);
         setMessage(restoredState.message);
         setResolvedAnswer(restoredState.resolvedAnswer);
@@ -371,25 +380,26 @@ export default function EquadleGameClient({
       return;
     }
 
-    const revealLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle?.equationLength) : 8;
+    const revealLength = Number.isFinite(puzzle?.equalsIndex) ? Number(puzzle?.equalsIndex) : 6;
     const revealTotalMs = Math.max(0, (revealLength - 1) * FLIP_STAGGER_MS + FLIP_DURATION_MS);
     const timeoutId = window.setTimeout(() => setIsResultOpen(true), revealTotalMs);
     return () => window.clearTimeout(timeoutId);
-  }, [gameState, puzzle?.equationLength, revealingRowIndex]);
+  }, [gameState, puzzle?.equalsIndex, revealingRowIndex]);
 
 
   const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
-  const equationLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle?.equationLength) : 8;
+  const equationLength = Number.isFinite(puzzle?.equationLength) ? Number(puzzle?.equationLength) : 9;
   const equalsIndex = Number.isFinite(puzzle?.equalsIndex)
     ? Number(puzzle?.equalsIndex)
     : 4;
-  const guessInputLength = Math.max(1, equationLength - 1);
+  const target = String(puzzle?.target || "");
+  const guessInputLength = Math.max(1, equalsIndex);
 
   const boardRows = useMemo(() => {
     const rows = attempts.map((attempt) =>
       attempt.guess.split("").map((char, index) => ({
         char: toDisplayEquationChar(char),
-        state: index === equalsIndex ? "locked" : (attempt.feedback[index] || "absent"),
+        state: index === equalsIndex ? "locked" : index > equalsIndex ? "target" : (attempt.feedback[index] || "absent"),
       })),
     );
 
@@ -399,6 +409,10 @@ export default function EquadleGameClient({
       for (let index = 0; index < equationLength; index += 1) {
         if (index === equalsIndex) {
           draft.push({ char: "=", state: "locked" });
+          continue;
+        }
+        if (index > equalsIndex) {
+          draft.push({ char: target[index - equalsIndex - 1] || "", state: "target" });
           continue;
         }
         const nextChar = guess[guessCursor] || "";
@@ -412,20 +426,26 @@ export default function EquadleGameClient({
     while (rows.length < maxGuesses) {
       const emptyRow = [];
       for (let index = 0; index < equationLength; index += 1) {
-        emptyRow.push(index === equalsIndex ? { char: "=", state: "locked" } : { char: "", state: "empty" });
+        if (index === equalsIndex) {
+          emptyRow.push({ char: "=", state: "locked" });
+        } else if (index > equalsIndex) {
+          emptyRow.push({ char: target[index - equalsIndex - 1] || "", state: "target" });
+        } else {
+          emptyRow.push({ char: "", state: "empty" });
+        }
       }
       rows.push(emptyRow);
     }
 
     return rows;
-  }, [attempts, equationLength, equalsIndex, gameState, guess, maxGuesses]);
+  }, [attempts, equationLength, equalsIndex, gameState, guess, maxGuesses, target]);
 
   const keyStates = useMemo(() => {
     const states = new Map();
     for (const attempt of attempts) {
       const chars = String(attempt?.guess || "").split("");
       const feedback = Array.isArray(attempt?.feedback) ? attempt.feedback : [];
-      for (let index = 0; index < chars.length; index += 1) {
+      for (let index = 0; index < Math.min(chars.length, equalsIndex); index += 1) {
         const key = chars[index];
         const nextState = feedback[index] || "absent";
         const currentState = states.get(key) || "empty";
@@ -435,7 +455,7 @@ export default function EquadleGameClient({
       }
     }
     return states;
-  }, [attempts]);
+  }, [attempts, equalsIndex]);
 
   const canSubmitGuess = gameState === "playing" && guess.length === guessInputLength;
   const canDeleteGuess = gameState === "playing" && guess.length > 0;
@@ -461,7 +481,7 @@ export default function EquadleGameClient({
       return;
     }
 
-    const guessEquation = buildFullGuess(guess.trim(), equationLength, equalsIndex);
+    const guessEquation = buildFullGuess(guess.trim(), equationLength, equalsIndex, target);
     trackGameStarted("equadle", puzzle.puzzleDate, isArchiveView);
     try {
       const response = await fetch("/api/equadle/puzzle/submit", {
@@ -492,6 +512,7 @@ export default function EquadleGameClient({
         setGameState("won");
         setMessage("");
         setResolvedAnswer(payload.answer || "");
+        setRecordedGuessesUsed(nextAttempts.length);
         recordGameCompletionQuietly({
           gameSlug: "equadle",
           puzzleId: puzzle.puzzleId,
@@ -528,6 +549,7 @@ export default function EquadleGameClient({
         setGameState("lost");
         setMessage("");
         setResolvedAnswer(payload.answer || "");
+        setRecordedGuessesUsed(nextAttempts.length);
         recordGameCompletionQuietly({
           gameSlug: "equadle",
           puzzleId: puzzle.puzzleId,
@@ -563,7 +585,7 @@ export default function EquadleGameClient({
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : "Guess must be a valid equation");
     }
-  }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, isArchiveView, lockDailyCompletion, maxGuesses, puzzle]);
+  }, [attempts, completionKey, equationLength, equalsIndex, gameState, guess, isArchiveView, lockDailyCompletion, maxGuesses, puzzle, target]);
 
   useEffect(() => {
     if (gameState !== "playing" || isCalculatorOpen) {
@@ -598,23 +620,24 @@ export default function EquadleGameClient({
   const effectiveAnswer = answerEquation || "Unavailable";
   const displayEffectiveAnswer = toDisplayEquation(effectiveAnswer);
   const resultEquationTiles = answerEquation
-    ? answerEquation.split("").map((char) => {
+    ? answerEquation.split("").map((char, index) => {
         const displayChar = toDisplayEquationChar(char);
         return {
           char: displayChar,
-          state: char === "=" ? "locked" : "correct",
+          state: char === "=" ? "locked" : index > answerEquation.indexOf("=") ? "target" : "correct",
         };
       })
     : [];
-  const performanceLabel = getPerformanceLabel(gameState === "won", attempts.length, maxGuesses);
+  const effectiveGuessesUsed = gameState === "playing" ? attempts.length : Math.max(attempts.length, recordedGuessesUsed);
+  const performanceLabel = getPerformanceLabel(gameState === "won", effectiveGuessesUsed, maxGuesses);
   const shareText = buildGameShareText({
     gameName: "Equadle",
     isArchiveView,
     puzzleDate: puzzle?.puzzleDate,
     didWin: gameState === "won",
-    guessesUsed: attempts.length,
+    guessesUsed: effectiveGuessesUsed,
     maxGuesses,
-    visualRows: buildEquationShareRows(attempts),
+    visualRows: buildEquationShareRows(attempts, equalsIndex),
     url: toPublicAppUrl("/equadle"),
   });
   const handleShareResult = async () => {
@@ -667,7 +690,7 @@ export default function EquadleGameClient({
         <section className="card equadle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <GuessProgressChip used={effectiveGuessesUsed} total={maxGuesses} active={gameState === "playing"} />
             <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
@@ -821,7 +844,7 @@ export default function EquadleGameClient({
               <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>
               <p className="result-modal-copy result-modal-stat-line">
                 Guesses used:{" "}
-                <span className="result-modal-stat-value">{attempts.length}/{maxGuesses}</span>
+                <span className="result-modal-stat-value">{effectiveGuessesUsed}/{maxGuesses}</span>
               </p>
             </div>
             {resultEquationTiles.length > 0 ? (

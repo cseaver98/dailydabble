@@ -7,6 +7,11 @@ export const runtime = "nodejs";
 
 const allowedEquation = /^[0-9+\-*/=]+$/;
 const validStatuses = ["pending_review", "approved"] as const;
+const EQUATION_LENGTH = 9;
+const MIN_TARGET = 10;
+const MAX_TARGET = 99;
+const MIN_STANDARD_SOLUTIONS = 700;
+const MAX_STANDARD_SOLUTIONS = 2500;
 type CandidateStatus = (typeof validStatuses)[number];
 type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
@@ -148,7 +153,7 @@ const evalRpn = (tokens: string[]): number => {
   return stack[0];
 };
 
-const validateEquation = (raw: string, expectedLength = 8): string => {
+const validateEquation = (raw: string, expectedLength = EQUATION_LENGTH): string => {
   const equation = String(raw || "").trim();
   if (equation.length !== expectedLength) {
     throw new Error(`Guess must be ${expectedLength} characters`);
@@ -178,7 +183,31 @@ const randomOperator = (): "+" | "-" | "*" | "/" => {
   return operators[randomInt(0, operators.length - 1)];
 };
 
-const generateRandomEquation = (expectedLength = 8): string => {
+const applyGeneratedOperation = (left: number, right: number, operator: "+" | "-" | "*" | "/"): number | null => {
+  if (operator === "+") return left + right;
+  if (operator === "-") return left - right;
+  if (operator === "*") return left * right;
+  if (right === 0 || left % right !== 0) return null;
+  return left / right;
+};
+
+const evaluateGeneratedExpression = (
+  a: number,
+  b: number,
+  c: number,
+  op1: "+" | "-" | "*" | "/",
+  op2: "+" | "-" | "*" | "/",
+): number | null => {
+  if ((op2 === "*" || op2 === "/") && (op1 === "+" || op1 === "-")) {
+    const right = applyGeneratedOperation(b, c, op2);
+    return right === null ? null : applyGeneratedOperation(a, right, op1);
+  }
+
+  const left = applyGeneratedOperation(a, b, op1);
+  return left === null ? null : applyGeneratedOperation(left, c, op2);
+};
+
+const generateRandomEquation = (expectedLength = EQUATION_LENGTH): string => {
   for (let attempt = 0; attempt < 3000; attempt += 1) {
     const a = randomInt(1, 99);
     const b = randomInt(1, 99);
@@ -187,13 +216,8 @@ const generateRandomEquation = (expectedLength = 8): string => {
     const op2 = randomOperator();
     const left = `${a}${op1}${b}${op2}${c}`;
 
-    let leftValue = 0;
-    try {
-      leftValue = evalRpn(toRpn(tokenizeExpression(left)));
-    } catch {
-      continue;
-    }
-    if (!Number.isInteger(leftValue) || leftValue < 0) {
+    const leftValue = evaluateGeneratedExpression(a, b, c, op1, op2);
+    if (!Number.isInteger(leftValue) || leftValue < MIN_TARGET || leftValue > MAX_TARGET) {
       continue;
     }
 
@@ -210,6 +234,44 @@ const generateRandomEquation = (expectedLength = 8): string => {
   }
 
   throw new Error("Could not generate a valid random equation");
+};
+
+const targetSolutionCounts = new Map<number, number>();
+
+const countTargetSolutions = (target: number): number => {
+  const cached = targetSolutionCounts.get(target);
+  if (cached !== undefined) return cached;
+
+  let count = 0;
+  for (let a = 1; a <= 99; a += 1) {
+    for (let b = 1; b <= 99; b += 1) {
+      for (let c = 1; c <= 99; c += 1) {
+        for (const op1 of ["+", "-", "*", "/"] as const) {
+          for (const op2 of ["+", "-", "*", "/"] as const) {
+            const left = `${a}${op1}${b}${op2}${c}`;
+            if (`${left}=${target}`.length !== EQUATION_LENGTH) continue;
+
+            if (evaluateGeneratedExpression(a, b, c, op1, op2) === target) count += 1;
+          }
+        }
+      }
+    }
+  }
+
+  targetSolutionCounts.set(target, count);
+  return count;
+};
+
+const validateStandardDifficulty = (equation: string) => {
+  const target = Number(equation.split("=")[1]);
+  if (!Number.isInteger(target) || target < MIN_TARGET || target > MAX_TARGET) {
+    throw new Error("Equadle targets must be two-digit numbers from 10 to 99");
+  }
+
+  const solutionCount = countTargetSolutions(target);
+  if (solutionCount < MIN_STANDARD_SOLUTIONS || solutionCount > MAX_STANDARD_SOLUTIONS) {
+    throw new Error(`Target ${target} is outside the standard difficulty range`);
+  }
 };
 
 const getToday = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -326,7 +388,8 @@ export async function POST(request: Request) {
     const supabase = getSupabaseEquadleAdmin();
 
     if (action === "add-puzzle") {
-      const equation = validateEquation(payload.equation ?? "", 8);
+      const equation = validateEquation(payload.equation ?? "", EQUATION_LENGTH);
+      validateStandardDifficulty(equation);
       const { data: existing, error: existingError } = await supabase
         .from("puzzles")
         .select("id")
@@ -345,7 +408,7 @@ export async function POST(request: Request) {
         .from("puzzles")
         .insert({
           equation,
-          equation_length: 8,
+          equation_length: EQUATION_LENGTH,
           status: "pending_review",
         })
         .select("id,equation,equation_length,created_at,status")
@@ -362,12 +425,13 @@ export async function POST(request: Request) {
       let lastInsertError: Error | null = null;
 
       for (let attempt = 0; attempt < 40; attempt += 1) {
-        const equation = generateRandomEquation(8);
+        const equation = generateRandomEquation(EQUATION_LENGTH);
+        validateStandardDifficulty(equation);
         const { data, error } = await supabase
           .from("puzzles")
           .insert({
             equation,
-            equation_length: 8,
+            equation_length: EQUATION_LENGTH,
             status: "pending_review",
           })
           .select("id,equation,equation_length,created_at,status")
