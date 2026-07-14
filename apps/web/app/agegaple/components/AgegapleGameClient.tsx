@@ -621,6 +621,7 @@ export default function AgegapleGameClient({
           <DailydabbleNav
             subtitle="Agegaple"
             subtitleHref="/agegaple"
+            subtitleAsHeading={!isArchiveView}
             homeHref="/"
             leftContent={<GameMenu todayHref="/agegaple" archiveHref={archiveHref} hideToday={!isArchiveView} />}
             rightContent={<AccountNav />}
@@ -641,6 +642,7 @@ export default function AgegapleGameClient({
         <DailydabbleNav
           subtitle="Agegaple"
           subtitleHref="/agegaple"
+          subtitleAsHeading={!isArchiveView}
           homeHref="/"
           leftContent={<GameMenu todayHref="/agegaple" archiveHref={archiveHref} hideToday={!isArchiveView} />}
           rightContent={<AccountNav />}

@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 export function DailydabbleNav({
   subtitle,
   subtitleHref,
+  subtitleAsHeading = false,
   label,
   labelId,
   labelClassName = "",
@@ -41,9 +42,13 @@ export function DailydabbleNav({
                 React.Fragment,
                 null,
                 React.createElement("span", { className: "dd-brand-separator", "aria-hidden": "true" }),
-                subtitleHref
-                  ? React.createElement("a", { className: "dd-brand-subtitle-link", href: subtitleHref }, subtitle)
-                  : React.createElement("span", { className: "dd-brand-subtitle" }, subtitle),
+                React.createElement(
+                  subtitleAsHeading ? "h1" : "span",
+                  { className: "dd-brand-subtitle-heading" },
+                  subtitleHref
+                    ? React.createElement("a", { className: "dd-brand-subtitle-link", href: subtitleHref }, subtitle)
+                    : React.createElement("span", { className: "dd-brand-subtitle" }, subtitle),
+                ),
               )
             : null,
         ),

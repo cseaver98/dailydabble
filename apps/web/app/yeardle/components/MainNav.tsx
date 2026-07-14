@@ -14,6 +14,7 @@ export default function MainNav({ label = "Yeardle", hideToday = false }) {
     <DailydabbleNav
       subtitle="Yeardle"
       subtitleHref="/yeardle"
+      subtitleAsHeading={isOnTodaysGame}
       label={label}
       labelId="challengeDate"
       labelClassName="subtle nav-date"
