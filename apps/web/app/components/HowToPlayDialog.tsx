@@ -410,9 +410,9 @@ function getTutorial(
       subtitle: "Estimate the age gap between two people.",
       pages: [
         {
-          eyebrow: "Compare the photos",
-          heading: "Use the photo years",
-          copy: "Look at both people and note when each photo was taken. Estimate their ages in those photos, not their ages today.",
+          eyebrow: "Study the pair",
+          heading: "Guess their age gap",
+          copy: "Compare the two people and estimate how many years apart they are. Keep each photo's year in mind, since the pictures may have been taken at different times.",
           visual: <PhotoPair people={preview?.people} />,
         },
         {
