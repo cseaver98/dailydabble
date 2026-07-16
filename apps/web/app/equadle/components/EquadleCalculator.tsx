@@ -173,7 +173,26 @@ export default function EquadleCalculator({ isOpen, onClose }: EquadleCalculator
 
         <div className="calculator-utility-row">
           <button type="button" onClick={clear}>Clear</button>
-          <button type="button" onClick={backspace} aria-label="Delete last digit">⌫</button>
+          <button type="button" onClick={backspace} aria-label="Delete last digit">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="equadle-backspace-icon">
+              <path
+                d="M20 5H9L3 12l6 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="m10 9 6 6m0-6-6 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
 
         <div className="calculator-grid">
