@@ -18,6 +18,7 @@ import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
+import ResultOutcomeEffects from "../../components/ResultOutcomeEffects";
 import MainNav from "./MainNav";
 import EditorialDrawer from "./EditorialDrawer";
 
@@ -747,7 +748,12 @@ export default function MoviedleGameClient({
 
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
-          <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
+          <section
+            className="result-modal-panel result-outcome-panel"
+            data-outcome={gameState === "won" ? "win" : "loss"}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ResultOutcomeEffects didWin={gameState === "won"} />
             <button
               className="result-modal-close"
               type="button"
@@ -756,7 +762,9 @@ export default function MoviedleGameClient({
             >
               ×
             </button>
-            <h2 className="result-modal-title">Result</h2>
+            <h2 className="result-modal-title">
+              Result: <span className="result-modal-outcome-label" data-outcome={gameState === "won" ? "win" : "loss"}>{gameState === "won" ? "Won" : "Lost"}</span>
+            </h2>
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}

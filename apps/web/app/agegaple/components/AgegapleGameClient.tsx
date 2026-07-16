@@ -16,6 +16,7 @@ import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import LoadingLabel from "../../components/LoadingLabel";
 import ResultDialogActions from "../../components/ResultDialogActions";
+import ResultOutcomeEffects from "../../components/ResultOutcomeEffects";
 import GuessProgressChip from "../../components/GuessProgressChip";
 import useHowToPlayDialog from "../../components/useHowToPlayDialog";
 import EditorialDrawer from "./EditorialDrawer";
@@ -815,16 +816,20 @@ export default function AgegapleGameClient({
             onClick={() => setIsResultOpen(false)}
           >
             <div
-              className="result-modal-panel"
+              className="result-modal-panel result-outcome-panel"
+              data-outcome={didWin ? "win" : "loss"}
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-label="Agegaple result"
             >
+              <ResultOutcomeEffects didWin={didWin} />
               <button type="button" onClick={() => setIsResultOpen(false)} aria-label="Close result dialog" className="result-modal-close">
                 ×
               </button>
-              <h3 className="result-modal-title">Result</h3>
+              <h3 className="result-modal-title">
+                Result: <span className="result-modal-outcome-label" data-outcome={didWin ? "win" : "loss"}>{didWin ? "Won" : "Lost"}</span>
+              </h3>
               {lockDailyCompletion ? <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p> : null}
               <div className="result-modal-summary">
                 <p className="result-modal-copy result-modal-subtitle">{performanceLabel}</p>

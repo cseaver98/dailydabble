@@ -6,6 +6,7 @@ import { DailydabbleUnavailable } from "@dailydabble/ui";
 import ArchiveLockGate from "../../components/ArchiveLockGate";
 import HowToPlayDialog from "../../components/HowToPlayDialog";
 import ResultDialogActions from "../../components/ResultDialogActions";
+import ResultOutcomeEffects from "../../components/ResultOutcomeEffects";
 import MainNav from "./MainNav";
 import { normalizePhraseWithPunctuation } from "../../../lib/verble/puzzle-repository";
 import { toPublicAppUrl } from "../../../lib/app-url";
@@ -1761,7 +1762,12 @@ export default function VerbleGameClient({
 
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
-          <section className="result-modal-panel" onClick={(event) => event.stopPropagation()}>
+          <section
+            className="result-modal-panel result-outcome-panel"
+            data-outcome={gameState === "won" ? "win" : "loss"}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ResultOutcomeEffects didWin={gameState === "won"} />
             <button
               className="result-modal-close"
               type="button"
@@ -1770,7 +1776,9 @@ export default function VerbleGameClient({
             >
               ×
             </button>
-            <h2 className="result-modal-title">Result</h2>
+            <h2 className="result-modal-title">
+              Result: <span className="result-modal-outcome-label" data-outcome={gameState === "won" ? "win" : "loss"}>{gameState === "won" ? "Won" : "Lost"}</span>
+            </h2>
             {lockDailyCompletion && !isArchiveView ? (
               <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
