@@ -62,7 +62,14 @@ type RestoredYeardleState = {
   isResultOpen: boolean;
 };
 
-const isValidYear = (value: string) => /^\d{4}$/.test(value.trim());
+const isValidYear = (value: string) => {
+  const normalized = value.trim();
+  const year = Number(normalized);
+  return /^\d{1,4}$/.test(normalized)
+    && Number.isInteger(year)
+    && year >= 1
+    && year <= new Date().getFullYear();
+};
 const formatMonthDay = (dateString: string | undefined) => {
   if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return "";
@@ -391,7 +398,7 @@ export default function YeardleGameClient({
 
     const nextGuess = guess.trim();
     if (!isValidYear(nextGuess)) {
-      setMessage("Enter a 4-digit year.");
+      setMessage("Enter a year from 1 through the current year.");
       return;
     }
 
@@ -620,8 +627,8 @@ export default function YeardleGameClient({
               className="guess-input"
               type="text"
               inputMode="numeric"
-              pattern="[0-9]{4}"
-              placeholder="Guess the year (e.g. 1969)"
+              pattern="[0-9]{1,4}"
+              placeholder="Guess the year (e.g. 64 or 1969)"
               aria-label="Guess the year"
               disabled={gameState !== "playing"}
             />

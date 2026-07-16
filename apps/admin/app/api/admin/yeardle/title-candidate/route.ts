@@ -6,7 +6,7 @@ import { fetchCommonsImageMetadata } from "@/lib/wikimedia-commons";
 
 export const runtime = "nodejs";
 
-const MIN_YEAR = 1000;
+const MIN_YEAR = 1;
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const REQUEST_TIMEOUT_MS = 6000;
 
@@ -343,7 +343,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "candidate is required." }, { status: 400 });
     }
 
-    if (!Number.isFinite(eventYear) || eventYear < MIN_YEAR || eventYear > currentYear) {
+    if (!Number.isInteger(eventYear) || eventYear < MIN_YEAR || eventYear > currentYear) {
       return NextResponse.json({ error: `eventYear must be between ${MIN_YEAR} and ${currentYear}.` }, { status: 400 });
     }
     if ((eventMonth == null) !== (eventDay == null)) {

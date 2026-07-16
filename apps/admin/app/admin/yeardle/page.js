@@ -179,8 +179,8 @@ export default function YeardleAdminTab() {
       const eventYear = Number(manualYear);
       const eventMonth = manualMonth ? Number(manualMonth) : null;
       const eventDay = manualDay ? Number(manualDay) : null;
-      if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
-        throw new Error("Enter a valid event year.");
+      if (!Number.isInteger(eventYear) || eventYear < 1 || eventYear > new Date().getFullYear()) {
+        throw new Error("Enter an event year from 1 through the current year.");
       }
       if ((eventMonth === null) !== (eventDay === null)) {
         throw new Error("Enter both event month and day, or leave both blank.");
@@ -821,7 +821,7 @@ export default function YeardleAdminTab() {
                   Event year
                   <input
                     type="number"
-                    min="1000"
+                    min="1"
                     max={new Date().getFullYear()}
                     value={manualYear}
                     onChange={(event) => setManualYear(event.target.value)}
@@ -960,7 +960,7 @@ export default function YeardleAdminTab() {
                   Event year
                   <input
                     type="number"
-                    min="1000"
+                    min="1"
                     max={new Date().getFullYear()}
                     value={editingCandidateDraft.eventYear}
                     onChange={(event) => updateEditingCandidateField("eventYear", event.target.value)}

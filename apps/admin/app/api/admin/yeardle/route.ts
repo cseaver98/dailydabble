@@ -303,8 +303,8 @@ export async function PATCH(request: Request) {
       if (!title) {
         return NextResponse.json({ error: "Candidate title is required." }, { status: 400 });
       }
-      if (!Number.isFinite(eventYear) || eventYear < 1000 || eventYear > new Date().getFullYear()) {
-        return NextResponse.json({ error: "Event year must be between 1000 and current year." }, { status: 400 });
+      if (!Number.isInteger(eventYear) || eventYear < 1 || eventYear > new Date().getFullYear()) {
+        return NextResponse.json({ error: "Event year must be between 1 and the current year." }, { status: 400 });
       }
       if ((eventMonth == null) !== (eventDay == null)) {
         return NextResponse.json({ error: "Event month and day must be provided together." }, { status: 400 });
