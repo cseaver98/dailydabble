@@ -628,7 +628,7 @@ export default function YeardleGameClient({
               type="text"
               inputMode="numeric"
               pattern="[0-9]{1,4}"
-              placeholder="Guess the year (e.g. 64 or 1969)"
+              placeholder="Guess the year"
               aria-label="Guess the year"
               disabled={gameState !== "playing"}
             />
