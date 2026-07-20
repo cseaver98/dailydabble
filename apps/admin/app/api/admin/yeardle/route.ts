@@ -335,39 +335,17 @@ export async function PATCH(request: Request) {
     if (hasStatus && status === "approved") {
       const { data: currentEvent, error: currentEventError } = await supabase
         .from("events")
-        .select("image_url,image_source_page_url,image_license,image_author,image_attribution_text,image_license_verified_at")
+        .select("image_url")
         .eq("id", eventId)
         .maybeSingle<{
           image_url: string | null;
-          image_source_page_url: string | null;
-          image_license: string | null;
-          image_author: string | null;
-          image_attribution_text: string | null;
-          image_license_verified_at: string | null;
         }>();
       if (currentEventError) {
-        throw new Error(`Failed checking event image attribution: ${currentEventError.message}`);
+        throw new Error(`Failed checking event image: ${currentEventError.message}`);
       }
-      const effectiveSourcePageUrl = imageSourcePageUrl ?? currentEvent?.image_source_page_url ?? null;
-      const effectiveLicense = imageLicense ?? currentEvent?.image_license ?? null;
-      const effectiveAuthor = imageAuthor ?? currentEvent?.image_author ?? null;
-      const effectiveAttributionText = imageAttributionText ?? currentEvent?.image_attribution_text ?? null;
-      const effectiveVerifiedAt =
-        payload.imageLicenseVerified === true
-          ? new Date().toISOString()
-          : payload.imageLicenseVerified === false
-            ? null
-            : currentEvent?.image_license_verified_at ?? null;
-      if (
-        !currentEvent?.image_url ||
-        !effectiveSourcePageUrl ||
-        !effectiveLicense ||
-        !effectiveAuthor ||
-        !effectiveAttributionText ||
-        !effectiveVerifiedAt
-      ) {
+      if (!currentEvent?.image_url) {
         return NextResponse.json(
-          { error: "Verify image source, author, license, and attribution before approving this Yeardle candidate." },
+          { error: "Add an image before approving this Yeardle candidate." },
           { status: 400 },
         );
       }

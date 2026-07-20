@@ -774,7 +774,7 @@ export default function YeardleAdminTab() {
                       ) : null}
                     </div>
                     <label style={{ fontWeight: 700, fontSize: ".85rem" }}>
-                      Attribution
+                      Attribution (optional)
                       <input
                         type="text"
                         value={manualCandidate.imageAttributionText || ""}
@@ -940,8 +940,8 @@ export default function YeardleAdminTab() {
                 Scheduled: <b>{item.nextScheduledDate}</b>
               </p>
             ) : null}
-            <p style={{ margin: ".2rem 0 0", color: item.image_license_verified_at ? "#2f672d" : "#8b2d2d", fontSize: ".82rem", fontWeight: 800 }}>
-              Image attribution: {item.image_license_verified_at ? "verified" : "needs review"}
+            <p style={{ margin: ".2rem 0 0", color: item.image_license_verified_at ? "#2f672d" : "#5b6168", fontSize: ".82rem", fontWeight: 800 }}>
+              Image attribution: {item.image_license_verified_at ? "verified" : "optional"}
               {item.image_license ? ` | ${item.image_license}` : ""}
             </p>
 
@@ -1172,7 +1172,7 @@ export default function YeardleAdminTab() {
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: ".5rem" }}>
                 <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                  Source page URL
+                  Source page URL (optional)
                   <input
                     value={photoDraftSourcePageUrl}
                     onChange={(event) => {
@@ -1184,7 +1184,7 @@ export default function YeardleAdminTab() {
                   />
                 </label>
                 <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                  License
+                  License (optional)
                   <input
                     value={photoDraftLicense}
                     onChange={(event) => {
@@ -1196,7 +1196,7 @@ export default function YeardleAdminTab() {
                   />
                 </label>
                 <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                  License URL
+                  License URL (optional)
                   <input
                     value={photoDraftLicenseUrl}
                     onChange={(event) => {
@@ -1208,7 +1208,7 @@ export default function YeardleAdminTab() {
                   />
                 </label>
                 <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                  Author
+                  Author (optional)
                   <input
                     value={photoDraftAuthor}
                     onChange={(event) => {
@@ -1221,7 +1221,7 @@ export default function YeardleAdminTab() {
                 </label>
               </div>
               <label style={{ display: "grid", gap: ".28rem", fontWeight: 700 }}>
-                Attribution text
+                Attribution text (optional)
                 <input
                   value={photoDraftAttributionText}
                   onChange={(event) => {
@@ -1238,7 +1238,7 @@ export default function YeardleAdminTab() {
                   checked={photoDraftLicenseVerified}
                   onChange={(event) => setPhotoDraftLicenseVerified(event.target.checked)}
                 />
-                Image source, author, license, and attribution verified
+                Verify the attribution details provided above
               </label>
               <div style={{ display: "flex", gap: ".45rem", alignItems: "center", flexWrap: "wrap" }}>
                 <label className="admin-btn" style={{ cursor: uploadingPhotoCandidateId ? "default" : "pointer", opacity: uploadingPhotoCandidateId ? 0.65 : 1 }}>

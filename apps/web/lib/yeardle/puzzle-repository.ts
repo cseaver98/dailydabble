@@ -142,11 +142,7 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<YeardleP
     .from("events")
     .select("id,title,event_year,event_month,event_day,image_url,image_alt,image_source_page_url,image_license,image_license_url,image_author,image_attribution_text,wikipedia_url,hint_description,created_at")
     .eq("status", "approved")
-    .not("image_license_verified_at", "is", null)
-    .not("image_source_page_url", "is", null)
-    .not("image_license", "is", null)
-    .not("image_author", "is", null)
-    .not("image_attribution_text", "is", null)
+    .not("image_url", "is", null)
     .order("reviewed_at", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(5000);
