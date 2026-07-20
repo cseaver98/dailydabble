@@ -272,7 +272,11 @@ export default function MoviedleGameClient({
         setCopyStatus("");
         setLockedSuggestionQuery("");
         setSelectedStillIndex(restoredState.gameState === "playing" ? Math.max(0, restoredState.attempts.length) : 0);
-        setResultStillIndex(0);
+        setResultStillIndex(
+          restoredState.gameState === "playing"
+            ? 0
+            : Math.max(0, (Array.isArray(payload.stillImages) ? payload.stillImages.length : 0) - 1),
+        );
       } catch (loadError) {
         if (!active) {
           return;
@@ -394,6 +398,10 @@ export default function MoviedleGameClient({
   const canNavigateResultStills = visibleStills.length > 1;
   const latestAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null;
   const earlierAttempts = attempts.slice(0, -1).reverse();
+  const openResultDialog = () => {
+    setResultStillIndex(Math.max(0, stills.length - 1));
+    setIsResultOpen(true);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -446,8 +454,7 @@ export default function MoviedleGameClient({
         setRevealedDetails(normalizeRevealedDetails(payload.answerDetails));
         setMessage(finalMessage);
         setSelectedStillIndex(0);
-        setResultStillIndex(0);
-        setIsResultOpen(true);
+        openResultDialog();
         recordGameCompletionQuietly({
           gameSlug: "moviedle",
           puzzleId: puzzle.puzzleId,
@@ -491,8 +498,7 @@ export default function MoviedleGameClient({
         setRevealedDetails(normalizeRevealedDetails(payload.answerDetails));
         setMessage(finalMessage);
         setSelectedStillIndex(0);
-        setResultStillIndex(0);
-        setIsResultOpen(true);
+        openResultDialog();
         recordGameCompletionQuietly({
           gameSlug: "moviedle",
           puzzleId: puzzle.puzzleId,
@@ -665,7 +671,7 @@ export default function MoviedleGameClient({
                 Guess
               </button>
             ) : (
-              <button className="guess-submit-btn" type="button" onClick={() => setIsResultOpen(true)}>
+              <button className="guess-submit-btn" type="button" onClick={openResultDialog}>
                 Review result
               </button>
             )}
