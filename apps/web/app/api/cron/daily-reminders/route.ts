@@ -1,4 +1,5 @@
 import { games } from "@/lib/games";
+import { scheduleTodayGames } from "@/lib/daily-game-scheduler";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { createHmac } from "crypto";
@@ -142,12 +143,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Materialize every daily puzzle even when nobody visits a game that day.
+  const scheduling = await scheduleTodayGames();
   const timeZone = process.env.TIMEZONE || "America/New_York";
   const localHour = getHourInTimeZone(timeZone);
   const isForcedRun = request.nextUrl.searchParams.get("force") === "1";
   const isDryRun = request.nextUrl.searchParams.get("dryRun") === "1";
   if (!isForcedRun && localHour !== 9) {
-    return NextResponse.json({ ok: true, skipped: "outside_reminder_hour", localHour, timeZone });
+    return NextResponse.json({ ok: true, skipped: "outside_reminder_hour", localHour, timeZone, scheduling });
   }
 
   const today = getTodayPuzzleDate();
@@ -162,12 +165,23 @@ export async function GET(request: NextRequest) {
     .returns<ReminderProfileRow[]>();
 
   if (profileError) {
-    return NextResponse.json({ error: "Failed to load reminder profiles", details: profileError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load reminder profiles", details: profileError.message, scheduling },
+      { status: 500 },
+    );
   }
 
   const profileRows = profiles ?? [];
   if (!profileRows.length) {
-    return NextResponse.json({ ok: true, date: today, eligible: 0, sent: 0, skippedPlayed: 0, failed: 0 });
+    return NextResponse.json({
+      ok: true,
+      date: today,
+      eligible: 0,
+      sent: 0,
+      skippedPlayed: 0,
+      failed: 0,
+      scheduling,
+    });
   }
 
   const profileIds = profileRows.map((profile) => profile.id);
@@ -183,7 +197,10 @@ export async function GET(request: NextRequest) {
       .returns<PlayedRow[]>();
 
     if (playedError) {
-      return NextResponse.json({ error: "Failed to load today results", details: playedError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to load today results", details: playedError.message, scheduling },
+        { status: 500 },
+      );
     }
 
     for (const row of playedRows ?? []) {
@@ -202,6 +219,7 @@ export async function GET(request: NextRequest) {
       sent: 0,
       skippedPlayed: playedUserIds.size,
       failed: 0,
+      scheduling,
     });
   }
 
@@ -217,13 +235,14 @@ export async function GET(request: NextRequest) {
       localHour,
       timeZone,
       forced: isForcedRun,
+      scheduling,
     });
   }
 
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.REMINDER_EMAIL_FROM;
   if (!apiKey || !from) {
-    return NextResponse.json({ error: "Reminder email is not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Reminder email is not configured", scheduling }, { status: 500 });
   }
 
   const resend = new Resend(apiKey);
@@ -272,7 +291,10 @@ export async function GET(request: NextRequest) {
       .in("id", ids);
 
     if (updateError) {
-      return NextResponse.json({ error: "Failed to record reminder sends", details: updateError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to record reminder sends", details: updateError.message, scheduling },
+        { status: 500 },
+      );
     }
   }
 
@@ -286,5 +308,6 @@ export async function GET(request: NextRequest) {
     failed: failures.length,
     failures: failures.slice(0, 10),
     forced: isForcedRun,
+    scheduling,
   });
 }
