@@ -1606,16 +1606,10 @@ export default function VerbleGameClient({
               <button
                 type="button"
                 className="key wide control-key"
-                onClick={() => {
-                  if (canOpenFullPhraseConfirm) {
-                    setIsPhraseConfirmOpen(true);
-                    return;
-                  }
-                  void submitWordGuess();
-                }}
-                disabled={!canOpenFullPhraseConfirm && !canSubmitWordGuess}
+                onClick={clearWordGuess}
+                disabled={gameState !== "playing" || isResolvingGuess || !selectedSlotDraft.some((letter, index) => !selectedSlotLockState[index] && Boolean(letter))}
               >
-                Enter
+                Clear
               </button>
               <button
                 type="button"
@@ -1643,7 +1637,20 @@ export default function VerbleGameClient({
                   />
                 </svg>
               </button>
-              <button type="button" className="key wide control-key" onClick={clearWordGuess} disabled={gameState !== "playing" || isResolvingGuess || !selectedSlotDraft.some((letter, index) => !selectedSlotLockState[index] && Boolean(letter))}>Clear</button>
+              <button
+                type="button"
+                className="key wide control-key"
+                onClick={() => {
+                  if (canOpenFullPhraseConfirm) {
+                    setIsPhraseConfirmOpen(true);
+                    return;
+                  }
+                  void submitWordGuess();
+                }}
+                disabled={!canOpenFullPhraseConfirm && !canSubmitWordGuess}
+              >
+                Enter
+              </button>
             </div>
           </div>
 

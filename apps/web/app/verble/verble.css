@@ -168,7 +168,7 @@
   width: clamp(1.76rem, 7.9vw, 3rem);
   height: clamp(2.18rem, 9.1vw, 3.4rem);
   border-radius: clamp(0.45rem, 1.6vw, 0.7rem);
-  border: 1px solid var(--outline-soft);
+  border: 1.5px solid #aeb7c3;
   background: #fff;
   display: grid;
   place-items: center;
@@ -548,10 +548,11 @@
   width: 1.15rem;
   height: 1.15rem;
 }
-.verble-shell .key[data-state="absent"] { background: #b5bbc5; border-color: #a3a9b4; color: #fff; }
+.verble-shell .key[data-state="absent"] { background: #7d8591; border-color: #6d7580; color: #fff; }
 .verble-shell .key[data-state="present"] { background: #e4bc4d; border-color: #c7a340; color: #fff; }
 .verble-shell .key[data-state="resolved"] { background: #65b84d; border-color: #5aa545; color: #fff; }
 .verble-shell .key:disabled { opacity: 0.55; cursor: not-allowed; }
+.verble-shell .key[data-state="absent"]:disabled { opacity: 0.82; }
 
 .verble-shell .message { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--muted); }
 .verble-shell .message[data-kind="won"] { color: #0a7a37; }
@@ -1000,6 +1001,10 @@
 }
 
 @media (max-width: 720px) {
+.verble-shell .slot-tile.pick-word-pulse:not(.fixed):not(.reveal):not(.solved) {
+    animation: none;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
+  }
 .verble-shell .card {
     padding: 0.85rem;
   }
