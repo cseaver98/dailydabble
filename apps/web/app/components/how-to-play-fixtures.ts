@@ -12,7 +12,31 @@ export const EQUADLE_TUTORIAL = {
   incorrectGuessFeedback: ["correct", "correct", "present", "absent", "present", "present", "locked", "target", "target"],
 } as const;
 
-export const DOODLE_TUTORIAL = doodleTutorialPalmTree;
+const buildSixStageDoodleTutorial = () => {
+  const stages = doodleTutorialPalmTree.stages;
+  const finalStage = stages.at(-1);
+  const finalSegment = finalStage?.[0];
+  if (!finalSegment) {
+    return stages;
+  }
+
+  const preferredSplit = Math.floor(finalSegment.d.length / 2);
+  const splitIndex = finalSegment.d.indexOf(" M", preferredSplit);
+  if (splitIndex <= 0) {
+    return stages;
+  }
+
+  return [
+    ...stages.slice(0, -1),
+    [{ ...finalSegment, d: finalSegment.d.slice(0, splitIndex) }],
+    [{ ...finalSegment, d: finalSegment.d.slice(splitIndex) }],
+  ];
+};
+
+export const DOODLE_TUTORIAL = {
+  ...doodleTutorialPalmTree,
+  stages: buildSixStageDoodleTutorial(),
+};
 
 export const SPORTLE_TUTORIAL = {
   answer: "LeBron James",

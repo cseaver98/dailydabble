@@ -7,6 +7,7 @@ const candidateStatuses = ["pending", "approved", "finished"];
 const filterStatuses = ["pending", "approved", "today", "finished", "all"];
 const candidatePageSize = 10;
 const PLACEHOLDER_IMAGE = "/favicon.svg";
+const REQUIRED_STILL_COUNT = 6;
 const statusLabel = {
   pending: "pending",
   approved: "approved",
@@ -552,7 +553,7 @@ export default function MoviedleAdminTab() {
                   {item.title} {item.release_year ? `(${item.release_year})` : ""}
                 </p>
                 <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
-                  Votes: {Number(item.imdb_votes || 0).toLocaleString()} | Status: {item.status} | Stills: {item.stillCount || 0}
+                  Votes: {Number(item.imdb_votes || 0).toLocaleString()} | Status: {item.status} | Stills: {item.stillCount || 0}/{REQUIRED_STILL_COUNT}
                 </p>
                 <p style={{ margin: 0, color: "#5b6168", fontSize: ".88rem" }}>
                   Schedule: {item.scheduleCount === 0 ? "Not scheduled" : `${item.scheduleCount}x (last ${item.lastScheduledDate})`}
@@ -744,7 +745,7 @@ export default function MoviedleAdminTab() {
               <div>
                 <p style={{ margin: 0, fontWeight: 900 }}>{galleryCandidate.title}</p>
                 <p style={{ margin: ".2rem 0 0", color: "#5b6168", fontSize: ".88rem" }}>
-                  Still {galleryUrls.length ? Math.min(galleryIndex + 1, galleryUrls.length) : 0} of {galleryUrls.length}
+                  Still {galleryUrls.length ? Math.min(galleryIndex + 1, galleryUrls.length) : 0} of {galleryUrls.length} ({REQUIRED_STILL_COUNT} required)
                 </p>
               </div>
               <button className="admin-btn" type="button" onClick={closeGallery}>Close</button>

@@ -257,7 +257,7 @@ function PhotoPair({ people = [] }: { people?: TutorialPreviewData["people"] }) 
 
 function DoodlePreview() {
   return (
-    <div className="doodle-stage-wrap tutorial-doodle-preview" role="img" aria-label="A Palm Tree doodle being drawn in five stages">
+    <div className="doodle-stage-wrap tutorial-doodle-preview" role="img" aria-label="A Palm Tree doodle being drawn in six stages">
       <svg className="doodle-canvas" viewBox={DOODLE_TUTORIAL.viewBox} aria-hidden="true">
         {DOODLE_TUTORIAL.stages.map((_, stageIndex) => (
           <g className={`tutorial-doodle-stage tutorial-doodle-stage-${stageIndex + 1}`} key={stageIndex}>

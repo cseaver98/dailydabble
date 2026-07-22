@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_STAGE_COUNT = 5;
+const DEFAULT_STAGE_COUNT = 6;
 
 const argMap = new Map();
 for (const arg of process.argv.slice(2)) {
@@ -219,8 +219,8 @@ const orderPaths = (paths) => {
 };
 
 const buildIncrementRatios = (count) => {
-  if (count === 5) {
-    return [0.1, 0.1, 0.1, 0.1, 0.6];
+  if (count === 6) {
+    return [0.08, 0.08, 0.08, 0.08, 0.08, 0.6];
   }
 
   const raw = Array.from({ length: count }, (_, index) => 1 + index * 0.04);

@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 
 const STATUS_VALUES = ["pending", "approved"] as const;
 const STORED_STATUS_VALUES = ["pending", "approved", "used"] as const;
+const REQUIRED_STAGE_COUNT = 6;
 type DoodleStatus = (typeof STATUS_VALUES)[number];
 type StoredDoodleStatus = (typeof STORED_STATUS_VALUES)[number];
 
@@ -228,7 +229,7 @@ const updateManifestStagesForSlug = (slug: string, nextStages: unknown): void =>
       {
         generatedAt: parsed.generatedAt ?? new Date().toISOString(),
         strategy: parsed.strategy ?? "balanced",
-        stageCount: parsed.stageCount ?? (Array.isArray(nextStages) ? nextStages.length : 5),
+        stageCount: parsed.stageCount ?? (Array.isArray(nextStages) ? nextStages.length : REQUIRED_STAGE_COUNT),
         items: nextItems,
       },
       null,
@@ -274,7 +275,7 @@ const updateManifestAnswerForSlug = (slug: string, answer: string, aliases: stri
       {
         generatedAt: parsed.generatedAt ?? new Date().toISOString(),
         strategy: parsed.strategy ?? "balanced",
-        stageCount: parsed.stageCount ?? 5,
+        stageCount: parsed.stageCount ?? REQUIRED_STAGE_COUNT,
         items: nextItems,
       },
       null,
@@ -347,7 +348,7 @@ const saveDbProcessedRecord = async (slug: string, processed: ProcessedDoodleRec
     answer: (processed.answer || slug).trim().toLowerCase(),
     aliases: Array.isArray(processed.aliases) ? processed.aliases.filter((alias): alias is string => typeof alias === "string" && alias.trim().length > 0) : [],
     view_box: typeof processed.viewBox === "string" ? processed.viewBox : "0 0 512 512",
-    stage_count: Number.isFinite(processed.stageCount) ? Number(processed.stageCount) : Array.isArray(processed.stages) ? processed.stages.length : 5,
+    stage_count: Number.isFinite(processed.stageCount) ? Number(processed.stageCount) : Array.isArray(processed.stages) ? processed.stages.length : REQUIRED_STAGE_COUNT,
     path_count: Number.isFinite(processed.pathCount) ? Number(processed.pathCount) : 0,
     stages: Array.isArray(processed.stages) ? processed.stages : [],
     ...(status ? { status } : {}),
@@ -378,6 +379,10 @@ const syncPuzzleStatus = async (slug: string, status: DoodleStatus): Promise<voi
     !Array.isArray(processed.stages)
   ) {
     throw new Error("Processed puzzle is required before approving. Run staging pipeline first.");
+  }
+
+  if (processed.stageCount !== REQUIRED_STAGE_COUNT || processed.stages.length !== REQUIRED_STAGE_COUNT) {
+    throw new Error(`Doodle candidates need exactly ${REQUIRED_STAGE_COUNT} generated stages before approval. Rerun the staging pipeline.`);
   }
 
   const aliases = Array.isArray(processed.aliases)
@@ -696,7 +701,7 @@ const buildOverview = async () => {
       lifecycleStatus: isUsedToday ? "today" : latestUsedDate ? "finished" : nextScheduledDate ? "scheduled" : "unscheduled",
       statusUpdatedAt: state.updatedAt,
       rawUpdatedAt: file.updatedAt,
-      hasProcessed: Boolean(processedSummary),
+      hasProcessed: Boolean(processedSummary && processedSummary.stageCount === REQUIRED_STAGE_COUNT),
       stageCount: processedSummary?.stageCount ?? 0,
       pathCount: processedSummary?.pathCount ?? 0,
       viewBox: processedSummary?.viewBox ?? null,

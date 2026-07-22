@@ -64,6 +64,7 @@ export type DoodlePuzzle = {
   aliases: string[];
   viewBox: string;
   stageCount: number;
+  maxGuesses: number;
   stages: unknown[];
   clues: string[];
 };
@@ -83,7 +84,7 @@ const getArchiveGameNumber = async (date: string): Promise<number> => {
 };
 
 const mapPuzzle = async (scheduleRow: ScheduleRow, puzzleRow: PuzzleRow): Promise<DoodlePuzzle> => {
-  const stageCount = Number.isFinite(puzzleRow.stage_count) ? Number(puzzleRow.stage_count) : 5;
+  const stageCount = Number.isFinite(puzzleRow.stage_count) ? Number(puzzleRow.stage_count) : 6;
   const archiveGameNumber = await getArchiveGameNumber(scheduleRow.puzzle_date);
   return {
     puzzleId: puzzleRow.id,
@@ -94,6 +95,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, puzzleRow: PuzzleRow): Promis
     aliases: Array.isArray(puzzleRow.aliases) ? puzzleRow.aliases : [],
     viewBox: puzzleRow.view_box || "0 0 512 512",
     stageCount,
+    maxGuesses: 6,
     stages: Array.isArray(puzzleRow.stages) ? puzzleRow.stages : [],
     clues: buildClues(puzzleRow.answer, stageCount),
   };
@@ -147,7 +149,9 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<DoodlePu
     throw new Error(`Failed to load approved doodle puzzles: ${approvedError.message}`);
   }
 
-  const candidates = (Array.isArray(approvedRows) ? approvedRows : []) as PuzzleRow[];
+  const candidates = ((Array.isArray(approvedRows) ? approvedRows : []) as PuzzleRow[]).filter(
+    (candidate) => candidate.stage_count === 6 && Array.isArray(candidate.stages) && candidate.stages.length === 6,
+  );
   for (const candidate of candidates) {
     const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
       .from("daily_schedule")

@@ -97,7 +97,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, eventRow: EventRow): Promise<
     editorialContext: {
       description: eventRow.hint_description || "No description provided.",
     },
-    maxGuesses: 5,
+    maxGuesses: 6,
   };
 };
 

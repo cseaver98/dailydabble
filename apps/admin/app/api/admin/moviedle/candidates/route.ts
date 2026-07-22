@@ -4,6 +4,7 @@ import { getMoviedleSupabaseAdmin } from "@/lib/supabase/moviedle";
 export const runtime = "nodejs";
 
 const validStatuses = ["pending", "approved"] as const;
+const REQUIRED_STILL_COUNT = 6;
 type CandidateStatus = (typeof validStatuses)[number];
 type CandidateFilter = CandidateStatus | "finished" | "today" | "all";
 
@@ -195,7 +196,7 @@ export async function GET(request: Request) {
     const items = needsDerivedFilter ? filtered.slice(offset, offset + pageSize) : filtered;
 
     const [{ data: allMovies, error: allMoviesError }, { data: allSchedule, error: allScheduleError }] = await Promise.all([
-      supabase.from("movies").select("id,status"),
+      supabase.from("movies").select("id,status,still_urls"),
       supabase.from("daily_schedule").select("movie_id,puzzle_date"),
     ]);
     if (allMoviesError) {
@@ -212,13 +213,16 @@ export async function GET(request: Request) {
     let pending = 0;
     let approved = 0;
     let finished = 0;
-    for (const row of ((allMovies as Array<{ id: string; status: string }> | null) ?? [])) {
+    for (const row of ((allMovies as Array<{ id: string; status: string; still_urls?: string[] | null }> | null) ?? [])) {
       if (row.status === "pending") pending += 1;
       if (row.status === "approved") approved += 1;
       if (finishedIds.has(row.id)) finished += 1;
     }
-    const approvedUnused = ((allMovies as Array<{ id: string; status: string }> | null) ?? []).filter(
-      (row) => row.status === "approved" && !finishedIds.has(row.id),
+    const approvedUnused = ((allMovies as Array<{ id: string; status: string; still_urls?: string[] | null }> | null) ?? []).filter(
+      (row) => row.status === "approved"
+        && !finishedIds.has(row.id)
+        && Array.isArray(row.still_urls)
+        && row.still_urls.filter(Boolean).length === REQUIRED_STILL_COUNT,
     ).length;
     const scheduled = new Set(((allSchedule as Array<{ movie_id: string; puzzle_date: string }> | null) ?? []).map((row) => row.movie_id)).size;
     const lowQueueThreshold = Number(process.env.ADMIN_QUEUE_LOW_THRESHOLD ?? 3);
@@ -236,7 +240,7 @@ export async function GET(request: Request) {
         scheduled,
         pending,
         finished,
-        total: ((allMovies as Array<{ id: string; status: string }> | null) ?? []).length,
+        total: ((allMovies as Array<{ id: string; status: string; still_urls?: string[] | null }> | null) ?? []).length,
         lowQueueThreshold,
         isLow: approvedUnused < lowQueueThreshold,
       },
@@ -427,8 +431,8 @@ export async function PATCH(request: Request) {
         throw new Error(`Failed to validate candidate before approval: ${error.message}`);
       }
       const stills = Array.isArray(data?.still_urls) ? data.still_urls.filter(Boolean) : [];
-      if (stills.length < 1) {
-        return NextResponse.json({ error: "Add at least one still image before approving." }, { status: 400 });
+      if (stills.length !== REQUIRED_STILL_COUNT) {
+        return NextResponse.json({ error: `Add exactly ${REQUIRED_STILL_COUNT} still images before approving.` }, { status: 400 });
       }
     }
 

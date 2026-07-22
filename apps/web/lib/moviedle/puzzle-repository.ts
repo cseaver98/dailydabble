@@ -91,7 +91,7 @@ const mapPuzzle = async (scheduleRow: ScheduleRow, movieRow: MovieRow): Promise<
       director: movieRow.director || null,
       leadActors: Array.isArray(movieRow.lead_actors) ? movieRow.lead_actors.filter(Boolean).slice(0, 8) : [],
     },
-    maxGuesses: 5,
+    maxGuesses: 6,
     stillImages,
   };
 };
@@ -153,7 +153,9 @@ const autoScheduleApprovedPuzzleForDate = async (date: string): Promise<Moviedle
     throw new Error(`Failed to load approved moviedle movies: ${approvedError.message}`);
   }
 
-  const candidates = (Array.isArray(approvedRows) ? approvedRows : []) as MovieRow[];
+  const candidates = ((Array.isArray(approvedRows) ? approvedRows : []) as MovieRow[]).filter(
+    (candidate) => Array.isArray(candidate.still_urls) && candidate.still_urls.filter(Boolean).length === 6,
+  );
   for (const candidate of candidates) {
     const { data: alreadyScheduled, error: scheduleLookupError } = await supabase
       .from("daily_schedule")
@@ -256,7 +258,7 @@ export const submitMovieGuess = async (puzzleId: string, guessTitle: string, gue
   const normalizedGuess = normalizeTitle(guessTitle);
   const aliases = Array.isArray(movieRow.aliases_normalized) ? movieRow.aliases_normalized : [];
   const isCorrect = normalizedGuess === movieRow.title_normalized || aliases.includes(normalizedGuess);
-  const shouldReveal = isCorrect || guessCount >= 4;
+  const shouldReveal = isCorrect || guessCount >= 5;
 
   return {
     puzzleId: movieRow.id,
@@ -307,8 +309,8 @@ export const createMoviedlePuzzle = async ({
     ? stillUrls.map((url) => String(url || "").trim()).filter(Boolean).slice(0, 6)
     : [];
 
-  if (cleanStillUrls.length < 1) {
-    throw new Error("At least one still image URL is required");
+  if (cleanStillUrls.length !== 6) {
+    throw new Error("Exactly six still image URLs are required");
   }
 
   if (!isDateString(puzzleDate)) {

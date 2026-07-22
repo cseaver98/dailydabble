@@ -405,7 +405,7 @@ export default function MoviedleGameClient({
     };
   }, [gameState, guess, lockedSuggestionQuery]);
 
-  const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 5;
+  const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
   const stills = Array.isArray(puzzle?.stillImages) ? (puzzle?.stillImages ?? []) : [];
   const revealedStillCount = gameState === "playing"
     ? Math.max(1, Math.min(stills.length || 1, 1 + attempts.length))

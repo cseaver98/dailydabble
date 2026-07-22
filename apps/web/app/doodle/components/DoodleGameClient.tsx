@@ -38,6 +38,7 @@ type DoodlePuzzle = {
   aliases?: string[];
   viewBox?: string;
   stageCount?: number;
+  maxGuesses?: number;
   stages?: DoodleStageSegmentInput[][];
 };
 type DoodleGameState = "playing" | "won" | "lost";
@@ -464,7 +465,7 @@ export default function DoodleGameClient({
     window.localStorage.setItem(storageKey, JSON.stringify(payload));
   }, [attempts, gameState, guess, message, puzzle, storageKey]);
 
-  const maxGuesses = Number.isFinite(puzzle?.stageCount) && (puzzle?.stageCount ?? 0) > 0 ? (puzzle?.stageCount ?? 5) : 5;
+  const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
   const stageList = useMemo<DoodleStageSegmentInput[][]>(
     () => (Array.isArray(puzzle?.stages) ? (puzzle.stages ?? []) : []),
     [puzzle],

@@ -579,7 +579,7 @@ export default function DoodleAdminTab() {
                       ) : null}
                     </div>
                     <p style={{ margin: ".22rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
-                      Status: <b>{statusLabel[item.status] || item.status}</b> | Lifecycle: <b>{statusLabel[item.lifecycleStatus] || item.lifecycleStatus}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0} | Paths: {item.pathCount || 0}
+                      Status: <b>{statusLabel[item.status] || item.status}</b> | Lifecycle: <b>{statusLabel[item.lifecycleStatus] || item.lifecycleStatus}</b> | File: {item.filename} | Processed: {item.hasProcessed ? "yes" : "no"} | Stages: {item.stageCount || 0}/6 | Paths: {item.pathCount || 0}
                     </p>
                     <p style={{ margin: ".16rem 0 0", color: "#5b6168", fontSize: ".84rem" }}>
                       In manifest: {item.inManifest ? "yes" : "no"} | Preview html: {item.previewReady ? "yes" : "no"}

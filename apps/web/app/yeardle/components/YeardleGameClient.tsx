@@ -377,7 +377,7 @@ export default function YeardleGameClient({
     window.localStorage.setItem(progressKey, JSON.stringify(payload));
   }, [attempts, gameState, guess, message, progressKey, puzzle, resolvedAnswer]);
 
-  const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 5;
+  const maxGuesses = Number.isFinite(puzzle?.maxGuesses) ? Number(puzzle?.maxGuesses) : 6;
   const galleryImages = Array.isArray(puzzle?.galleryImages) && puzzle.galleryImages.length
     ? puzzle.galleryImages
     : [{ imageUrl: puzzle?.imageUrl, imageAlt: puzzle?.imageAlt }];

@@ -13,6 +13,7 @@ const execFileAsync = promisify(execFile);
 
 const DOODLE_STORAGE_BUCKET = process.env.DOODLE_STORAGE_BUCKET || "doodle-sources";
 const DOODLE_STORAGE_PREFIX = (process.env.DOODLE_STORAGE_PREFIX || "raw").replace(/^\/+|\/+$/g, "");
+const REQUIRED_STAGE_COUNT = 6;
 
 const findRepoRoot = (): string => {
   const candidates = [process.cwd(), resolve(process.cwd(), ".."), resolve(process.cwd(), "../..")] as const;
@@ -112,6 +113,7 @@ const runDoodlePipeline = async ({
     `--in=${inputDir}`,
     `--out=${outputDir}`,
     `--preview=${previewDir}`,
+    `--stages=${REQUIRED_STAGE_COUNT}`,
     `--seed=${seed}`,
   ];
   if (slug) {
@@ -182,7 +184,7 @@ const upsertGeneratedRecords = async (records: ProcessedDoodleRecord[]): Promise
       answer: (existing?.answer || record.answer || slug).trim().toLowerCase(),
       aliases: Array.isArray(existing?.aliases) ? existing.aliases : Array.isArray(record.aliases) ? record.aliases : [],
       view_box: typeof record.viewBox === "string" ? record.viewBox : "0 0 512 512",
-      stage_count: Number.isFinite(record.stageCount) ? Number(record.stageCount) : Array.isArray(record.stages) ? record.stages.length : 5,
+      stage_count: Number.isFinite(record.stageCount) ? Number(record.stageCount) : Array.isArray(record.stages) ? record.stages.length : REQUIRED_STAGE_COUNT,
       path_count: Number.isFinite(record.pathCount) ? Number(record.pathCount) : 0,
       stages: Array.isArray(record.stages) ? record.stages : [],
       status: existing?.status || "pending",
