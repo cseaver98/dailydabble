@@ -23,15 +23,10 @@
   flex: 1 1 0;
   height: 0.26rem;
   border-radius: 999px;
-  background: color-mix(in srgb, currentColor 28%, transparent);
-  transition: background-color 180ms ease, transform 180ms ease;
+  background: transparent;
+  transition: background-color 180ms ease;
 }
 
-.guess-progress-bars > .is-used {
-  background: color-mix(in srgb, currentColor 52%, transparent);
-}
-
-.guess-progress-bars > .is-current {
+.guess-progress-bars > .is-remaining {
   background: currentColor;
-  transform: scaleY(1.18);
 }

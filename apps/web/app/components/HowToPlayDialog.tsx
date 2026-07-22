@@ -468,7 +468,13 @@ function getTutorial(
           eyebrow: "Use each reveal",
           heading: `Solve it in ${maxGuesses} guesses`,
           copy: "Every miss costs a guess but adds more detail. Earlier correct answers earn the strongest result.",
-          visual: <div className="tutorial-progress"><span className="is-used" /><span className="is-used" /><span className="is-current" />{Array.from({ length: Math.max(0, maxGuesses - 3) }, (_, i) => <span key={i} />)}</div>,
+          visual: (
+            <div className="tutorial-progress" aria-label={`${Math.max(0, maxGuesses - 2)} guesses left`}>
+              {Array.from({ length: maxGuesses }, (_, index) => (
+                <span className={index >= 2 ? "is-remaining" : undefined} key={index} />
+              ))}
+            </div>
+          ),
         },
       ],
     },

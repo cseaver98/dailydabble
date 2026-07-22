@@ -76,10 +76,6 @@
   white-space: nowrap;
 }
 
-.verble-shell .guess-progress-bars > .is-used {
-  background: color-mix(in srgb, var(--brand-strong) 80%, transparent);
-}
-
 .verble-shell .how-to-play-btn {
   display: inline-flex;
   align-items: center;

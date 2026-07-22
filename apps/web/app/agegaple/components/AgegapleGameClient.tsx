@@ -662,7 +662,7 @@ export default function AgegapleGameClient({
             <section className={panelClass}>
               <div className="agegaple-meta-row">
                 <span className="chip">{statusChipLabel}</span>
-                <GuessProgressChip used={attempts.length} total={maxGuesses} active={!hasFinishedAttempts} />
+                <GuessProgressChip used={attempts.length} total={maxGuesses} />
                 <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
                   ? How to play
                 </button>

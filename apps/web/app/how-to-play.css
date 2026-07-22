@@ -56,9 +56,8 @@
 .tutorial-swatch-present { background: #c4a737; }
 
 .tutorial-progress { display: flex; gap: 0.35rem; justify-content: center; flex-wrap: wrap; }
-.tutorial-progress span { width: 1.5rem; height: 0.45rem; border-radius: 999px; background: var(--tutorial-line); }
-.tutorial-progress .is-used { background: color-mix(in srgb, var(--tutorial-accent) 45%, white); }
-.tutorial-progress .is-current { background: var(--tutorial-accent); }
+.tutorial-progress span { width: 1.5rem; height: 0.45rem; border-radius: 999px; background: transparent; }
+.tutorial-progress .is-remaining { background: var(--tutorial-accent); }
 
 .tutorial-math-order { display: grid; gap: 0.25rem; justify-items: center; color: var(--tutorial-muted); font-weight: 800; }
 .tutorial-math-order span, .tutorial-math-order strong { padding: 0.38rem 0.7rem; border-radius: 0.5rem; background: white; border: 1px solid var(--tutorial-line); }

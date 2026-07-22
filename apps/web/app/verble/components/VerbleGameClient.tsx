@@ -1366,7 +1366,7 @@ export default function VerbleGameClient({
         <section className="card verble-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <GuessProgressChip used={guessesUsed} total={maxGuesses} active={gameState === "playing"} />
+            <GuessProgressChip used={guessesUsed} total={maxGuesses} />
             <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>

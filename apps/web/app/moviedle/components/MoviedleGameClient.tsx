@@ -623,7 +623,7 @@ export default function MoviedleGameClient({
         <section className="card moviedle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <GuessProgressChip used={attempts.length} total={maxGuesses} active={gameState === "playing"} />
+            <GuessProgressChip used={attempts.length} total={maxGuesses} />
             <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>

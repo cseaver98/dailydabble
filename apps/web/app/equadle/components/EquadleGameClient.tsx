@@ -691,7 +691,7 @@ export default function EquadleGameClient({
         <section className="card equadle-card">
           <div className="game-meta-row">
             <span className="chip">{statusChipLabel}</span>
-            <GuessProgressChip used={effectiveGuessesUsed} total={maxGuesses} active={gameState === "playing"} />
+            <GuessProgressChip used={effectiveGuessesUsed} total={maxGuesses} />
             <button className="how-to-play-btn" type="button" onClick={openHowToPlay}>
               ? How to play
             </button>
