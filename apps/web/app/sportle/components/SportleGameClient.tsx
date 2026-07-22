@@ -2,7 +2,7 @@
 
 import { trackGameStarted } from "../../../lib/analytics-client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { DailydabbleUnavailable } from "@dailydabble/ui";
 import MainNav from "./MainNav";
@@ -137,6 +137,68 @@ const getPerformanceLabel = (didWin: boolean, attemptsUsed: number, maxGuesses: 
 };
 
 const normalizeGuessName = (value: string) => value.trim().toLowerCase();
+
+function FittedClueText({ text }: { text: string }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLSpanElement | null>(null);
+
+  const fit = useCallback(() => {
+    const container = containerRef.current;
+    const textElement = textRef.current;
+    if (!container || !textElement) return;
+
+    const availableWidth = container.clientWidth;
+    const availableHeight = container.clientHeight;
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    const fitsAt = (size: number) => {
+      textElement.style.fontSize = `${size}px`;
+      return textElement.scrollWidth <= availableWidth + 0.5 && textElement.scrollHeight <= availableHeight + 0.5;
+    };
+
+    let low = 6;
+    let high = 14.4;
+    if (!fitsAt(high)) {
+      for (let iteration = 0; iteration < 8; iteration += 1) {
+        const middle = (low + high) / 2;
+        if (fitsAt(middle)) {
+          low = middle;
+        } else {
+          high = middle;
+        }
+      }
+      high = low;
+    }
+
+    const nextFontSize = Math.floor(high * 10) / 10;
+    textElement.style.fontSize = `${nextFontSize}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const animationFrame = window.requestAnimationFrame(fit);
+    const resizeObserver = new ResizeObserver(fit);
+    resizeObserver.observe(container);
+    window.addEventListener("orientationchange", fit);
+    void document.fonts?.ready.then(fit);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      window.removeEventListener("orientationchange", fit);
+    };
+  }, [fit, text]);
+
+  return (
+    <div ref={containerRef} className="clue-value-fit">
+      <span ref={textRef} className="clue-value">
+        {text}
+      </span>
+    </div>
+  );
+}
 
 export default function SportleGameClient({
   apiUrl,
@@ -591,7 +653,7 @@ export default function SportleGameClient({
                                 overlayClassName="clue-image-loading-overlay"
                                 spinnerClassName="clue-image-spinner"
                               />
-                              <span className="clue-value">{clue.value}</span>
+                              <FittedClueText text={clue.value} />
                             </div>
                           ) : clue.imageUrl ? (
                             <div className="clue-team-row clue-image-row">
@@ -605,7 +667,7 @@ export default function SportleGameClient({
                               />
                             </div>
                           ) : (
-                            <span className="clue-value">{clue?.value}</span>
+                            <FittedClueText text={clue.value} />
                           )}
                         </>
                       ) : null}
