@@ -1,4 +1,4 @@
-import doodleTutorialPalmTree from "./doodle-tutorial-palm-tree.json";
+import doodleTutorialSquirrel from "./doodle-tutorial-squirrel.json";
 
 export const VERBLE_TUTORIAL = {
   phrase: "Rome wasn't built in a day",
@@ -12,31 +12,7 @@ export const EQUADLE_TUTORIAL = {
   incorrectGuessFeedback: ["correct", "correct", "present", "absent", "present", "present", "locked", "target", "target"],
 } as const;
 
-const buildSixStageDoodleTutorial = () => {
-  const stages = doodleTutorialPalmTree.stages;
-  const finalStage = stages.at(-1);
-  const finalSegment = finalStage?.[0];
-  if (!finalSegment) {
-    return stages;
-  }
-
-  const preferredSplit = Math.floor(finalSegment.d.length / 2);
-  const splitIndex = finalSegment.d.indexOf(" M", preferredSplit);
-  if (splitIndex <= 0) {
-    return stages;
-  }
-
-  return [
-    ...stages.slice(0, -1),
-    [{ ...finalSegment, d: finalSegment.d.slice(0, splitIndex) }],
-    [{ ...finalSegment, d: finalSegment.d.slice(splitIndex) }],
-  ];
-};
-
-export const DOODLE_TUTORIAL = {
-  ...doodleTutorialPalmTree,
-  stages: buildSixStageDoodleTutorial(),
-};
+export const DOODLE_TUTORIAL = doodleTutorialSquirrel;
 
 export const SPORTLE_TUTORIAL = {
   answer: "LeBron James",

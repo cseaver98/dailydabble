@@ -255,46 +255,88 @@ function PhotoPair({ people = [] }: { people?: TutorialPreviewData["people"] }) 
   );
 }
 
+type TutorialDoodleSegment = {
+  d: string;
+  id?: string;
+  fullD?: string;
+  fillOnly?: boolean;
+  style?: {
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: string;
+    opacity?: string;
+  };
+};
+
+const combineTutorialDoodleStages = (revealedCount: number): TutorialDoodleSegment[] => {
+  const combined = new Map<string, TutorialDoodleSegment>();
+  const stages = DOODLE_TUTORIAL.stages as TutorialDoodleSegment[][];
+
+  for (const stage of stages.slice(0, revealedCount)) {
+    for (const segment of stage) {
+      const key = segment.id || segment.d;
+      const previous = combined.get(key);
+      combined.set(key, {
+        ...segment,
+        d: previous?.d ? `${previous.d} ${segment.d}` : segment.d,
+      });
+    }
+  }
+
+  return Array.from(combined.values());
+};
+
 function DoodlePreview() {
   return (
-    <div className="doodle-stage-wrap tutorial-doodle-preview" role="img" aria-label="A Palm Tree doodle being drawn in six stages">
+    <div className="doodle-stage-wrap tutorial-doodle-preview" role="img" aria-label="A squirrel doodle being drawn in six stages">
       <svg className="doodle-canvas" viewBox={DOODLE_TUTORIAL.viewBox} aria-hidden="true">
         {DOODLE_TUTORIAL.stages.map((_, stageIndex) => (
           <g className={`tutorial-doodle-stage tutorial-doodle-stage-${stageIndex + 1}`} key={stageIndex}>
-            {stageIndex < DOODLE_TUTORIAL.stages.length - 1 ? (
-              <>
-                <defs>
-                  <mask id={`tutorial-doodle-stage-mask-${stageIndex}`} maskUnits="userSpaceOnUse">
-                    <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
-                    <path
-                      d={DOODLE_TUTORIAL.stages
-                        .slice(0, stageIndex + 1)
-                        .flatMap((frame) => frame.map((segment) => segment.d))
-                        .join(" ")}
-                      fill="none"
-                      stroke="white"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="18"
-                    />
-                  </mask>
-                </defs>
-                <path
-                  d={DOODLE_TUTORIAL.fullD}
-                  fill="currentColor"
-                  fillRule="evenodd"
-                  mask={`url(#tutorial-doodle-stage-mask-${stageIndex})`}
-                  stroke="none"
-                />
-              </>
-            ) : (
-              <path
-                d={DOODLE_TUTORIAL.fullD}
-                fill="currentColor"
-                fillRule="evenodd"
-                stroke="none"
-              />
-            )}
+            {combineTutorialDoodleStages(stageIndex + 1).map((segment, segmentIndex) => {
+              const isFillOnly = segment.fillOnly
+                ?? (segment.style?.stroke === "none" && segment.style?.fill !== "none");
+              if (!isFillOnly) {
+                return (
+                  <path
+                    d={segment.d}
+                    fill="none"
+                    key={segment.id || segmentIndex}
+                    opacity={segment.style?.opacity || "1"}
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={segment.style?.strokeWidth || "3"}
+                  />
+                );
+              }
+
+              const maskId = `tutorial-doodle-stage-${stageIndex}-segment-${segmentIndex}`;
+              return (
+                <g key={segment.id || segmentIndex}>
+                  <defs>
+                    <mask id={maskId} maskUnits="userSpaceOnUse">
+                      <rect x="-10000" y="-10000" width="20000" height="20000" fill="black" />
+                      <path
+                        d={segment.d}
+                        fill="none"
+                        stroke="white"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="18"
+                      />
+                    </mask>
+                  </defs>
+                  <path
+                    d={segment.fullD || segment.d}
+                    fill="currentColor"
+                    fillRule="evenodd"
+                    mask={`url(#${maskId})`}
+                    opacity={segment.style?.opacity || "1"}
+                    stroke="none"
+                  />
+                </g>
+              );
+            })}
           </g>
         ))}
       </svg>
