@@ -196,6 +196,41 @@
   right: 1.65rem;
 }
 
+.moviedle-shell .still-fullscreen-btn {
+  position: absolute;
+  right: 1.65rem;
+  bottom: 0.65rem;
+  z-index: 11;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  box-shadow: 0 10px 18px rgba(44, 47, 49, 0.16);
+  opacity: 0.8;
+  cursor: pointer;
+  transition: background 160ms ease, opacity 160ms ease;
+}
+
+.moviedle-shell .still-fullscreen-btn:hover {
+  background: #fff;
+  opacity: 1;
+}
+
+.moviedle-shell .still-fullscreen-btn svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .moviedle-shell .image-modal-backdrop  {
   position: fixed;
   inset: 0;
@@ -215,19 +250,38 @@
   place-items: center;
 }
 
+.moviedle-shell .image-modal-image-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 .moviedle-shell .image-modal-close  {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 20;
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
   background: rgba(18, 18, 21, 0.78);
-  color: #ffffff;
-  padding: 0.45rem 0.65rem;
-  font-family: "Plus Jakarta Sans", "Manrope", sans-serif;
-  font-size: 0.85rem;
-  font-weight: 800;
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.moviedle-shell .image-modal-close:hover {
+  background: #27272a;
 }
 
 .moviedle-shell .image-modal-image  {
@@ -235,6 +289,37 @@
   height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.moviedle-shell .image-modal-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(18, 18, 21, 0.78);
+  color: #fff;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.moviedle-shell .image-modal-nav:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.moviedle-shell .image-modal-prev {
+  left: 0.5rem;
+}
+
+.moviedle-shell .image-modal-next {
+  right: 0.5rem;
 }
 
 .moviedle-shell .result-modal-backdrop  {
@@ -832,6 +917,14 @@
 }
 
 @media (max-width: 720px) {
+  .moviedle-shell .still-fullscreen-btn {
+    right: 0.65rem;
+  }
+
+  .moviedle-shell .still-nav-btn-next {
+    right: 3.45rem;
+  }
+
   .moviedle-shell .game-meta-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;

@@ -180,6 +180,7 @@ export default function MoviedleGameClient({
   const [lockedSuggestionQuery, setLockedSuggestionQuery] = useState("");
   const [selectedStillIndex, setSelectedStillIndex] = useState(0);
   const [resultStillIndex, setResultStillIndex] = useState(0);
+  const [isStillFullscreenOpen, setIsStillFullscreenOpen] = useState(false);
   const [archiveLock, setArchiveLock] = useState<{ title: string; description: string; mode?: "password" | "subscription" } | null>(null);
   const contextChipLabel = isArchiveView
     ? `ARCHIVE GAME #${puzzle?.archiveGameNumber ?? ""}`.trim()
@@ -319,6 +320,26 @@ export default function MoviedleGameClient({
       });
     };
   }, [puzzle?.puzzleId, puzzle?.stillImages]);
+
+  useEffect(() => {
+    if (!isStillFullscreenOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsStillFullscreenOpen(false);
+      }
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isStillFullscreenOpen]);
 
   const progressKey = useMemo(() => {
     if (!puzzle?.puzzleId) {
@@ -642,6 +663,18 @@ export default function MoviedleGameClient({
                 </button>
               </>
             ) : null}
+            {visibleStill ? (
+              <button
+                type="button"
+                className="still-fullscreen-btn"
+                onClick={() => setIsStillFullscreenOpen(true)}
+                aria-label="View still fullscreen"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+                </svg>
+              </button>
+            ) : null}
           </figure>
 
           {gameState !== "playing" ? <EditorialDrawer editorialContext={puzzle?.editorialContext} /> : null}
@@ -751,6 +784,56 @@ export default function MoviedleGameClient({
 
         </section>
       </main>
+
+      {isStillFullscreenOpen && visibleStill ? (
+        <div className="image-modal-backdrop" onClick={() => setIsStillFullscreenOpen(false)}>
+          <section
+            className="image-modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Movie still fullscreen view"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="image-modal-close"
+              onClick={() => setIsStillFullscreenOpen(false)}
+              aria-label="Close fullscreen view"
+            >
+              ×
+            </button>
+            <AsyncImage
+              src={visibleStill.url}
+              alt={visibleStill.alt || "Movie still"}
+              className="image-modal-image"
+              wrapperClassName="image-modal-image-frame"
+              overlayClassName="bg-black/70 text-white"
+            />
+            {canNavigateStills ? (
+              <>
+                <button
+                  type="button"
+                  className="image-modal-nav image-modal-prev"
+                  onClick={() => setSelectedStillIndex((current) => Math.max(0, current - 1))}
+                  aria-label="Previous still"
+                  disabled={boundedStillIndex <= 0}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  className="image-modal-nav image-modal-next"
+                  onClick={() => setSelectedStillIndex((current) => Math.min(visibleStills.length - 1, current + 1))}
+                  aria-label="Next still"
+                  disabled={boundedStillIndex >= visibleStills.length - 1}
+                >
+                  →
+                </button>
+              </>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
 
       {isResultOpen && gameState !== "playing" ? (
         <div className="result-modal-backdrop" onClick={() => setIsResultOpen(false)}>
