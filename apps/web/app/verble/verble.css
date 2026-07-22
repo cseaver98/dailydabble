@@ -552,7 +552,6 @@
 .verble-shell .key[data-state="present"] { background: #e4bc4d; border-color: #c7a340; color: #fff; }
 .verble-shell .key[data-state="resolved"] { background: #65b84d; border-color: #5aa545; color: #fff; }
 .verble-shell .key:disabled { opacity: 0.55; cursor: not-allowed; }
-.verble-shell .key[data-state="absent"]:disabled { opacity: 0.82; }
 
 .verble-shell .message { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--muted); }
 .verble-shell .message[data-kind="won"] { color: #0a7a37; }

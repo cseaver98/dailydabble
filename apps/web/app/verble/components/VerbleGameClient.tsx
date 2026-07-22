@@ -634,9 +634,6 @@ export default function VerbleGameClient({
   };
 
   const appendWordGuessChar = (char: string) => {
-    if (isLetterBlocked(char)) {
-      return;
-    }
     updateSelectedDraft((current, locks) => {
       const next = [...current];
       const openIndex = next.findIndex((letter, index) => !locks[index] && !letter);
@@ -722,15 +719,6 @@ export default function VerbleGameClient({
 
     return states;
   }, [puzzle, slotDrafts, slotLocks, wordAttempts]);
-
-  const isLetterBlocked = (letter: string): boolean => {
-    const normalized = normalizeWord(letter);
-    if (!normalized) {
-      return false;
-    }
-    const state = keyboardState[normalized];
-    return state === "absent" || state === "resolved";
-  };
 
   const submitWordGuess = async () => {
     if (!puzzle || gameState !== "playing" || !selectedSlotMeta || isResolvingGuess) return;
@@ -1304,9 +1292,6 @@ export default function VerbleGameClient({
       }
 
       if (/^[a-z]$/i.test(event.key)) {
-        if (isLetterBlocked(event.key)) {
-          return;
-        }
         event.preventDefault();
         appendWordGuessChar(event.key.toLowerCase());
       }
@@ -1314,7 +1299,7 @@ export default function VerbleGameClient({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canOpenFullPhraseConfirm, canSubmitWordGuess, gameState, isResolvingGuess, keyboardState, selectedSlotMeta, solvedWords]);
+  }, [canOpenFullPhraseConfirm, canSubmitWordGuess, gameState, isResolvingGuess, selectedSlotMeta, solvedWords]);
  
   const latestAttempt = wordAttempts.length > 0 ? wordAttempts[wordAttempts.length - 1] : null;
   const earlierAttempts = wordAttempts.slice(0, -1).reverse();
@@ -1580,8 +1565,6 @@ export default function VerbleGameClient({
                   const state = keyboardState[letter.toLowerCase()] || "unknown";
                   const isDisabled = gameState !== "playing"
                     || isResolvingGuess
-                    || state === "absent"
-                    || state === "resolved"
                     || !selectedSlotMeta
                     || selectedSlotDraft.every((letter, index) => selectedSlotLockState[index] || Boolean(letter));
                   return (
