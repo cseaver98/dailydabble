@@ -996,6 +996,19 @@
 }
 
 @media (max-width: 720px) {
+.verble-shell .slot-word-button,
+.verble-shell .slot-word-button:hover,
+.verble-shell .slot-word-button:focus,
+.verble-shell .slot-word-button:active,
+.verble-shell .key,
+.verble-shell .key:hover,
+.verble-shell .key:focus,
+.verble-shell .key:active {
+    appearance: none;
+    -webkit-appearance: none;
+    transform: none !important;
+    translate: none !important;
+  }
 .verble-shell .slot-tile.pick-word-pulse:not(.fixed):not(.reveal):not(.solved) {
     animation: none;
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18), inset 0 -1px 0 rgba(47, 51, 61, 0.03);
