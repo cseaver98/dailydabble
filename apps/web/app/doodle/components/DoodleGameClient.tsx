@@ -581,6 +581,35 @@ export default function DoodleGameClient({
       });
     return map;
   }, [previousStageSegments]);
+  const animatedSegmentOrder = useMemo(() => {
+    const order = new Map<string, number>();
+    let animationIndex = 0;
+
+    activeStageSegments
+      .map((segment, index) => ({ segment: normalizeStageSegment(segment), index }))
+      .filter((entry) => Boolean(entry.segment))
+      .forEach(({ segment, index }) => {
+        const segmentKey = getSegmentKey(segment, index);
+        const previousSegment = previousStageMap.get(segmentKey) ?? null;
+        const previousD =
+          previousSegment && typeof previousSegment.d === "string"
+            ? previousSegment.d.trim()
+            : "";
+        const currentD = typeof segment.d === "string" ? segment.d.trim() : "";
+        const hasDelta =
+          Boolean(previousD) &&
+          Boolean(currentD) &&
+          currentD.startsWith(previousD) &&
+          currentD.length > previousD.length;
+
+        if (!previousSegment || hasDelta) {
+          order.set(segmentKey, animationIndex);
+          animationIndex += 1;
+        }
+      });
+
+    return order;
+  }, [activeStageSegments, previousStageMap]);
   const answerAliases = Array.isArray(puzzle?.aliases) ? puzzle.aliases : [];
   const canonicalAnswer = normalizeAnswerKey(puzzle?.answer || "");
   const canonicalAliases = answerAliases.map((alias) => normalizeAnswerKey(alias));
@@ -782,6 +811,7 @@ export default function DoodleGameClient({
                   }
 
                   const segmentKey = getSegmentKey(segment, pathIndex);
+                  const animationIndex = animatedSegmentOrder.get(segmentKey) ?? 0;
                   const previousSegment = previousStageMap.get(segmentKey) ?? null;
                   const previousD =
                     previousSegment && typeof previousSegment.d === "string"
@@ -830,7 +860,7 @@ export default function DoodleGameClient({
                             style={
                               animate
                                 ? {
-                                    animationDelay: `${pathIndex * activeDrawStaggerMs}ms`,
+                                    animationDelay: `${animationIndex * activeDrawStaggerMs}ms`,
                                     animationDuration: `${activeDrawDurationMs}ms`,
                                   }
                                 : undefined
@@ -850,7 +880,7 @@ export default function DoodleGameClient({
                         style={
                           animate
                             ? {
-                                animationDelay: `${pathIndex * activeDrawStaggerMs}ms`,
+                                animationDelay: `${animationIndex * activeDrawStaggerMs}ms`,
                                 animationDuration: `${activeDrawDurationMs}ms`,
                               }
                             : undefined
@@ -908,7 +938,7 @@ export default function DoodleGameClient({
                           strokeDasharray={`${segment.to} 1`}
                           strokeDashoffset={segment.to}
                           style={{
-                            animationDelay: `${pathIndex * activeDrawStaggerMs}ms`,
+                            animationDelay: `${animationIndex * activeDrawStaggerMs}ms`,
                             animationDuration: `${activeDrawDurationMs}ms`,
                           }}
                         />
@@ -952,7 +982,7 @@ export default function DoodleGameClient({
                       strokeDasharray={`${segment.to} 1`}
                       strokeDashoffset={segment.to}
                       style={{
-                        animationDelay: `${pathIndex * activeDrawStaggerMs}ms`,
+                        animationDelay: `${animationIndex * activeDrawStaggerMs}ms`,
                         animationDuration: `${activeDrawDurationMs}ms`,
                       }}
                     />
