@@ -16,7 +16,6 @@ import "./how-to-play.css";
 import "./desktop-game-layout.css";
 import AuthStateStorageBoundary from "./components/AuthStateStorageBoundary";
 import AnalyticsPageTracker from "./components/AnalyticsPageTracker";
-import TrophyEarnedDialog from "./components/TrophyEarnedDialog";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -41,9 +40,9 @@ const isStagingEnvironment = (): boolean => process.env.NEXT_PUBLIC_APP_ENV === 
 const twitterImageUrl = "/opengraph-image?v=20260712";
 const siteUrl = "https://dailydabble.app";
 const siteName = "DailyDabble";
-const siteTitle = "DailyDabble: Free Daily Games, Trivia & Puzzles";
+const siteTitle = "DailyDabble: Play Verble, the Daily Phrase Game";
 const siteDescription =
-  "Play seven free daily games in one place. Challenge yourself with word, movie, sports, history, math, drawing, and celebrity trivia puzzles.";
+  "Play Verble, a free daily phrase game where you solve the saying one word at a time, then explore the DailyDabble game archives.";
 
 export const generateMetadata = (): Metadata => {
   const title = isStagingEnvironment() ? "DailyDabble Staging" : siteTitle;
@@ -59,7 +58,7 @@ export const generateMetadata = (): Metadata => {
     alternates: { canonical: "/" },
     applicationName: siteName,
     category: "games",
-    keywords: ["daily games", "daily trivia games", "word games", "puzzle games", "browser games", "DailyDabble"],
+    keywords: ["Verble", "daily phrase game", "word games", "daily word puzzle", "browser games", "DailyDabble"],
     manifest: "/manifest.webmanifest",
     openGraph: {
       title,
@@ -115,15 +114,15 @@ export default function RootLayout({
       {
         "@type": "ItemList",
         "@id": `${siteUrl}/#daily-games`,
-        name: "DailyDabble daily games",
+        name: "DailyDabble games",
         itemListElement: [
           ["Verble", "verble", "Guess the daily phrase one word at a time."],
-          ["Agegaple", "agegaple", "Guess the celebrity couple age gap."],
-          ["Doodle", "doodle", "Guess the doodle as it is drawn."],
-          ["Moviedle", "moviedle", "Guess the movie from stills."],
-          ["Yeardle", "yeardle", "Guess the year of an event from this day in history."],
-          ["Equadle", "equadle", "Guess the hidden arithmetic equation."],
-          ["Sportle", "sportle", "Guess the pro athlete from the daily clues."],
+          ["Agegaple Archive", "agegaple/archive", "Play past celebrity age-gap puzzles."],
+          ["Doodle Archive", "doodle/archive", "Play past drawing puzzles."],
+          ["Moviedle Archive", "moviedle/archive", "Play past movie puzzles."],
+          ["Yeardle Archive", "yeardle/archive", "Play past history puzzles."],
+          ["Equadle Archive", "equadle/archive", "Play past equation puzzles."],
+          ["Sportle Archive", "sportle/archive", "Play past athlete puzzles."],
         ].map(([name, slug, description], index) => ({
           "@type": "ListItem",
           position: index + 1,
@@ -153,7 +152,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: subscriberBootScript }} />
         <AuthStateStorageBoundary />
         <AnalyticsPageTracker />
-        <TrophyEarnedDialog />
         {children}
         <Analytics />
         <SpeedInsights />

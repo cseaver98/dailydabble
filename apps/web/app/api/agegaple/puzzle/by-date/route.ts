@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
     }
-    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber });
+    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber, gameSlug: "agegaple" });
     if (lockState.locked) {
       return lockState.reason === "subscription"
         ? createArchiveSubscriptionLockedResponse("Agegaple", date)

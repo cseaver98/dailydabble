@@ -86,9 +86,9 @@ export default function EmailPreferencesForm({
             className="mt-1 h-4 w-4 cursor-pointer accent-[#2f672d]"
           />
           <span>
-            <span className="block text-sm font-extrabold text-[#2c2f31]">Daily game reminders</span>
+            <span className="block text-sm font-extrabold text-[#2c2f31]">Daily Verble reminders</span>
             <span className="mt-1 block text-sm font-semibold leading-relaxed text-[#666a6d]">
-              A simple reminder when today&apos;s games are live, only if you have not played yet.
+              A simple reminder when today&apos;s Verble is live, only if you have not played yet.
             </span>
           </span>
         </label>

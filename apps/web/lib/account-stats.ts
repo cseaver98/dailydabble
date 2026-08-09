@@ -1,12 +1,10 @@
-import { games } from "@/lib/games";
+import { dailyGames } from "@/lib/games";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSubscriptionAccess } from "@/lib/subscriptions";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   calculateBestCompletionStreak,
   calculateCurrentCompletionStreak,
-  calculateDailyTrophyDates,
-  calculateFavoriteGame,
   dedupeDailyCompletions,
 } from "@/lib/daily-completion-stats";
 
@@ -53,21 +51,6 @@ export type AccountStats = {
     totalGamesToday: number;
   };
   games: GameStats[];
-  favoriteGame: {
-    gameSlug: string;
-    gameName: string;
-    totalCompletions: number;
-    lastCompletedAt: string;
-  } | null;
-  trophies: {
-    total: number;
-    currentMonth: number;
-    bestMonth: {
-      month: string;
-      count: number;
-    } | null;
-    dates: string[];
-  };
   entitlements: {
     advancedStats: boolean;
   };
@@ -130,8 +113,8 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
   }
 
   const today = getTodayPuzzleDate();
-  const gameStats = games.map((game) => summarizeGame(game.slug, game.name, statsByGame.get(game.slug) ?? [], today));
-  const dailyRows = dedupeDailyCompletions(rows, new Set(games.map((game) => game.slug)));
+  const gameStats = dailyGames.map((game) => summarizeGame(game.slug, game.name, statsByGame.get(game.slug) ?? [], today));
+  const dailyRows = dedupeDailyCompletions(rows, new Set(dailyGames.map((game) => game.slug)));
   const archiveRows = rows.filter((row) => row.is_archive);
   const played = dailyRows.length;
   const wins = dailyRows.filter((row) => row.is_win).length;
@@ -139,18 +122,9 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
   const guesses = dailyRows.map((row) => row.guesses_used);
   const completedTodayCount = new Set(
     rows
-      .filter((row) => !row.is_archive && row.puzzle_date === today)
+      .filter((row) => !row.is_archive && row.puzzle_date === today && dailyGames.some((game) => game.slug === row.game_slug))
       .map((row) => row.game_slug),
   ).size;
-  const trophyDates = calculateDailyTrophyDates(dailyRows, new Set(games.map((game) => game.slug)));
-  const currentMonth = today.slice(0, 7);
-  const trophiesByMonth = trophyDates.reduce((months, date) => {
-    const month = date.slice(0, 7);
-    months.set(month, (months.get(month) ?? 0) + 1);
-    return months;
-  }, new Map<string, number>());
-  const bestMonth = [...trophiesByMonth.entries()]
-    .sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0] ?? null;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -166,16 +140,9 @@ export async function getAccountStats(userId: string): Promise<AccountStats> {
       currentDailyDabbleStreak: calculateCurrentCompletionStreak(dailyRows.map((row) => row.puzzle_date), today),
       bestDailyDabbleStreak: calculateBestCompletionStreak(dailyRows.map((row) => row.puzzle_date), today),
       completedTodayCount,
-      totalGamesToday: games.length,
+      totalGamesToday: dailyGames.length,
     },
     games: gameStats,
-    favoriteGame: calculateFavoriteGame(dailyRows, games),
-    trophies: {
-      total: trophyDates.length,
-      currentMonth: trophiesByMonth.get(currentMonth) ?? 0,
-      bestMonth: bestMonth ? { month: bestMonth[0], count: bestMonth[1] } : null,
-      dates: trophyDates,
-    },
     entitlements: {
       advancedStats: subscriptionAccess.canAccessPremiumStats,
     },

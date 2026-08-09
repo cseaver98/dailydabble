@@ -154,7 +154,7 @@ export default async function OpenGraphImage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Play original daily games in one place.
+            Play Verble daily. Explore six game archives.
           </div>
 
           <div

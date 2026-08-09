@@ -131,8 +131,8 @@ export default async function AccountPage() {
                         {subscriptionAccess.flags.subscriptionsEnabled
                           ? subscriptionAccess.isSubscriber
                             ? <>Your account is ready for <DailyDabbleWordmark plus className="text-[1em]" /> features as they launch.</>
-                            : <><DailyDabbleWordmark plus className="text-[1em]" /> will unlock archive access, premium stats, and account badges.</>
-                          : <><DailyDabbleWordmark plus className="text-[1em]" /> is being prepared in the background. Archive access, premium stats, and badges are coming later.</>}
+                            : <><DailyDabbleWordmark plus className="text-[1em]" /> will unlock the Verble archive, premium stats, and account badges.</>
+                          : <><DailyDabbleWordmark plus className="text-[1em]" /> is being prepared in the background. The Verble archive, premium stats, and badges are coming later.</>}
                       </p>
                     </div>
                     <span className={`inline-flex shrink-0 items-center justify-center rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] ${

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "DailyDabble",
     short_name: "DailyDabble",
-    description: "Play seven original daily games in one place, with a fresh challenge every day.",
+    description: "Play Verble, the daily phrase game, and explore past DailyDabble games.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

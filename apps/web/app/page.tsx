@@ -1,6 +1,6 @@
 "use client";
 
-import { games } from "@/lib/games";
+import { games, getGamePlayHref } from "@/lib/games";
 import { DailydabbleNav } from "@dailydabble/ui";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,13 +15,6 @@ import SiteMenu from "./components/SiteMenu";
 type StatusResponse = {
   date: string;
   status: Record<string, boolean>;
-  gameStatuses?: Record<string, {
-    status: "not_started" | "completed_won" | "completed_lost";
-    isWin?: boolean;
-    guessesUsed?: number;
-    maxGuesses?: number;
-    completedAt?: string;
-  }>;
 };
 
 type AccessResponse = {
@@ -55,7 +48,6 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState(true);
   const [status, setStatus] = useState<Record<string, boolean>>({});
-  const [gameStatuses, setGameStatuses] = useState<StatusResponse["gameStatuses"]>({});
   const [access, setAccess] = useState<AccessResponse | null>(null);
   const [error, setError] = useState("");
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -88,7 +80,6 @@ function HomeContent() {
           throw new Error(payload.error ?? "Failed to load status");
         }
         setStatus(payload.status);
-        setGameStatuses(payload.gameStatuses ?? {});
       };
 
       const loadSession = async () => {
@@ -257,19 +248,19 @@ function HomeContent() {
         rightContent={<AccountNav />}
       />
 
-      <main className="min-h-screen bg-transparent px-5 pb-12 text-[#2c2f31] sm:px-8">
+      <main className="min-h-screen bg-transparent px-5 pb-12 pt-5 text-[#2c2f31] sm:px-8 sm:pt-7">
         <section className="mx-auto max-w-6xl">
-        <h1 className="sr-only">DailyDabble: seven original daily games in one place</h1>
-        <div className="mb-4 py-2 text-center sm:py-3">
-          {error && <p className="mt-3 text-sm text-[#b02500]">{error}</p>}
-        </div>
+          <h1 className="sr-only">DailyDabble: play Verble every day</h1>
+          {error && <p className="mb-5 text-center text-sm text-[#b02500]">{error}</p>}
 
-        <div id="games" className="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2 md:gap-8">
+          <div id="games" className="grid grid-cols-1 items-start gap-2.5 md:grid-cols-2 md:gap-8">
           {games.map((game, index) => {
             const complete = Boolean(status[game.slug]);
-            const lockedFromStarting = isGuestLocked && !complete;
-            const gameStatus = gameStatuses?.[game.slug]?.status ?? "not_started";
-            const statusLabel = statusLoading
+            const isArchiveOnly = game.availability === "archive";
+            const lockedFromStarting = !isArchiveOnly && isGuestLocked && !complete;
+            const statusLabel = isArchiveOnly
+              ? "Archive"
+              : statusLoading
               ? "Loading"
               : complete
                 ? "Completed"
@@ -346,7 +337,7 @@ function HomeContent() {
             return (
               <a
                 key={game.slug}
-                href={game.href}
+                href={getGamePlayHref(game)}
                 data-hub-card={game.slug}
                 style={mobileCardStyle}
                 className={`group relative overflow-hidden rounded-[2rem] bg-[#ffffff] p-8 shadow-[0_20px_40px_rgba(44,47,49,0.06)] transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${lockedFromStarting ? "bg-[#f1f3f5] saturate-[0.82]" : ""} ${cardHoverClass} ${
@@ -425,17 +416,19 @@ function HomeContent() {
                     <h2 className="font-headline text-3xl font-bold text-[#2c2f31]">{game.name}</h2>
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wider ${
-                        statusLoading ? "normal-case" : "uppercase"
+                        !isArchiveOnly && statusLoading ? "normal-case" : "uppercase"
                       } ${
-                        statusLoading
+                        isArchiveOnly
+                          ? "bg-[#eff1f4] text-[#595c5e]"
+                        : statusLoading
                           ? "bg-[#eff1f4] text-[#595c5e]"
                           : complete
                           ? "bg-[#d1ffc7] text-[#114c15]"
                           : "bg-[#fff2a6] text-[#4b3f00]"
                       }`}
                     >
-                      <span>{statusLoading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
-                      {complete ? (
+                      <span>{!isArchiveOnly && statusLoading ? <LoadingLabel text={statusLabel} /> : statusLabel}</span>
+                      {!isArchiveOnly && complete ? (
                         <span
                           aria-hidden
                           className="inline-block h-2 w-3.5 -translate-y-0.5 rotate-[-45deg] border-b-[0.16rem] border-l-[0.16rem] border-[#114c15]"
@@ -449,7 +442,7 @@ function HomeContent() {
                     style={mobileButtonStyle}
                     className={`font-headline inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold transition-all duration-300 ease-out max-md:transform-gpu max-md:will-change-transform max-md:duration-[420ms] max-md:ease-[cubic-bezier(0.22,0.61,0.36,1)] ${buttonHoverClass} ${buttonBackground}`}
                   >
-                    {lockedFromStarting ? "Log in to play" : "Play"}
+                    {lockedFromStarting ? "Log in to play" : isArchiveOnly ? "Play archive" : "Play today"}
                     <span
                       aria-hidden
                       className="inline-block h-0 w-0 border-y-[0.38rem] border-l-[0.62rem] border-y-transparent border-l-current"
@@ -493,8 +486,8 @@ function HomeContent() {
             <>
               <p className="mx-auto mt-3 max-w-xl text-[#595c5e]">
                 {isLoggedIn
-                  ? "See your win rates, streaks, guesses, and progress across every DailyDabble game."
-                  : "Save your progress, keep your stats, and pick up your DailyDabble games across devices."}
+                  ? "See your Verble win rate, streak, guesses, and history."
+                  : "Save your Verble progress, keep your stats, and continue across devices."}
               </p>
               {isLoggedIn ? (
                 <Link
@@ -552,9 +545,9 @@ function HomeContent() {
             </button>
           </div>
           <div className="pr-8">
-            <p className="font-headline text-lg font-extrabold text-[#2c2f31]">Daily games, all in one place.</p>
+            <p className="font-headline text-lg font-extrabold text-[#2c2f31]">A new Verble every day.</p>
             <p className="mt-1 text-sm font-semibold leading-relaxed text-[#595c5e]">
-              Pick a game, play in under a minute, and come back tomorrow for a fresh set.
+              Solve today&apos;s phrase, build your streak, and explore past DailyDabble games anytime.
             </p>
           </div>
         </div>

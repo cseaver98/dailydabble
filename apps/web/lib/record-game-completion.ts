@@ -11,12 +11,6 @@ export type RecordGameCompletionInput = {
   resultPayload?: Record<string, unknown>;
 };
 
-type CompletionResponse = {
-  reminderPrompt?: {
-    puzzleDate?: string;
-  } | null;
-};
-
 const dispatchTodayCompletionRecorded = (input: RecordGameCompletionInput) => {
   if (typeof window === "undefined" || input.isArchive) return;
 
@@ -56,14 +50,6 @@ export const recordGameCompletion = async (input: RecordGameCompletionInput) => 
     },
   });
 
-  const payload = (await response.json().catch(() => ({}))) as CompletionResponse;
-  if (payload.reminderPrompt?.puzzleDate && typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("dailydabble:daily-reminder-prompt", {
-        detail: { puzzleDate: payload.reminderPrompt.puzzleDate },
-      }),
-    );
-  }
 };
 
 export const recordGameCompletionQuietly = (input: RecordGameCompletionInput) => {

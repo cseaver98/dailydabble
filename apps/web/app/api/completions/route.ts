@@ -1,12 +1,9 @@
-import { allowedGameSlugs, games } from "@/lib/games";
+import { allowedGameSlugs } from "@/lib/games";
 import { recordGameResult } from "@/lib/account-results";
-import { getProfile } from "@/lib/account-profile";
 import { getExistingPlayerId, getOrCreatePlayerId } from "@/lib/player-id";
 import { createSupabaseServerClient } from "@/lib/supabase-auth/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { NextRequest, NextResponse } from "next/server";
-
-const DAILY_REMINDER_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 function corsHeaders(origin: string | null) {
   const isAllowedOrigin =
@@ -74,37 +71,7 @@ export async function POST(req: NextRequest) {
         playerId,
       });
 
-      let reminderPrompt: { puzzleDate: string } | null = null;
-      if (user && !body.isArchive) {
-        const profile = await getProfile(user.id);
-        const promptedAt = profile?.dailyReminderPromptedAt ? Date.parse(profile.dailyReminderPromptedAt) : 0;
-        const canPrompt =
-          !promptedAt || Number.isNaN(promptedAt) || Date.now() - promptedAt >= DAILY_REMINDER_PROMPT_COOLDOWN_MS;
-
-        if (profile && !profile.dailyReminderOptIn && canPrompt) {
-          const { data: rows, error: countError } = await getSupabaseAdmin()
-            .schema("core")
-            .from("game_results")
-            .select("game_slug")
-            .eq("user_id", user.id)
-            .eq("puzzle_date", date)
-            .eq("is_archive", false)
-            .returns<Array<{ game_slug: string }>>();
-
-          if (countError) {
-            throw new Error(`Failed to count daily completions: ${countError.message}`);
-          }
-
-          const completedDailyGames = new Set(
-            (rows ?? []).map((row) => row.game_slug).filter((gameSlug) => allowedGameSlugs.has(gameSlug)),
-          );
-          if (completedDailyGames.size >= games.length) {
-            reminderPrompt = { puzzleDate: date };
-          }
-        }
-      }
-
-      return NextResponse.json({ ok: true, persisted: "game_results", reminderPrompt }, { headers });
+      return NextResponse.json({ ok: true, persisted: "game_results" }, { headers });
     }
 
     const playerId = await getOrCreatePlayerId();

@@ -10,10 +10,10 @@ export async function GET() {
   try {
     const [items, archiveAccess] = await Promise.all([
       listArchivePuzzles(),
-      getCurrentArchiveSubscriptionAccess(),
+      getCurrentArchiveSubscriptionAccess("agegaple"),
     ]);
     return NextResponse.json(
-      { items, lockEnabled: isArchiveLockEnabled(), archiveAccess },
+      { items, lockEnabled: isArchiveLockEnabled("agegaple"), archiveAccess },
       {
         headers: {
           "Cache-Control": "no-store, max-age=0",

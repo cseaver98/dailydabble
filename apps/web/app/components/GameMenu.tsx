@@ -1,6 +1,6 @@
 "use client";
 
-import { games } from "@/lib/games";
+import { dailyGames, games, getGamePlayHref } from "@/lib/games";
 import { DailydabbleMenu } from "@dailydabble/ui";
 import { usePathname } from "next/navigation";
 import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
@@ -23,9 +23,9 @@ export default function GameMenu({
 }: GameMenuProps) {
   const currentGame = games.find((game) => game.href === todayHref);
   const { completedGames } = useTodayCompletionStatus();
-  const completedCount = games.filter((game) => completedGames[game.slug]).length;
-  const allGamesComplete = completedCount === games.length;
-  const nextGameCountdown = useNextGameCountdown(allGamesComplete);
+  const completedCount = dailyGames.filter((game) => completedGames[game.slug]).length;
+  const dailyComplete = completedCount === dailyGames.length;
+  const nextGameCountdown = useNextGameCountdown(dailyComplete);
   const pathname = usePathname();
   const hideTodayOption = hideToday || pathname?.startsWith(archiveHref);
 
@@ -36,27 +36,31 @@ export default function GameMenu({
       progressSummary={{
         label: "Today",
         completed: completedCount,
-        total: games.length,
-        ariaLabel: `${completedCount} of ${games.length} games completed today`,
-        progressMessage: allGamesComplete ? undefined : "Complete all 7 games to earn today's trophy.",
-        completionTitle: allGamesComplete ? "Today's trophy earned!" : undefined,
-        completionMessage: allGamesComplete ? "Come back tomorrow for another trophy." : undefined,
-        completionCountdown: allGamesComplete ? `New games in ${nextGameCountdown || "--:--:--"}` : undefined,
-        completionActionLabel: allGamesComplete ? "Remind me" : undefined,
-        completionActionHref: allGamesComplete ? "/account#email-preferences" : undefined,
+        total: dailyGames.length,
+        ariaLabel: completedCount ? "Today's Verble completed" : "Today's Verble not completed",
+        progressMessage: dailyComplete ? undefined : "Solve today's Verble phrase.",
+        completionTitle: dailyComplete ? "Today's Verble complete!" : undefined,
+        completionMessage: dailyComplete ? "Come back tomorrow for a new phrase." : undefined,
+        completionCountdown: dailyComplete ? `New Verble in ${nextGameCountdown || "--:--:--"}` : undefined,
+        completionActionLabel: dailyComplete ? "Remind me" : undefined,
+        completionActionHref: dailyComplete ? "/account#email-preferences" : undefined,
       }}
       items={[
         { label: "Today", href: todayHref, id: "todayGameBtn", hidden: hideTodayOption, iconBackground: currentGame?.iconBackground },
         ...games.map((game) => ({
           label: game.name,
-          href: game.href,
-          archiveHref: game.href === todayHref ? archiveHref : `${game.href}/archive`,
+          href: getGamePlayHref(game),
+          archiveHref: game.availability === "daily"
+            ? (game.href === todayHref ? archiveHref : `${game.href}/archive`)
+            : undefined,
           iconSrc: game.iconSrc,
           iconAlt: game.iconAlt,
           iconBackground: game.iconBackground,
-          completed: Boolean(completedGames[game.slug]),
-          statusLabel: completedGames[game.slug] ? "Completed" : "Not done",
-          statusTone: completedGames[game.slug] ? "done" : "neutral",
+          completed: game.availability === "daily" && Boolean(completedGames[game.slug]),
+          statusLabel: game.availability === "archive"
+            ? "Archive"
+            : completedGames[game.slug] ? "Completed" : "Not done",
+          statusTone: game.availability === "daily" && completedGames[game.slug] ? "done" : "neutral",
         })),
       ]}
       legalLinks={[

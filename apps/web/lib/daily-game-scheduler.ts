@@ -1,10 +1,4 @@
-import { getTodayPuzzle as getTodayAgegaplePuzzle } from "@/lib/agegaple/puzzle-repository";
-import { getTodayDoodlePuzzle } from "@/lib/doodle/puzzle-repository";
-import { getTodayEquadlePuzzle } from "@/lib/equadle/puzzle-repository";
-import { getTodayMoviedlePuzzle } from "@/lib/moviedle/puzzle-repository";
-import { getTodaySportlePuzzle } from "@/lib/sportle/puzzle-repository";
 import { getTodayVerblePuzzle } from "@/lib/verble/puzzle-repository";
-import { getTodayYeardlePuzzle } from "@/lib/yeardle/puzzle-repository";
 
 type ScheduledPuzzle = {
   puzzleDate: string;
@@ -20,12 +14,6 @@ const schedulers: Array<{
   getTodayPuzzle: () => Promise<ScheduledPuzzle | null>;
 }> = [
   { gameSlug: "verble", getTodayPuzzle: getTodayVerblePuzzle },
-  { gameSlug: "agegaple", getTodayPuzzle: getTodayAgegaplePuzzle },
-  { gameSlug: "doodle", getTodayPuzzle: getTodayDoodlePuzzle },
-  { gameSlug: "moviedle", getTodayPuzzle: getTodayMoviedlePuzzle },
-  { gameSlug: "yeardle", getTodayPuzzle: getTodayYeardlePuzzle },
-  { gameSlug: "sportle", getTodayPuzzle: getTodaySportlePuzzle },
-  { gameSlug: "equadle", getTodayPuzzle: getTodayEquadlePuzzle },
 ];
 
 export const scheduleTodayGames = async (): Promise<ScheduleResult[]> =>

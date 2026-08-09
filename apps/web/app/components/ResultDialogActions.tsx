@@ -5,8 +5,6 @@ import type { CSSProperties } from "react";
 import { useState } from "react";
 
 import { games } from "@/lib/games";
-import { trackEvent } from "@/lib/analytics-client";
-import { useTodayCompletionStatus } from "./useTodayCompletionStatus";
 
 type ResultDialogActionsProps = {
   currentGameSlug: string;
@@ -37,11 +35,10 @@ const getPrimaryButtonStyle = (gameSlug: string | undefined, isHovered: boolean)
 
 export default function ResultDialogActions({ currentGameSlug, onShare }: ResultDialogActionsProps) {
   const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
-  const { completedGames, isLoading } = useTodayCompletionStatus();
-  const nextGame = isLoading
-    ? undefined
-    : games.find((game) => game.slug !== currentGameSlug && !completedGames[game.slug]);
-  const hasLongNextGameLabel = Boolean(nextGame && nextGame.name.length >= 8);
+  const currentGame = games.find((game) => game.slug === currentGameSlug);
+  const isArchiveOnlyGame = currentGame?.availability === "archive";
+  const primaryHref = isArchiveOnlyGame && currentGame ? `${currentGame.href}/archive` : "/account/stats";
+  const primaryLabel = isArchiveOnlyGame && currentGame ? `More ${currentGame.name}` : "Stats";
 
   return (
     <div className="result-modal-actions">
@@ -49,47 +46,24 @@ export default function ResultDialogActions({ currentGameSlug, onShare }: Result
         Share
       </button>
       <Link className="admin-btn-like" href="/">
-        All Games
+        Home
       </Link>
-      {isLoading ? (
-        <span
-          aria-disabled="true"
-          className="admin-btn-like cursor-wait bg-white"
-        >
-          Loading...
-        </span>
-      ) : (
-        <Link
-          className="admin-btn-like primary"
-          href={nextGame ? nextGame.href : "/account/stats"}
-          onClick={() => {
-            if (!nextGame) return;
-            trackEvent({
-              eventName: "next_game_clicked",
-              gameSlug: currentGameSlug,
-              metadata: { nextGameSlug: nextGame.slug },
-            });
-          }}
-          onMouseEnter={() => setIsPrimaryHovered(true)}
-          onMouseLeave={() => setIsPrimaryHovered(false)}
-          onFocus={() => setIsPrimaryHovered(true)}
-          onBlur={() => setIsPrimaryHovered(false)}
-          style={{
-            ...getPrimaryButtonStyle(nextGame?.slug ?? currentGameSlug, isPrimaryHovered),
-            whiteSpace: "nowrap",
-            fontSize: hasLongNextGameLabel ? "0.8rem" : undefined,
-            paddingInline: hasLongNextGameLabel ? "0.65rem" : undefined,
-          }}
-        >
-          {nextGame ? (
-            <>
-              Next Game
-              <span className="mx-1.5 h-4 w-px bg-current opacity-55" aria-hidden="true" />
-              {nextGame.name}
-            </>
-          ) : "Stats"}
-        </Link>
-      )}
+      <Link
+        className="admin-btn-like primary"
+        href={primaryHref}
+        onMouseEnter={() => setIsPrimaryHovered(true)}
+        onMouseLeave={() => setIsPrimaryHovered(false)}
+        onFocus={() => setIsPrimaryHovered(true)}
+        onBlur={() => setIsPrimaryHovered(false)}
+        style={{
+          ...getPrimaryButtonStyle(currentGameSlug, isPrimaryHovered),
+          whiteSpace: "nowrap",
+          fontSize: primaryLabel.length >= 13 ? "0.8rem" : undefined,
+          paddingInline: primaryLabel.length >= 13 ? "0.65rem" : undefined,
+        }}
+      >
+        {primaryLabel}
+      </Link>
     </div>
   );
 }

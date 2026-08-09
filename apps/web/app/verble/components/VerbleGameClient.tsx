@@ -1347,7 +1347,7 @@ export default function VerbleGameClient({
     ? `ARCHIVE GAME #${puzzle.archiveGameNumber ?? ""}`.trim()
     : "TODAY'S GAME";
   const statusChipLabel = shouldShowNextGameCountdown
-    ? `Next game in ${nextGameCountdown || "--:--:--"}`
+    ? `Next Verble in ${nextGameCountdown || "--:--:--"}`
     : contextChipLabel;
   const playPrompt = message || (
     gameState !== "playing"
@@ -1770,7 +1770,7 @@ export default function VerbleGameClient({
               Result: <span className="result-modal-outcome-label" data-outcome={gameState === "won" ? "win" : "loss"}>{gameState === "won" ? "Won" : "Lost"}</span>
             </h2>
             {lockDailyCompletion && !isArchiveView ? (
-              <p className="result-modal-timer">Next game in {nextGameCountdown || "--:--:--"}</p>
+              <p className="result-modal-timer">Next Verble in {nextGameCountdown || "--:--:--"}</p>
             ) : null}
             <div className="result-modal-summary">
               <p className="result-modal-copy result-modal-subtitle">{resultLabel}</p>

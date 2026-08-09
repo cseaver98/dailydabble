@@ -1,4 +1,4 @@
-import { games } from "@/lib/games";
+import { dailyGames } from "@/lib/games";
 import { scheduleTodayGames } from "@/lib/daily-game-scheduler";
 import { getTodayPuzzleDate } from "@/lib/puzzle-date";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -64,17 +64,18 @@ const chunk = <T,>(items: T[], size: number) => {
 
 const buildReminderEmail = (userId: string) => {
   const appUrl = getAppUrl();
+  const playUrl = `${appUrl}/verble`;
   const unsubscribeUrl = `${appUrl}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(userId, "daily_reminder"))}`;
 
   return {
-    subject: "Today's DailyDabble games are live!",
+    subject: "Today's Verble is live!",
     text: [
-      "Today's DailyDabble games are live!",
+      "Today's Verble is live!",
       "",
       "Play a quick round and keep your streak 🔥 going.",
       "",
       "Play here:",
-      appUrl,
+      playUrl,
       "",
       "You received this email because daily reminders are turned on for your DailyDabble account.",
       "Turn off reminder emails:",
@@ -86,7 +87,7 @@ const buildReminderEmail = (userId: string) => {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Today's DailyDabble games are live!</title>
+          <title>Today's Verble is live!</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;900&family=Plus+Jakarta+Sans:wght@900&display=swap" rel="stylesheet">
@@ -100,7 +101,7 @@ const buildReminderEmail = (userId: string) => {
                     <td style="border: 1px solid #d8dce2; border-radius: 20px; background: #ffffff; padding: 28px; box-shadow: 0 18px 44px rgba(44, 47, 49, 0.12);">
                       <img src="https://dailydabble.app/dailydabble-logo-email.png" width="220" height="47" alt="DailyDabble" style="display: block; width: 220px; max-width: 100%; height: auto; border: 0; outline: none; text-decoration: none;">
                       <p style="margin: 16px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
-                        Today's DailyDabble games are live!
+                        Today&apos;s Verble is live!
                       </p>
                       <p style="margin: 8px 0 0; color: #595c5e; font-size: 15px; line-height: 1.6; font-weight: 600;">
                         Play a quick round and keep your streak 🔥 going.
@@ -108,8 +109,8 @@ const buildReminderEmail = (userId: string) => {
                       <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0 0; border-collapse: collapse;">
                         <tr>
                           <td>
-                            <a href="${appUrl}" style="display: inline-block; border-radius: 999px; background: #2c2f31; color: #ffffff; padding: 13px 22px; font-size: 15px; line-height: 1; font-weight: 900; text-decoration: none;">
-                              Play today's games
+                            <a href="${playUrl}" style="display: inline-block; border-radius: 999px; background: #5a40cb; color: #ffffff; padding: 13px 22px; font-size: 15px; line-height: 1; font-weight: 900; text-decoration: none;">
+                              Play today&apos;s Verble
                             </a>
                           </td>
                         </tr>
@@ -118,7 +119,7 @@ const buildReminderEmail = (userId: string) => {
                         If the button does not work, copy and paste this link into your browser:
                       </p>
                       <p style="margin: 8px 0 0; word-break: break-all; color: #2c2f31; font-size: 13px; line-height: 1.5;">
-                        <a href="${appUrl}" style="color: #2c2f31; text-decoration: underline;">${appUrl}</a>
+                        <a href="${playUrl}" style="color: #2c2f31; text-decoration: underline;">${playUrl}</a>
                       </p>
                     </td>
                   </tr>
@@ -194,6 +195,7 @@ export async function GET(request: NextRequest) {
       .in("user_id", ids)
       .eq("puzzle_date", today)
       .eq("is_archive", false)
+      .eq("game_slug", "verble")
       .returns<PlayedRow[]>();
 
     if (playedError) {
@@ -228,7 +230,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       dryRun: true,
       date: today,
-      games: games.length,
+      games: dailyGames.length,
       eligible: profileRows.length,
       wouldSend: sendableProfiles.length,
       skippedPlayed: playedUserIds.size,
@@ -301,7 +303,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     date: today,
-    games: games.length,
+    games: dailyGames.length,
     eligible: profileRows.length,
     sent: sentUserIds.length,
     skippedPlayed: playedUserIds.size,

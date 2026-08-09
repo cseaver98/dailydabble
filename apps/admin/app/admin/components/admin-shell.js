@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/admin/verble", label: "Verble" },
-  { href: "/admin/agegaple", label: "Agegaple" },
-  { href: "/admin/doodle", label: "Doodle" },
-  { href: "/admin/moviedle", label: "Moviedle" },
-  { href: "/admin/yeardle", label: "Yeardle" },
-  { href: "/admin/equadle", label: "Equadle" },
-  { href: "/admin/sportle", label: "Sportle" },
+  { href: "/admin/agegaple", label: "Agegaple (Paused)" },
+  { href: "/admin/doodle", label: "Doodle (Paused)" },
+  { href: "/admin/moviedle", label: "Moviedle (Paused)" },
+  { href: "/admin/yeardle", label: "Yeardle (Paused)" },
+  { href: "/admin/equadle", label: "Equadle (Paused)" },
+  { href: "/admin/sportle", label: "Sportle (Paused)" },
   { href: "/admin/email", label: "Email" },
 ];
 
@@ -24,7 +24,7 @@ export default function AdminShell({ children }) {
         <p className="admin-subtle">Admin</p>
         <nav className="admin-nav" aria-label="Game curation tabs">
           {tabs.map((tab) => {
-            const isActive = pathname === tab.href || (tab.href === "/admin/agegaple" && pathname === "/admin");
+            const isActive = pathname === tab.href || (tab.href === "/admin/verble" && pathname === "/admin");
             return (
               <Link key={tab.href} href={tab.href} className={`admin-nav-link${isActive ? " active" : ""}`}>
                 {tab.label}

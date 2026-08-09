@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!puzzle) {
       return NextResponse.json({ error: `No Moviedle puzzle scheduled for ${date}` }, { status: 404 });
     }
-    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber });
+    const lockState = await getArchivePuzzleLockState({ request, archiveGameNumber: puzzle.archiveGameNumber, gameSlug: "moviedle" });
     if (lockState.locked) {
       return lockState.reason === "subscription"
         ? createArchiveSubscriptionLockedResponse("Moviedle", date)

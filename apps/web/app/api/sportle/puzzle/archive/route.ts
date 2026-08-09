@@ -8,9 +8,9 @@ export async function GET() {
   try {
     const [items, archiveAccess] = await Promise.all([
       listSportleArchive(180),
-      getCurrentArchiveSubscriptionAccess(),
+      getCurrentArchiveSubscriptionAccess("sportle"),
     ]);
-    return NextResponse.json({ items, lockEnabled: isArchiveLockEnabled(), archiveAccess });
+    return NextResponse.json({ items, lockEnabled: isArchiveLockEnabled("sportle"), archiveAccess });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load archive";
     return NextResponse.json({ error: message }, { status: 500 });
