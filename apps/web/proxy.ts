@@ -1,17 +1,16 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { enforceStagingAccess } from "./lib/staging-access";
-import { refreshSupabaseAuthSession } from "./lib/supabase-auth/proxy";
-
-export async function proxy(request: NextRequest) {
-  const stagingResponse = await enforceStagingAccess(request);
-  if (stagingResponse) {
-    return stagingResponse;
+export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/api/email/unsubscribe") {
+    return NextResponse.next();
   }
 
-  return refreshSupabaseAuthSession(request);
+  return new NextResponse(null, {
+    status: 410,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|robots.txt|sitemap.xml).*)"],
+  matcher: ["/:path*"],
 };

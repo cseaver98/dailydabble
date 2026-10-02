@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { createHmac, timingSafeEqual } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 type UnsubscribePreference = "daily_reminder" | "marketing";
 
@@ -9,18 +9,13 @@ type UnsubscribePayload = {
   preference?: UnsubscribePreference;
 };
 
-const getAppUrl = () => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dailydabble.app";
-  return appUrl.replace(/\/+$/, "");
-};
-
 const getUnsubscribeSecret = () => process.env.EMAIL_UNSUBSCRIBE_SECRET || process.env.CRON_SECRET || "";
 
-const redirectToHub = (status: "reminder-unsubscribed" | "marketing-unsubscribed" | "unsubscribe-error") => {
-  const url = new URL(getAppUrl());
-  url.searchParams.set("emailPreference", status);
-  return NextResponse.redirect(url);
-};
+const reply = (message: string, status: number) =>
+  new Response(message, {
+    status,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+  });
 
 const safeEqual = (a: string, b: string) => {
   const aBuffer = Buffer.from(a);
@@ -52,7 +47,7 @@ export async function GET(request: NextRequest) {
   const payload = parseToken(token);
 
   if (!payload?.userId || !payload.preference) {
-    return redirectToHub("unsubscribe-error");
+    return reply("This unsubscribe link is invalid.", 400);
   }
 
   const updatePayload =
@@ -63,7 +58,7 @@ export async function GET(request: NextRequest) {
         : null;
 
   if (!updatePayload) {
-    return redirectToHub("unsubscribe-error");
+    return reply("This unsubscribe link is invalid.", 400);
   }
 
   const { error } = await getSupabaseAdmin()
@@ -73,8 +68,8 @@ export async function GET(request: NextRequest) {
     .eq("id", payload.userId);
 
   if (error) {
-    return redirectToHub("unsubscribe-error");
+    return reply("Could not update your email preference. Please try again later.", 500);
   }
 
-  return redirectToHub(payload.preference === "daily_reminder" ? "reminder-unsubscribed" : "marketing-unsubscribed");
+  return reply("You have been unsubscribed.", 200);
 }
