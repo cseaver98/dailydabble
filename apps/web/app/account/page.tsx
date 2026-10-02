@@ -146,7 +146,6 @@ export default async function AccountPage() {
                 </div>
                 <EmailPreferencesForm
                   initialMarketingEmailOptIn={profile?.marketingEmailOptIn ?? false}
-                  initialDailyReminderOptIn={profile?.dailyReminderOptIn ?? false}
                 />
                 <div className="rounded-2xl border border-[#d8dce2] bg-[#fdfefe] px-4 py-4">
                   <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#75777a]">Feedback</p>

@@ -5,23 +5,18 @@ import DailyDabbleWordmark from "../components/DailyDabbleWordmark";
 
 type EmailPreferencesFormProps = {
   initialMarketingEmailOptIn: boolean;
-  initialDailyReminderOptIn: boolean;
 };
 
 export default function EmailPreferencesForm({
   initialMarketingEmailOptIn,
-  initialDailyReminderOptIn,
 }: EmailPreferencesFormProps) {
   const [marketingEmailOptIn, setMarketingEmailOptIn] = useState(initialMarketingEmailOptIn);
-  const [dailyReminderOptIn, setDailyReminderOptIn] = useState(initialDailyReminderOptIn);
   const [savedMarketingEmailOptIn, setSavedMarketingEmailOptIn] = useState(initialMarketingEmailOptIn);
-  const [savedDailyReminderOptIn, setSavedDailyReminderOptIn] = useState(initialDailyReminderOptIn);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const hasChanges =
-    marketingEmailOptIn !== savedMarketingEmailOptIn || dailyReminderOptIn !== savedDailyReminderOptIn;
+  const hasChanges = marketingEmailOptIn !== savedMarketingEmailOptIn;
 
   const savePreferences = async () => {
     if (!hasChanges || saving) return;
@@ -34,7 +29,7 @@ export default function EmailPreferencesForm({
       const response = await fetch("/api/account/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ marketingEmailOptIn, dailyReminderOptIn }),
+        body: JSON.stringify({ marketingEmailOptIn }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -42,7 +37,6 @@ export default function EmailPreferencesForm({
       }
 
       setSavedMarketingEmailOptIn(Boolean(payload.profile?.marketingEmailOptIn));
-      setSavedDailyReminderOptIn(Boolean(payload.profile?.dailyReminderOptIn));
       setStatus("Email preferences saved.");
       window.dispatchEvent(new Event("dailydabble:profile-updated"));
     } catch (preferenceError) {
@@ -74,24 +68,9 @@ export default function EmailPreferencesForm({
             </span>
           </span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white px-4 py-3">
-          <input
-            type="checkbox"
-            checked={dailyReminderOptIn}
-            onChange={(event) => {
-              setDailyReminderOptIn(event.target.checked);
-              setStatus("");
-              setError("");
-            }}
-            className="mt-1 h-4 w-4 cursor-pointer accent-[#2f672d]"
-          />
-          <span>
-            <span className="block text-sm font-extrabold text-[#2c2f31]">Daily Verble reminders</span>
-            <span className="mt-1 block text-sm font-semibold leading-relaxed text-[#666a6d]">
-              A simple reminder when today&apos;s Verble is live, only if you have not played yet.
-            </span>
-          </span>
-        </label>
+        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-[#666a6d]">
+          DailyDabble reminders are paused while Verble moves to its own site.
+        </p>
       </div>
       <div className="mt-4 flex justify-end">
         <button
